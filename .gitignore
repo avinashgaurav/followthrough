@@ -1,0 +1,13 @@
+node_modules/
+data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+.env
+.env.*
+blobs/
+dist/
+web/dist/
+.DS_Store
+.gstack/
+.design-shots/

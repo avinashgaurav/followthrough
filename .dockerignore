@@ -1,0 +1,15 @@
+node_modules
+web/node_modules
+web/dist
+data
+.env
+.env.*
+.git
+.gstack
+.design-shots
+.qa
+evals/results
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+.DS_Store
