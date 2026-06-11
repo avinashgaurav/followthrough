@@ -1,0 +1,111 @@
+Vista 360 Business Consulting
+Engagement Type                                   Short, Time-Constrained Product Demo
+
+Client Profile                                    Consulting-led organization handling multiple
+                                                  enterprise accounts across industries; distributed
+                                                  and multi-tenant cloud environment.
+
+Cloud Providers                                   Microsoft Azure, Google Cloud Platform, AWS,
+                                                  Adobe Cloud (Adobe Experience Platform) - varies
+                                                  by client requirement
+
+Resource Mix                                      VMs and application deployment environments;
+                                                  involvement in CI/CD pipelines, AEP and broader
+                                                  cloud and data-platform integrations
+
+Spend Profile                                     Non-prod roughly $250 - $300 / month;
+                                                  production roughly $1,000+ / month (rough
+                                                  estimates, vary by project)
+
+Team Size                                         Fewer than three people handling multiple
+                                                  projects - drives preference for low-overhead
+                                                  tooling.
+
+Stakeholder Authority                             18+ years of consulting experience; owner of
+                                                  Vista360; involved in agentic AI development,
+                                                  customer data platforms and cloud services.
+
+
+
+
+1. Call Character and Context
+   1.​ A short, time-constrained product demo. The client acknowledged limited time upfront and
+       preferred a concise walkthrough.
+   2.​ The interaction was transactional: the client wanted to quickly understand the product's
+       relevance before committing to deeper engagement. The call was briefly interrupted when the
+       client attended to another matter.
+
+2. Client Environment and Business Context
+   1.​ Organization Type: Consulting-led company managing infrastructure for multiple enterprise
+       clients rather than operating a single internal system.
+   2.​ Cloud Footprint: Microsoft Azure, Google Cloud Platform, AWS and Adobe Cloud (AEP) - chosen
+       per client requirement.
+   3.​ Architecture: Distributed and multi-tenant. Generally includes VMs and application deployment
+       environments, with involvement in CI/CD pipelines, AEP integrations and broader cloud / data
+       platform work.
+   4.​ Cost Profile: Non-prod environments typically $250 - $300 / month; production roughly $1,000+
+       / month. These are rough estimates that vary by project.
+   5.​ Operational Constraint: The team is small (fewer than three people handling multiple projects),
+       which directly shapes evaluation criteria toward tools that minimize manual effort and
+       operational overhead.
+
+3. Demo Flow and Product Introduction
+   1.​ The demo was conducted using the XYZ playground with dummy data.
+   2.​ Quick introduction to the XYZ product suite: XYZ Day (infrastructure and CI/CD) and XYZ
+       (cloud cost optimization). The conversation centered on XYZ.
+   3.​ Walkthrough began on the "All Resources" view, highlighting unified cross-cloud visibility with
+       metadata (provider, instance type, region) and XYZ's internal tagging system that does not
+       mutate native cloud tags.
+
+4. Resource Control and Scheduling Capabilities
+   1.​ Manual start / stop of resources through simple toggles with no scripts required.
+   2.​ Automated scheduling based on custom working hours (for example, weekdays morning to
+       evening), with visual active / inactive periods and estimated cost savings shown inline.
+   3.​ The client summarized the concept correctly as "disabling resources when not in use," indicating
+       the value proposition landed cleanly.
+
+5. Resource Grouping - Partial Demo
+   1.​ Resource grouping was introduced - multiple resources can be grouped and managed as a single
+       unit, useful for application-level control.
+   2.​ Dependency handling within groups was beginning to be described (databases vs. application
+       services started / stopped in correct order) when the client pivoted the conversation.
+
+6. Key Client Objection - Dynamic Production Workloads
+   1.​ The client's usage patterns - particularly for production systems - are unpredictable and
+       client-driven, so fixed schedules or manual groupings may not be practical.
+   2.​ The core question: is XYZ's approach suitable for environments where resource usage is
+       dynamic and driven by external client activity?
+   3.​ Clarification: XYZ's primary use case is non-production environments, where usage patterns
+       are predictable and can be safely scheduled. For production, organizations typically restrict
+       permissions to read-only rather than enabling automated shutdowns, to protect critical systems.
+
+7. Shift to Deferred Evaluation
+   1.​ Given time constraints and ongoing commitments, the client asked for product documentation /
+       a brochure to review internally with their team.
+   2.​ They explicitly preferred to first identify one or two relevant use cases before engaging in deeper
+       discussions or pricing conversations - a deferred evaluation model rather than an interactive
+       demo loop.
+
+8. Final Feature Highlights and Pricing
+   1.​ The recommendation engine was briefly highlighted as a source of optimization suggestions
+       based on usage patterns.
+   2.​ The integrations section (Slack, Microsoft Teams, Google Chat, webhooks) was referenced for
+       real-time notifications.
+   3.​ Pricing was positioned as a free proof of concept for the first month, with subsequent charges
+       based on impact - typically around 10% of savings generated. This value-based pricing model was
+       framed as a low-risk entry point.
+
+9. Timing Constraints
+   1.​ Immediate adoption is not feasible due to an IT freeze from roughly December 20 to January 7.
+   2.​ The organization follows strict processes and audit trails, so any new tool adoption requires
+       structured evaluation and approvals.
+   3.​ The next potential window is early next quarter, including involvement of additional stakeholders
+       and the client's New Zealand team.
+
+10. Overall Read
+   1.​ Indirect opportunity: success depends on whether XYZ fits into Vista360's service
+       offerings as a value-added optimization layer for their end-clients.
+   2.​ Alignment on multi-cloud visibility and non-production optimization is clear; the dynamic
+       production-workload objection must be addressed through careful positioning rather than
+       feature changes.
+Brightwater

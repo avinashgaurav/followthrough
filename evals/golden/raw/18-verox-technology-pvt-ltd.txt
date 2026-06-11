@@ -1,0 +1,440 @@
+Verox Technology Pvt Ltd
+ Engagement Type                                Partnership Discussion + XYZ Product
+                                                Walkthrough
+
+ Client Attendee                                Pranav - Verox Technology Pvt Ltd (System
+                                                Integrator)
+
+ Verox Location                                 Bangalore
+
+ Business Model                                 System integrator working with enterprise
+                                                customers across India
+
+ Customer Types Pranav Can Reach               Data centers, software companies (example:
+                                                Orbit Systems); majority service-based
+
+ Prior Product Exposure                         Minimal - 1-2 minute overview previously; no
+                                                prior product demo seen
+
+ Previous Partnership Experience                None with a product company before
+
+
+
+Verox Technology Pvt Ltd
+
+
+
+The following is a transcript of the meeting between the XYZ team (based in Bangalore,
+Bangalore) and Pranav, a system integrator (based in Bangalore).
+
+
+
+
+Part 1: Introductions and Context
+
+XYZ (Female Speaker): Hello. Hi, Pranav.
+
+Avinash (XYZ): Hi, Pranav.
+
+Pranav: Hey, hi. One second, so sorry. (Adjusts setup) Hey, hi. Good afternoon. How are you?
+
+XYZ (Female Speaker): Good, how are you?
+
+Pranav: Good, good. Yeah, good.
+XYZ (Female Speaker): So Pranav, where are you based out of?
+
+Pranav: Bangalore.
+
+XYZ (Female Speaker): Which part?
+
+Pranav: South. Bangalore.
+
+XYZ (Female Speaker): Bangalore? So we are in Bangalore.
+
+Pranav: Oh, you're in Bangalore? Okay, Bangalore only. Okay. So our office is in Bangalore
+basically. I think it is very near for you. It's almost 5 kilometers, I think.
+
+XYZ (Female Speaker): a central part of the city. Yeah, around that area.
+
+Pranav: We're in Bangalore basically. Actually, I was not aware that you're in Bangalore. So
+probably we could have met face-to-face.
+
+XYZ (Female Speaker): Yeah, definitely. We'll meet up. Next time.
+
+Pranav: Next time, we'll meet up. Yes, definitely. Actually, I thought you were operating from
+Delhi. I had seen something on the website... so I thought like that. So from my office, it is
+almost less than 5 kilometers actually.
+
+XYZ (Female Speaker): It’s not much. Next time.
+
+Pranav: Sure.
+
+
+
+
+Part 2: Business Discussion and Partnership Models
+
+XYZ (Female Speaker): So Pranav, Avinash told me that you wanted to discuss the
+pricing, the pricing model, etc. Do you have any specific questions?
+
+Pranav: No, see, I'll just give the background of what we do. Basically, we are the system
+integrators. So we work with a couple of companies. Based on their requirements, we give a
+solution to them. It can be cloud-related, or it can be any other networking and whatsoever the
+implementation they're looking for. As part of it, like we have a couple of customers pan-India
+which we are working with regularly for one or another project. So when last time I had a word,
+definitely the product whatever is there, that is basically not required for us, but we can push this
+product—we can bring this product in front of the customer, the end customer. So in this
+scenario, how we can engage and how we can take it forward? That's what I was asking
+Avinash.
+
+XYZ (Female Speaker): And I just wanted to know... I have a few questions. I'm not sure
+whether you have seen the product or not.
+Pranav: Product? I have not seen. No.
+
+XYZ (Female Speaker): Okay.
+
+Pranav: Because that day, basically, it was a very short discussion. Avinash was there.
+Actually, it was not possible also. So just we met and the overview kind of thing... probably one
+or two minutes. I don't remember who explained from your team member... like it was a very
+short conversation. On call, we had discussed about the XYZ.
+
+XYZ (Female Speaker): Okay. But do you think your end users or your customers would
+need this kind of tool?
+
+Pranav: See, probably, we work with a few clients, data centers, and so probably this product
+we can push there, hopefully.
+
+XYZ (Female Speaker): Data centers? Okay.
+
+Pranav: Data centers we have, some software-related companies we have. Example, there is
+a company called Orbit Systems. So they spend a lot into the cloud.[1]
+
+XYZ (Female Speaker): Okay. And do you know approx. how much is their cloud bill?
+
+Pranav: No, I really have no idea about that. Because as I said, right, they are our customers,
+so other services we are giving related to the IT infra and other things. So we can take this
+product in front of them. That's what I'm saying. See, I really have no idea whether we are able
+to close it or not. So with the rapport, definitely I will try to push this product so that you can give
+a demo and other things. So definitely, if there is a cost optimization, right, so they may be
+interested and they can take it forward.
+
+XYZ (Female Speaker): Okay. So I'll tell you, I'll give you a brief. We can send the
+document later, but I'll give you a brief. Can you share the screen? (Addressing Avinash)
+
+Avinash: Sure.
+
+
+
+
+Part 3: Partnership Models Explanation
+
+XYZ (Female Speaker): Can you see the screen?
+
+Pranav: Yes.
+
+XYZ (Female Speaker): So basically, Pranav, we have two models. First one is the
+Referral, where if you give us any lead—which is a qualified lead—and if they end up using our
+product, if they end up buying our product, then we have this revenue share model. If you can
+see on the screen, you'll see the percentage, that is between 15% to 20% of the contract value.
+So this is what is part of the referral partner model, where you'll give us the lead, but that
+depends... that lead has to be under our ICP (Ideal Customer Profile). That's why I asked you
+initially what is their cloud bill, because if their cloud bill is around $2k to $3k USD—or minimum
+less than $10,000—then it does not make sense to engage or to invest so much time. Because
+usually what we have seen is if they have less than a $10,000 cloud bill, then usually they don't
+see the value.
+
+Pranav: Understood. Correct.
+
+XYZ (Female Speaker): So these things are important. We can tell you more about our ICP,
+but let's go through this model first. So this is our first model where we're going to manage the
+sale. You are going to give us the lead—a qualified lead. We are going to manage the sale,
+billing, etc., onboarding everything about the platform. So these will be our responsibility. And
+you will provide us an introduction and initial stakeholder alignment, and we will see whether
+this is aligned with their expectations or not, or whether they fall in our ICP or not. So this is
+Model 1.
+
+XYZ (Female Speaker): And the second model is basically Reseller, where you are going
+to take the responsibility of selling our product.
+
+Pranav: Okay.
+
+XYZ (Female Speaker): And obviously, depending on how much time you invest and what
+is the contract value, depending on that, we will have the revenue share percentage based on
+different things. Here again, so we are not going to manage the sale or we are not going to help
+in deployment or onboarding etc., you are going to take care of that. Yeah, and that also
+depends on how we are going to manage this basically for the end users. But just one question
+again: have you done this kind of engagement with anyone or with any product company?
+
+Pranav: Not yet. Not yet.
+
+XYZ (Female Speaker): Okay. Fine. And how many customers do you think would be ready
+to use this product or would be interested in using this product?
+
+Pranav: See, openly I will tell you, really I have no idea right now. So now what I should start
+doing is the homework, right? So currently how much bill they are getting, so that basic study I
+have to start doing it. So based on that only I can confirm. So currently I have zero visibility how
+much are they spending per annum or on a quarterly basis. So after this, what I will do is I will
+start analyzing that and you can also give me some prerequisites (1, 2, 3, 4) we have to check it
+out. If everything looks good, then I will come to you so that you also no need to spend much
+time into that. So at least the basic primary checks and other things, right? Those things I will
+do, then I will come to you.
+
+
+
+
+Part 4: Product Demo (XYZ)
+XYZ (Female Speaker): Okay. And also, I think we should give you the demo of the product
+as well so that you have an idea when you talk to your clients. A few things... I think what we
+can also do is we can send you one questionnaire, right? The questions maybe you should be
+asking your end users. All those questions would be around cloud usage: which cloud they are
+on, for example. We are right now on XYZ, we are supporting AWS, Azure, and GCP. We
+have not yet supported OCI and we are not supporting any on-prem resources as well...
+on-prem infrastructure, sorry, not resources. So I'm not sure the data center thing would work or
+not, but we'll check.
+
+Pranav: Sure.
+
+XYZ (Female Speaker): So you can also... this is our website, xyz.com. This is the
+playground. I think you can also go and explore for yourself. This is on dummy data. So once
+you connect your cloud account, right, from here you will connect your cloud account.[2] Once
+you connect your cloud account, you will land on this "All Resources" page where what we do is
+we take different kind of permissions to show you this. So there are different things that we do in
+the platform, so there are different types of permissions that we need.
+
+XYZ (Female Speaker): First one is the Global View permission to sync all the resources
+that you have on your cloud account on this page. That is just to sync all the resources on this
+page. And the other part is Scheduling.[3] To schedule the resources, we need resource
+life-cycle permissions. Basically what we are going to do from our platform is that we are going
+to switch on and switch off the resources. For that, we need resource life-cycle permissions for
+the resources we can switch off... basically we can schedule, not for all the resources.
+
+XYZ (Female Speaker): So once you land on this page, you will see all the resources from
+different cloud accounts. You can connect multiple cloud accounts from the same service
+provider or you can connect different service providers as well. For example, you can connect
+one account of AWS and one subscription of Azure also. We sync all the resources and we'll
+show you resources here. If you see these icons, this will tell you which cloud account this
+resource is from, and this is the type of resource, and this is the region where this resource is
+spun up. This is the name of the resource. We'll give you all information for all the resources.
+
+XYZ (Female Speaker): The second column is all the Tags. For example, if you tag your
+resources, we'll show all the tags from your cloud accounts here. Also, from our platform, we
+have this XYZ feature through which you can auto-tag your resources as well. So what we do
+is we read the metadata of the resource and based on those metadata, we recommend you
+tags. And what you can do is you can review the tags and you can apply if you want to,
+otherwise you can skip that.
+
+XYZ (Female Speaker): The third column is basically the State of the resource. So this will
+tell you whether your resource is switched off or switched on on the cloud account. Green
+means it's switched on and grey means it's switched off on the cloud account. This is the toggle
+button. What you can do is, for example, this resource you want to switch off, you can use this
+toggle button and switch off the resource. And to automate this entire switching on and
+switching off, what you can do is you can use the Scheduler.[3]
+
+XYZ (Female Speaker): So this scheduler, basically, there are some schedulers we will
+provide you, otherwise what you can do is you can create a new scheduler. What it does is,
+basically, if you have some non-prod resources and your non-prod resources are not used 24/7,
+and if your team is working till 6 o'clock or 7 o'clock or 8 o'clock, what you can do is you can
+switch on those resources from 8 AM to 6 PM or whatever time these people are working. After
+that, you can switch off these resources. And to switch off those resources, we have automated
+this via this scheduler. What you can do is you can select, for example, from 8 to 6 o'clock, you
+can select that this resource should stay on. Once you do this configuration, you will see the
+estimated savings you're going to have by using this scheduler. These are the active hours and
+inactive hours.
+
+XYZ (Female Speaker): One more thing: you can select the Time Zone. For example, if
+your customers are not based out of India or any other location, different time zones, you can
+select the time zones as well. So once you create this scheduler, you can attach this scheduler.
+If you are not going to attach the scheduler, the scheduler will not work against the resource. So
+you have to attach this scheduler from here. The resource will work as per whatever schedule
+you have set. So this is our main feature through which you can save from 20% to 60% of your
+cloud bill. That depends on how many non-prod resources that you have on your cloud. This is
+also one of the questions you can ask: how many resources are there for non-production
+environments and how many are for production environments.
+
+
+
+
+Part 5: Advanced Features and Q&A
+
+Pranav: Any question?
+
+XYZ (Female Speaker): Yeah, see, for example, we'll mention 9 to 6 as a production hours
+and after 6 somebody will not use, right? Like you have selected now. So in case if somebody
+wanted to in an exceptional cases they wanted to use it, so in such scenario, like the admin has
+to enable that?
+
+XYZ (Female Speaker): We have Override. You can override. Admin can... I'll tell you one
+more thing. This is Teams. Basically, if you want to assign any team to any of the resources,
+you can assign it from here. This is the Cost and Budget. Basically, what is the cost of running
+this resource? If this resource is on, how much cost this would... basically cost of running this
+resource, right? And if you set the budget, it will tell you how much of this budget has been
+consumed by your resource. For example, $100 you've assigned as a budget to run this
+resource and out of $100, $14 are already consumed, that means 15%.
+
+XYZ (Female Speaker): I'll tell you where to do this configuration etc. So once you click
+here, for example, Action... if you click on Action, you can do all these configurations. You can
+assign a team, you can also create a team if it is not created. You can assign a different team
+and you can detach yourself. So you can assign a budget—any budget. It does not mean if this
+budget is consumed, the resource will switch off. It does not mean that. So it will stay... it will
+remain in the same state irrespective of the budget. But what it does is it helps you budget your
+resources.[4] For example, if you have this quarterly budget or annual budget that you have to
+give it to your cloud resources, once you assign this budget, you will have an idea how much
+cost it will... how much budget I need to assign if I need to do that, if it is consuming that much
+budget.
+
+XYZ (Female Speaker): And Alerts also you can get. If you enable this alert and you set
+this configuration as 80%, for example, if you want to get an alert if your resource has
+consumed 80% of your budget, you will get this alert. This alert you can get on different
+channels. Right now, we support three channels: Teams, Google Chat, and Slack. You can
+select these channels from here.
+
+XYZ (Female Speaker): To answer your question, for example, if we need to... if you've set
+a schedule for 6 PM, if your resource is going off at 6 PM but your team wants to work till 8 or 9
+or whatever time, what you can do is as an admin, you can enable this scheduler. By clicking
+here, you can do that. So this is a one-time configuration that you can do. For example, if you
+want your team to override the schedule for maximum of 5 hours or maybe 3 hours or 2 hours,
+you can add from here hours... you can add 5. This means that this schedule can be overridden
+for 5 hours on any particular day. You click on Update, so this configuration will be updated
+against the resource.
+
+Pranav: Got it. Okay.
+
+XYZ (Female Speaker): So now you mean to say that around 20% to 60% of the cloud bill
+we can save, correct?
+
+Pranav: Yeah, that depends on how many non-production resources you have.
+
+XYZ (Female Speaker): And second thing is like is there any demo version or something
+like that available we can give to the customer? Demo version as in the trial version I'm talking
+about for a week so that we can show them you have saved this much. Something like that, just
+I'm asking. If somebody will look for...
+
+Pranav: I didn't get your question. You are asking for any POC or...?
+
+XYZ (Female Speaker): We will approach this product with any of the customers and we
+will show the demo. So after the demo, is there any trial version available? Free trial kind of
+thing for a week or two?
+
+Pranav: Yeah, two to three weeks we can do. We can do. Fine. And like so majorly, who are
+the targeted customers actually from my end? Like whom should I target majorly?
+XYZ (Female Speaker): So again, I think you need to know. So right now we are targeting
+FMCG companies, media companies.
+
+Pranav: Which one?
+
+XYZ (Female Speaker): Media companies. So these are our ICP right now, but we are
+exploring mid-sized companies from different industries. But like for this FMCG companies and
+media companies, we are sure that this product is useful. But yeah, again... so do you have any
+customers from media or FMCG?
+
+Pranav: No, I don't. You don't have. Who are your customers like mostly?
+
+Pranav: See, majorly we're into the... that's what right, the service-based companies are
+majorly actually.
+
+XYZ (Female Speaker): Okay. Okay. Understood.
+
+Pranav: Okay, so I really got some overview kind of thing and even Avinash also I have seen
+this also how it works. What I will do, let me start approaching. So you can help me with the
+basic questionnaires what should I ask and get the information before I reach out. So that I will
+start doing it. And some prerequisites kind of thing you can give it to me, so that I will follow that.
+So probably once I have a proper qualified lead, right, so then we can sign up the agreement
+and we can move ahead.
+
+XYZ (Female Speaker): Okay, yeah. But I think we need at least like how many do you
+think... okay, fine, we'll talk about all these things later. But yeah, let us know if you get any
+leads.
+
+Pranav: Right. So that's what, let me start talking to them, let me understand what is their
+cloud bills and other things and what they are using currently. So that I will get an idea how
+many customers or how many leads I'm able to generate with my current portfolio.
+
+XYZ (Female Speaker): Yeah, also, I think usually... so if we, like whenever we have shown
+this product to anyone, right, a lot of people who have good cloud usage, they might have
+written scripts to use this scheduler. So you know, for any resource or any number of resources,
+they might have written some scripts on AWS or Azure or GCP to switch on and switch off these
+resources. But usually what happens is you have to manage these scripts and like a lot of
+operational overhead is there to manage all these scripts. So this is the... I think you're going to
+get this question like "we are already doing this, why do we need all this?"
+
+XYZ (Female Speaker): I've not given you the entire demo, so I'll just show you two more
+things. The other thing is Resource Group. So basically, whatever configuration we have done
+against the resource, single resource, you can do the similar configuration for the group of
+resources. So you can group this resources as per your environment, as per your application,
+as per any POC if you are doing. If you've spun up any resources for any particular POC, you
+can group those resources together and you can manage those resources. So whatever
+schedule you're going to set up for a group, all the resources within that group will run as per
+that schedule. There are other things also what you can do, for example, if one group has
+application and databases and if you want to configure like what resource should switch on first
+or switch off first, you can do this configuration from Auto Order and Custom Order. From
+Custom Order, what you can decide is which resource should go on first or off first. So this is
+what you can do in Resource Groups.
+
+XYZ (Female Speaker): And the second thing is... so there are two things through which
+you can save your cloud cost. One is via switching off the resources which are not being used.
+The second thing is Recommendations. So this is based on the usage. So we check the usage
+of your resources on the cloud and based on that, we provide you some recommendations.
+These recommendations are related to right-sizing, idle resources if there are idle resources,
+and if there are any orphaned resources which have not been used from a long time. So we'll
+identify those resources and we'll give you recommendations for that. And right-sizing also. So
+for example, your usage is just 20% or 30%, so we'll give you right-sizing recommendation as
+well.
+
+XYZ (Female Speaker): If you see this, this is related to cloud storage, compute,
+Kubernetes, and SQL. From here, what you can do is you can review it and you can... so we are
+working on one feature, like for example, if you like this recommendation and if you think you
+can apply this recommendation, we'll give you a button here through which you can
+automatically apply this recommendation. Or we can take you to a CLI and through that you can
+apply this. Obviously, we're going to give you the steps etc. that you need to follow to apply this
+recommendation. But right now it's not live, we're working on that. But right now we're just giving
+you the reason why we've recommended this particular right-sizing or idle resources or
+anything.
+
+XYZ (Female Speaker): And we are also going to tell you what is the current cost of
+running this resource and how much if you apply this recommendation, how much is the savings
+potential or opportunity that you will have—the amount that you are going to save. So if you use
+the scheduler for non-prod resources, you can save from 20% to 60%. But if you apply this
+recommendation and if you make use of these recommendations, you can further save your
+cloud bill up to 15% to 20%.
+
+Pranav: And see, come to the charges, right? Like how do you charge actually?
+
+XYZ (Female Speaker): So it is based on the number of resources.
+
+Pranav: Okay. So it's something like a license-based kind of thing or...?
+
+XYZ (Female Speaker): License-based meaning?
+
+Pranav: I mean number of user basis you said, right?
+
+XYZ (Female Speaker): No, not number of users. It depends on the number of resources.
+Pranav: Number of resources. Okay. So right now I have no other questions. So probably
+when clients will ask some questions, right, so I will have that. So probably I will connect with
+you during that time.
+
+XYZ (Female Speaker): Yeah, so we have this dashboard as well. What I'll suggest you is
+please go through this playground by yourself and if you have any questions, you can ask. You
+can directly call on my number if you have any questions.
+
+Pranav: Sure, sure, I'll do that.
+
+XYZ (Female Speaker): Anything else?
+
+Avinash: I don't think so. We are done with it.
+
+Pranav: Yeah, so probably the Word file which you've shown me, right? I think you can share
+me that. I'll share that. After this, I will go through that and some basic questionnaires also you
+please do share with me. So anything else I will connect with you.
+
+XYZ (Female Speaker): I think you need one permissions document as well—so basically
+what permission we ask across different hyperscalers. So we can give you that document as
+well because usually people ask that question: "What kind of permission you need?" or "How do
+you connect this to our cloud account?" etc. and what kind of permissions are needed. So yeah,
+we can send that.
+
+Pranav: Sure.
+
+XYZ (Female Speaker): Okay then, great. Thank you so much.
+
+Pranav: Bye. Bye.
+Owl (Owl Media Group)

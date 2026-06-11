@@ -1,0 +1,73 @@
+{
+  "transcript_file": "evals/golden/raw/14-tempo.txt",
+  "client_name": "Tempo",
+  "drafted_at_note": "corrected 2026-06-11 via 3-lens adversarial verification (refute/completeness/typecheck); founder spot-check welcome",
+  "expected_items": [
+    {
+      "item_type": "feature_request",
+      "title": "Wants migration help moving from self-hosted to AWS",
+      "body": "Rahul explicitly asked whether XYZ/XYZ could assist with their imminent migration from a self-hosted server to AWS, with both client data and Tempo's own data in scope. This is a buying-adjacent need that sits upstream of our core cost-optimization value: if we can plug into their migration moment, we land before their AWS footprint and spend habits solidify. The migration timeline (1-2 weeks) creates urgency and a natural wedge for adoption. Worth clarifying internally whether XYZ migration tooling is in scope or whether this is a partner/CS conversation.",
+      "quote": "No tool in use today for the migration itself; client explicitly asked whether\n       XYZ / XYZ could assist."
+    },
+    {
+      "item_type": "feature_request",
+      "title": "WhatsApp alert routing requested for usage alerts",
+      "body": "The client asked whether usage alerts could be routed to WhatsApp, and we confirmed it is possible alongside Microsoft Teams and Slack. This signals a regional/communication-channel preference common in Indian SMBs where WhatsApp is the primary operational channel. Confirming this is genuinely supported (not just verbally promised) matters for trust and reduces adoption friction. If it is not yet built, this is an engineering gap masked by a confident verbal yes.",
+      "quote": "WhatsApp Integration: Client asked whether usage alerts can be routed to WhatsApp. Confirmed\n        that WhatsApp integration is possible alongside Microsoft / Slack."
+    },
+    {
+      "item_type": "key_insight",
+      "title": "Cost-handler absent means no spend baseline yet captured",
+      "body": "The person who owns cloud spend was on leave, so monthly spend and resource types could not be confirmed on the call. This is a deal-qualification gap: without spend visibility we cannot size the ROI story or the ~10%-of-savings pricing, and the actual decision influence may sit with the absent handler rather than Rahul. The follow-up should explicitly loop in this person, since they likely gate budget approval. Treat current sizing assumptions as provisional until that data arrives.",
+      "quote": "Cost Awareness a global apparel retailer: The person who handles cloud spend was on leave, so monthly spend and\n       resource types could not be confirmed on call."
+    },
+    {
+      "item_type": "key_insight",
+      "title": "Pre-AWS prospect: no live cloud spend to optimize until AWS cutover",
+      "body": "Tempo is still self-hosted and only cutting over to AWS in 1-2 weeks, so there is currently no cloud bill for XYZ to optimize. This means near-term value is forward-looking and the POC can only show measurable savings once resources actually exist on AWS. The upside is we can shape their AWS cost hygiene from day one (tagging, schedules, budgets) before bad habits form. The risk is the POC has nothing to act on if migration slips, so timing our engagement to their cutover is critical.",
+      "quote": "Current State: Tempo is hosted on its own server at the time of the call."
+    },
+    {
+      "item_type": "key_insight",
+      "title": "Weekend-off scheduling is the clearest value hook for them",
+      "body": "The client indicated that scheduling inactive days (Monday-Friday active, weekends inactive) would be beneficial for Tempo, which is a strong buying signal aligned to our Scheduler's core strength. This tells us the weekday/weekend usage pattern is real for their workloads and that nightly/weekend shutdown savings will resonate in the ROI conversation. Lead the POC and follow-up with this pattern to produce a concrete savings number quickly. It is the lowest-friction path to a measurable win.",
+      "quote": "Client indicated that scheduling inactive days (e.g., Monday-Friday active, weekends inactive)\n        would be beneficial for Tempo."
+    },
+    {
+      "item_type": "key_insight",
+      "title": "Client wants self-serve hands-on before committing",
+      "body": "Rahul wanted to self-explore the product and follow up after a hands-on review rather than commit on the call. This is a low-pressure, evaluation-driven buyer who will be persuaded by the product experience itself, not the pitch. It raises the importance of frictionless onboarding and a clean setup guide, since adoption depends on him connecting resources unaided. If self-exploration stalls, the deal stalls, so CS should monitor whether resources actually get connected before the Monday/Tuesday call.",
+      "quote": "Client wanted to self-explore the product and follow up after a hands-on review."
+    },
+    {
+      "item_type": "action_item_ours",
+      "title": "Offered free two-week POC to prove measurable savings",
+      "body": "We offered a free two-week proof of concept so the client could see measurable impact before any commitment. Given that Tempo has no AWS spend yet, the POC's value depends on timing it to their migration so there are real resources to optimize. This is the primary conversion mechanism for this deal and should be scheduled around the cutover. Track whether the POC actually produces a quantified savings figure, since that is what will move the absent cost-handler.",
+      "quote": "Trial / POC: Free POC for two weeks was offered so the client could see measurable impact\n        before any commitment."
+    },
+    {
+      "item_type": "action_item_ours",
+      "title": "Send setup guide and product brief for self-onboarding",
+      "body": "We committed to share a setup guide and product brief so the client can begin connecting a few resources ahead of the follow-up. Because this buyer is evaluation-by-doing, the quality and clarity of these materials directly determines whether he succeeds in self-exploration. Poor docs here would silently kill momentum before the Monday/Tuesday call. This should land with CS and be sent promptly to give the client runway before follow-up.",
+      "quote": "Setup guide and product brief to be shared so the client can begin connecting a few resources."
+    },
+    {
+      "item_type": "commitment_theirs",
+      "title": "Client to self-explore then reconnect Monday/Tuesday",
+      "body": "The client agreed to do a hands-on review and a follow-up conversation is planned for Monday or Tuesday. This sets a concrete next checkpoint to drive the deal forward and aligns with their self-serve evaluation style. The follow-up should ideally include the cloud-spend handler who was absent, to unlock spend data and ROI sizing. Confirm the meeting and ensure the setup materials are in their hands well before it.",
+      "quote": "Follow-up conversation planned for Monday or Tuesday."
+    },
+    {
+      "item_type": "key_insight",
+      "title": "Pricing positioned at ~10% of savings, free under 10 resources",
+      "body": "Pricing was presented as roughly 10% of savings created, free up to 10 resources, and starting at INR 7,499 above that. This savings-share framing is compelling but only works once there is a real AWS bill and measurable savings, which they do not yet have. For a small post-migration footprint they may fall in or near the free tier initially, so the land-and-expand path depends on growing their connected resource count over time. Note the INR-denominated pricing reflects an India-based SMB buyer where price sensitivity is real.",
+      "quote": "Pricing: Pricing depends on the number of connected resources. High-level positioning:\n        approximately 10% of savings created. Free up to 10 resources; starts at INR 7,499 above that."
+    },
+    {
+      "item_type": "key_insight",
+      "title": "Client gave explicit positive feedback on the Recommendation feature",
+      "body": "During the demo walkthrough of right-sizing recommendations, the client gave good feedback specifically on the Recommendation feature. This is one of only two direct positive sentiment signals in the meeting (the other being the weekend-off scheduling comment), and the draft tracks that one but not this. It identifies a second resonance point to lead with in the POC and follow-up: once their AWS footprint exists, right-sizing recommendations can produce concrete savings evidence alongside scheduling. Product should also log this as validated-feature feedback from a live prospect demo.",
+      "quote": "Recommendations for right-sizing plus good-feedback mention for the Recommendation feature."
+    }
+  ]
+}

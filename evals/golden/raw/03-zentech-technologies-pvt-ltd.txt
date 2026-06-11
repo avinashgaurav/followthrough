@@ -1,0 +1,62 @@
+Zentech Technologies Pvt Ltd
+ Engagement Type                                       Product Capability Deep-Dive (Partner Discovery)
+
+ Call Date                                             December 19, 2025
+
+ Client Attendee                                       Manish - Zentech Technologies Pvt Ltd
+
+ Client Profile                                        Advanced Tier AWS Reseller Partner managing
+                                                       40+ customers.
+
+ Primary Interest                                      Advanced FinOps tooling that can help their
+                                                       clients reduce Total Cost of Ownership (TCO)
+                                                       beyond basic Savings Plans and Reserved
+                                                       Instances.
+
+ Cloud Focus                                           Predominantly AWS across the partner's 40+
+                                                       downstream clients.
+
+
+
+
+1. Partner Context and Introduction
+    1.​ XYZ Positioning: The two-product suite was introduced up front - XYZ Day for rapid
+        deployment / CI/CD, and XYZ for cloud cost optimization.
+    2.​ Zentech Profile: Zentech is an Advanced Tier AWS Reseller Partner with a book of 40+ customers.
+        Manish's primary lens was partner-led: he was not evaluating XYZ for Zentech's own
+        workloads but as a tool to add to their FinOps offering for downstream clients.
+    3.​ Existing FinOps Sophistication: Manish explicitly positioned basic optimization (right-sizing) as
+        "old," and said his customers are looking for more sophisticated re-architecting guidance.
+
+2. Technical Deep-Dive Conducted
+A. Architectural Recommendations and Re-Architecting
+    1.​ Manish asked whether the tool could deliver "heavy lifting" insights - for example,
+        recommending that a low-utilization EC2 server be migrated to a Serverless (Lambda) or PaaS
+        architecture.
+    2.​ The response emphasized that XYZ's current center of gravity is scheduling (turning
+        resources off when not in use), while the XYZ module is designed to layer in deeper
+        recommendations based on utilization patterns.
+    3.​ It was also acknowledged candidly that re-architecting recommendations still require human
+        context about application dependencies, so the tool is a decision-support system rather than an
+        autonomous architect.
+B. Resource Tagging
+    1.​ The auto-tagging system exists only within the XYZ ecosystem. This deliberately avoids
+        cluttering or interfering with an AWS / Azure account's existing tag taxonomy - a point that was
+        important for Zentech as a managed-services partner.
+C. Security and Networking Questions
+     1.​ Manish asked about port-level scanning capabilities, specifically detection of security groups
+         with 0.0.0.0/0 open to the world.
+     2.​ It was clarified that the tool's present focus is on idle and orphaned resource detection, with an
+         action item to verify whether port-level network details are surfaced in the reporting module.
+D. Integration and Permissions Model
+    1.​ To connect an AWS account, XYZ requires an Access Key and Secret Access Key.
+    2.​ Specific permission scopes include Global View (to enable visibility) and Resource Lifecycle
+        Management (to perform automated On/Off scheduling) - permissions that are documented and
+        signed off before onboarding.
+
+3. Partner Feedback and Signals
+    1.​ Manish's customer portfolio is heavily AWS-concentrated, so AWS feature depth and
+        AWS-native parity matter more to him than multi-cloud breadth.
+    2.​ The conversation surfaced a key product-direction signal: partner customers are graduating past
+        right-sizing and looking for re-architecture-grade insights.
+Cipher Systems

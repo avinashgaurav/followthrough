@@ -1,0 +1,31 @@
+{
+  "transcript_file": "evals/golden/raw/04-cipher-systems.txt",
+  "client_name": "Cipher Systems",
+  "drafted_at_note": "corrected 2026-06-11 via 3-lens adversarial verification (refute/completeness/typecheck); founder spot-check welcome",
+  "expected_items": [
+    {
+      "item_type": "key_insight",
+      "title": "Hybrid AWS+GCP VM-heavy estate is a strong scheduling fit",
+      "body": "Cipher Systems runs a hybrid AWS/GCP environment that is predominantly VMs (AWS M4 xLarge/Large, GCP N1 Standard 16GB), plus object storage and managed databases supporting media-server workloads. This profile is the ideal target for XYZ's nightly-shutdown and weekend-pause scheduling, since VM-heavy spend is exactly what start/stop automation reduces. Production spend runs into multiple lakhs of INR per month, so the savings opportunity is material even if the test-build footprint is small (~INR 30k/month). Worth keeping the production figure on file as the real prize for a future re-engagement.",
+      "quote": "Predominantly VMs. On AWS: M4 xLarge / Large instance types. On GCP: N1\n        Standard instances with 16 GB RAM. Additionally, object storage and managed databases\n        supporting media-server workloads."
+    },
+    {
+      "item_type": "key_insight",
+      "title": "Deal stalled on timing, not fit — re-engage when production scales",
+      "body": "Aakash acknowledged the value of centralized visibility and reduced script-maintenance overhead, but said Cipher Systems has no immediate need for a new FinOps tool right now. Critically, this is a timing/priority gating factor rather than a feature-fit objection, which means the product resonated but the buying window is closed today. The subtext — that they'll 'keep it in mind' as production workloads scale — is a soft deferral, not a no; the trigger to watch is their production growth. CS/sales should set a re-engagement cadence tied to that scaling signal rather than treating this as lost.",
+      "quote": "However, he indicated that Cipher Systems does not have an immediate requirement for a new FinOps\n       tool at this moment - a timing-based gating factor rather than a feature-fit objection."
+    },
+    {
+      "item_type": "key_insight",
+      "title": "Script-maintenance overhead reduction resonated with Aakash",
+      "body": "Aakash acknowledged the value of the reduction in script-maintenance overhead, alongside centralized multi-cloud visibility. This suggests the no-code scheduling angle (no scripts or YAML required) resonates with this buyer — plausibly because Cipher Systems runs some of its own start/stop automation today, though the transcript does not state that explicitly. For future outreach to Cipher Systems and similar hybrid AWS/GCP shops, leading with eliminating shutdown-script maintenance rather than generic FinOps savings is a reasonable bet. Treat this as a positive signal from one demo, not yet a validated pattern across buyers.",
+      "quote": "Aakash acknowledged the value of centralized visibility and the reduction in\n       script-maintenance overhead."
+    },
+    {
+      "item_type": "commitment_theirs",
+      "title": "Cipher Systems to keep XYZ in mind, conditioned on production scaling",
+      "body": "Aakash committed — softly but on the record — to keeping XYZ in mind for future needs, explicitly conditioned on their production workloads scaling further. This is the only client-side forward commitment from the meeting and the hook for re-engagement: Cipher Systems, not us, named production growth as the trigger. It should be tracked as an open their-side commitment with their production spend (currently multiple lakhs of INR per month) as the watch signal, distinct from the draft's analytical insight about re-engagement cadence.",
+      "quote": "He indicated that XYZ will be kept in mind for future needs as their production workloads\n       scale further."
+    }
+  ]
+}

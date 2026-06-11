@@ -1,0 +1,67 @@
+Tempo
+ Engagement Type                                     XYZ Product Demonstration
+
+ Client Attendee                                     Rahul - Tempo
+
+ Current Hosting                                     Self-hosted on own server at time of call
+
+ Planned Migration                                   Moving to AWS in the next 1-2 weeks
+
+ Migration Tooling                                   No migration tool currently in use
+
+ Monthly Spend Visibility                            Not available on call (handler on leave)
+
+
+
+
+1. Company Context
+   1.​ Current State: Tempo is hosted on its own server at the time of the call.
+   2.​ Migration: Planned cutover to AWS within 1-2 weeks.
+   3.​ Migration Tooling: No tool in use today for the migration itself; client explicitly asked whether
+       XYZ / XYZ could assist.
+   4.​ Data Migration Scope: Both client data and Tempo's own data need to move.
+   5.​ Cost Awareness a global apparel retailer: The person who handles cloud spend was on leave, so monthly spend and
+       resource types could not be confirmed on call.
+
+2. XYZ Demo Content
+All Resources and State
+   1.​ Unified listing from multi-cloud sync: AWS, Azure, GCP, Oracle, and local servers.
+   2.​ Auto-tagging explained as a way to identify whether a resource is used properly or not.
+   3.​ Manual on/off toggle with a warning review before critical events.
+Scheduler
+   1.​ Default schedules (Nightly Shutdown, Weekly Pause) and custom schedule creation.
+   2.​ Weekend-off, weekday-active pattern walked through visually; estimated savings and active-hour
+       counts shown.
+Resource Groups
+   1.​ Grouping 20 application resources for single-unit control.
+   2.​ Start Delay and Stop Delay for startup-order management (frontend / backend / database).
+   3.​ Auto Order vs. Custom Order.
+Teams, RBAC and Budgets
+   1.​ Teams with admin / editor / custom roles; access types include edit / view / create.
+   2.​ Per-group budget (example: USD 1,000) with threshold-based alerting (example: 75%).
+Schedule Override and Audit Log
+   1.​ One-off override without touching base schedule.
+   2.​ Audit Log with green / red markers and reference IDs for failed events.
+Recommendations and Integrations
+   1.​ Recommendations for right-sizing plus good-feedback mention for the Recommendation feature.
+   2.​ Integrations available for Slack, Microsoft Teams, Google Chat, custom webhooks.
+Overview Dashboard
+    1.​ Total savings, resources connected (example: 30), resource groups (example: 5), teams,
+        scheduler success rate (ideal 100%, shown 90%), over / under / no-budget team counts,
+        per-cloud resource and VM / database totals.
+
+3. Client Questions and Responses
+    1.​ WhatsApp Integration: Client asked whether usage alerts can be routed to WhatsApp. Confirmed
+        that WhatsApp integration is possible alongside Microsoft / Slack.
+    2.​ Pricing: Pricing depends on the number of connected resources. High-level positioning:
+        approximately 10% of savings created. Free up to 10 resources; starts at INR 7,499 above that.
+    3.​ Trial / POC: Free POC for two weeks was offered so the client could see measurable impact
+        before any commitment.
+
+4. Client Sentiment and Forward Plan
+    1.​ Client indicated that scheduling inactive days (e.g., Monday-Friday active, weekends inactive)
+        would be beneficial for Tempo.
+    2.​ Client wanted to self-explore the product and follow up after a hands-on review.
+    3.​ Follow-up conversation planned for Monday or Tuesday.
+    4.​ Setup guide and product brief to be shared so the client can begin connecting a few resources.
+Castle Group

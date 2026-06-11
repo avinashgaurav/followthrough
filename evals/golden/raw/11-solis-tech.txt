@@ -1,0 +1,195 @@
+Solis Tech
+ Engagement Type                                              XYZ Product Demonstration
+
+ Client Attendee                                              Gurpreet - Solis Tech (DevOps / Cloud
+                                                              Operations)
+
+ Client Positioning                                           Gold partners with major cloud providers;
+                                                              internal DevOps team performs continuous
+                                                              manual optimization.
+
+ Cloud Environment Referenced                                 AWS (primary for trial), multi-cloud capability
+                                                              discussed
+
+ Client Objective                                             Evaluate XYZ as one of multiple tools under
+                                                              review; reduce credit expenditure.
+
+ Incumbent Approach                                           Manual YAML scripts maintained by internal
+                                                              DevOps team; cloud-native dashboards already in
+                                                              use.
+
+
+
+Here is a detailed transcript of the recording:
+
+00:00 - 00:30​
+Presenter: Just a second. So, we are XYZ company, and under XYZ, we have two products: one is XYZ Day
+and the other product is XYZ. I’ll click on this playground, and this playground is based on dummy data, and I will
+use this for this demo. You can also explore the playground after this call. I’ll click on it.
+
+00:31 - 00:52​
+Presenter: And you'll see we have XYZ Day and XYZ, two products. XYZ Day is all about deployment; it makes you
+production-ready in just 30 minutes. It makes the CI/CD pipeline and automatically sets up observability. So yeah, this
+is a really cool product. Currently, we are focusing on XYZ; people are eventually using XYZ. So, I’ll click on
+XYZ.
+
+00:53 - 01:21​
+Presenter: Once you click on this, you'll land on this "All Resources" page where you'll see the listing of all the
+resources across multiple clouds that you have connected with XYZ. These can be AWS, Azure, GCP, Oracle,
+even local servers as well. And so you can see this resource name and where it belongs—GCP, their instance, and
+which region it is. Now you'll see this "All Tags" and in this "All Tags," it is automatically filled by XYZ. The
+auto-tagging is given automatically, and it helps you find out which resources are being used or if they're just
+forgotten in the environment and piling up the cloud costs. So these are the auto-tagging, and these tags are only
+visible in the XYZ platform, so it is not going to mess up the tagging of GCP or Azure individually. So this is only
+for the XYZ ecosystem.
+
+01:22 - 01:59​
+Presenter: Then we have this "State" where you can just turn off manually, and these resources will be turned off.
+This is what you do manually, but if you wanted to schedule it, you can use this scheduler as well. Once you click on
+it, you'll see these are the default schedules, like nightly shutdown, weekly pause. You can attach it to any one of the
+resources, and you can also create a new scheduler. You can write the name, like "Diwali" or maybe "New Year
+Holiday," and then you write the description, time zone, and you select, like, let's say you're working for weekdays,
+you can just select all the weekdays and you start your work in the morning, let's say 9:00 AM, so you just deselect
+this, and you stop working around 7:00 PM, so you can just deselect this.
+
+02:00 - 03:59​
+Presenter: So this is the red area where the resources will be turned off and this green part where it will be running.
+And once you select all this thing, you can see the estimate savings and number of active and inactive hours. And
+once you create this, it will create whatever name you have given, that thing will be shown here, and you have to
+attach it to any one of these resources and the resources will start working based on that schedule.
+
+So this was about the scheduler, and then we have this "Teams." We have a separate section only for that, I'll come
+to that later. In short, you can make teams, you can assign budget, and you can also give them roles, like this
+complete role-based access control. And then we have this "Cost Budget Status" where you'll see the extent of cost
+savings individually for each resource. So this page is all about individual resources.
+
+Gurpreet: Okay, so just to be clarifying one thing: we are already gold partners with all these cloud companies. So
+all these different dashboards we have proprietary from their end. Right? So my key thing is right now that Simran
+told me that you guys can help me save the credit expenditures. Right? So how does that work? That's what I wanted
+to understand.
+
+Presenter: Okay, for this kind of optimization, your team/company has already made something internally?
+
+Gurpreet: Yeah, so we have our DevOps team and they do optimization continuously.
+
+Presenter: Right, so they would have been writing YAML codes to maintain those scripts and all; a completely
+manual process. And this is where it becomes really easy, and this is one of the few features I’ll come to—the other
+features as well—and that's how we save cloud costs based on these features. I’ll come to that also, "Resource
+Groups." So let's continue.
+
+04:00 - 06:17​
+Presenter: So we have this "Resource Group," and let's say you have 300 resources, you can just group them and
+you can use the same feature like you can shut them manually and you can put a scheduler. The use case of this is,
+let's say you have an application having 20 resources, you can group those 20 resources and you can control that
+application. And if you wanted them to shut down in a certain order—let's say you have frontend and backend
+resources and some databases—you don't want your database to run later because it will crash the application. So
+you can also use this auto-order and custom order. Auto-order is where we'll take care of the order of shutting down
+and turning on the events, and custom order where you'll take care of it individually.
+
+So this is a feature that we have given. And I’ll create a new resource group, but for that, I'll come to this "Team" part.
+I’ll explain "Team," then I will use a team here while creating a new resource group. So here in "Teams," you can
+create multiple teams like QA teams, staging teams. You can write the team name, description, you can add
+members, you can give them any roles—this is a role-based access control. You can give them delete, create, edit
+access. So this is a full control. Once you create it, you'll see your team will be visible here. Any number of teams you
+can create. Now I will create a resource group. These are the already-made resource groups. I’ll create a new one. I'll
+write the name of this group, description, and I'll select the resources. I'll select, like, let's say I'll select three
+resources and then I'll assign that same team that I have created—let's say I am assigning it to the QA team—and I
+am giving them a budget of $1,000. There's an alert also, I'll turn it on and I'll give this 75%. So once they will exceed
+this 75% of the budget, you'll get an instant notification on G-Chat, on Slack, on any channels that you have
+integrated with. I’ll come to that; we have various channels where you can integrate.
+06:18 - 08:30​
+Presenter: So this is what you'll get an instant notification. And then we have "Schedule Override." So if you have
+already scheduled a resource for, like, two hours every day from 6:00 PM to 8:00 PM, and one day you wanted to
+work two more extra hours, so you don't have to go back and create a new schedule; you can just override the
+schedule, you can turn it on and write "2 hours," you can just select two hours. For that particular day, you can work
+for two more extra hours without touching the scheduling event.
+
+So this is all about creating a resource group and managing it. So "Team" I have explained. I'll come to this "Audit
+Log," and here you can see all the actions that you have taken and your team has taken, and how many of them are
+successful and how many of them are failed. It will be seen—you can see this in red color if it is failed—so you can
+also copy this reference ID and share it with us; we will try to resolve it. So this is just a representation of the audit
+log. And you'll also see a graph here—it is not visible because it is dummy data—so you can have a full visibility of
+your teams, like what they are doing and their actions.
+
+08:31 - 09:23​
+Presenter: Now I'll come to this "Recommendation" part. So our XYZ observes your every pattern of resource
+use. It finds out all the forgotten resources and it gives you a notification, it gives you a kind of recommendation, and
+we provide a full description of why we are giving this recommendation, and you can act accordingly. So for the
+optimal use of our product, you have to follow this recommendation to save cloud costs. So this is a feature that
+people are actually giving a good feedback on after onboarding. So there's an AI involved here and you can have a
+complete recommendation for everything from compute engine to Kubernetes and to cloud as well.
+
+09:24 - 09:42​
+Presenter: So this is about recommendation. Now I'll come to this setting. Here you can integrate with the channels
+like, let's say Slack, Microsoft Teams, Google Chat, custom webhooks. You can integrate with any channels, and it's
+really easy. Once you integrate, you'll get an instant notification for everything that is happening.
+
+09:43 - 11:32​
+Presenter: So this is all about settings. I'll come to this overview page. And the overview page where you'll see your
+total cost savings you have made. You can put a filter like 7 days, 30 days, and even three months. And you can also
+see the number of resources that you have—it belongs to multiple clouds as well, it depends on how many clouds
+you have connected with XYZ—so there are total 550 resources, and how many of them are scheduled and not
+scheduled. You can see the number of resource groups, number of teams, and you can also see the scheduler
+events—the total number of scheduler events you can see and how many of them are successful. And ideally, it will
+be 100%; just a representation—like 10% it is showing in red color, again you can share the reference ID, we'll
+resolve the thing. So this is full visibility. At last, we also give you a visibility of total team count, how many teams you
+have created and how many of them are assigned with—are running over budget, under budget, and how many of
+them are assigned with no budget. We also give you the idea of their resource group and resource that the team is
+connected with and how many members are there in a team. Then we have—lastly, we show you the number of
+clouds that you have connected with, like Azure, AWS, GCP, and how many VMs, databases are there. You can have
+a full visibility; like, most of the companies if you ask, they don't know how many virtual machines they have and how
+many databases they have. So apart from this visibility, our product also helps you optimize it and save cloud costs.
+So this is all about XYZ. If you have any questions...
+
+Gurpreet: That's good.
+
+Presenter: You can ask me some questions if you have.
+
+11:33 - 14:02​
+Gurpreet: Okay, so like, do we have a test account or something?
+
+Presenter: Yeah, we have—you can use playground for testing. You can also—we are doing a free POC, like you
+have some two-three resources, you can connect with and you can see the impact. The pricing, we are giving it free
+for a month, and we are charging only after...
+Gurpreet: I would just wanted, like, two to three days for my DevOps team to just to have a look at it. We are
+testing multiple tools for it right now.
+
+Presenter: Definitely, you can try with some of the resources and you can start, yeah.
+
+Gurpreet: Right, so like if we get the access for at least two to three days, we don't want any more access, and
+whatever is the final call, I can come up with you.
+
+Presenter: Right. When we can do this—the next meeting?
+
+Gurpreet: Next meeting we can do it in the next-to-next week. I'll be traveling from tomorrow.
+
+Presenter: Okay. So, the resources that you'll connect—it will be from AWS, Azure, or it can be from multiple?
+
+Gurpreet: Keep it for AWS right now.
+
+Presenter: Okay, so yeah, we will do it. Just if you can specify the date and time, now we can just schedule that
+meeting. It will be automated.
+
+Gurpreet: I'm sorry for that, I cannot confirm it right now because my travel schedule is a bit weird. So give me
+a—like you can call me up in the next-to-next week and then we can definitely finalize the timing and the dates.
+
+Presenter: Next-to-next week, yeah. Fine, it works, yeah. And apart from that, do you need any extra thing from us?
+Like any features document or any—anything, like?
+
+Gurpreet: Yeah, just share me whatever your guidelines are there to use the and optimize the features. So my
+team can have a look through and, you know, go through.
+
+Presenter: I'll share—I'll share a full setup guide with you, and on the mail I'll share with you.
+
+Gurpreet: Yeah, for sure.
+
+Presenter: So I think, yeah, that—that's all. So thank you so much, Gurpreet.
+
+Gurpreet: Same here, buddy, and thank you so much for explaining me quite well.
+
+Presenter: Yeah. Okay then, we'll connect again.
+
+Gurpreet: Yeah, for sure. Thank you.
+
+Presenter: Okay, thank you.
+Secure24

@@ -1,0 +1,451 @@
+Owl (Owl Media Group)
+ Engagement Type                                   XYZ Product Demonstration and Discovery
+
+ Client Attendee                                   Divya - Vice President, Product & Technology
+                                                   (group of companies)
+
+ Portfolio                                         Owl Media (OTT), Aradhya (recently soft-launched
+                                                   spiritual app), Owl (India business recently
+                                                   closed), plus internal communication projects
+
+ Cloud Used                                        AWS only (infrastructure and CDN)
+
+ Approx. Combined Cloud Spend                      ~INR 50 lakh per month (combined across
+                                                   entities, not Owl Media alone)
+
+ Resource Count (approx.)                          ~15-16 resources (Compute Cloud, CDN, S3, etc.)
+
+ Environment Split Visibility                      Client needs to internally check non-prod vs. prod
+                                                   split
+
+
+
+
+Owl
+
+Sure, here is the transcript for the video call:
+
+[00:00] Karan: Hi, hello, hi Divya.
+
+[00:04] Divya: Hi.
+
+[00:07] Maya: Hi Divya, my name is Maya, and I'm heading product at XYZ. So
+XYZ is our company name, and we have two products, XYZ Day and XYZ. So
+basically, what essentially we are trying to solve is we are trying to solve two major issues that
+people face in cloud. First is regarding the infrastructure. When they have to create any
+infrastructure on the cloud, we have automated those processes related to Kubernetes at the
+moment. We are working on other resources as well. Sorry, Kubernetes and the data store,
+some of the data stores. And we're working on VMs, etc. And the other product that we have is
+focused on the cost, basically. What we do is we have this cloud governance tool, XYZ,
+which includes the governance of the resources as well, plus the cost optimization. So we have
+these two products, XYZ Day and XYZ. So and today, we want to talk to you about XYZ
+Night.
+
+[01:21] Divya: Okay.
+
+[01:22] Maya: Okay. Can you maybe just introduce yourself, like what you are handling at the
+moment at Owl Media?
+
+[01:29] Divya: Yeah. So I'm working in the capacity of Vice President for Product and
+Technology for the group of organizations. So we have three applications right away with us. So
+one is Owl Media, which is a known OTT platform you are aware of, for which you have connected
+us. And the other one is Aradhya, which is a spiritual application we have launched recently. So
+yeah, we have soft-launched, but yeah, we are yet to launch it again. And apart from that, we
+had Owl app with us since last six years, which we have recently closed in India. Yeah. So yeah,
+that is still working. And apart from that, we are also working on few communication projects and
+all, which is not in public right away.
+
+[02:27] Maya: Okay. And then, I mean, considering your work, I think you will have a lot of
+cloud usage.
+
+[02:35] Divya: Yes, we have.
+
+[02:37] Maya: Okay. So can I ask you a few questions before we deep dive into the product?
+
+[02:41] Divya: Sure.
+
+[02:43] Maya: Yeah. So which hyperscaler are you using at the moment? Is it AWS, GCP, or
+Azure?
+
+[02:49] Divya: AWS. For our OTT platforms, we are dependent on AWS only.
+
+[02:56] Maya: AWS only. Okay. And for infrastructure, as well as for the CDN, both.
+
+[03:00] Divya: CDN also.
+
+[03:01] Maya: CDN also you are using. And do you, like, can you tell me what is your cloud
+spend approximately? I don't want to know the exact number, but what is the range that you're
+spending on cloud?
+
+[03:15] Divya: So standalone, if you ask about Owl Media, I need to get into documents, but
+overall budget I can say that goes for a month around 50 lakhs or something.
+
+[03:29] Maya: 50 lakhs. Yeah. Yeah, because we are talking to other media companies, so
+they also have something similar, like more than this, like three times or five times.
+
+[03:41] Divya: Yeah, but this is like combined budget. I'm not talking about Owl Media
+standalone. I need, if you need segregated figures, I would need to check into the figures.
+[03:52] Maya: No, no, it's fine. It's fine. Like, approx figure is fine right now. So why I'm asking
+these questions is because Divya, the product XYZ, right, so we are, there are two
+ways through which we do the cost optimization. One is through, through scheduling. So
+basically, what we do is we schedule your non-prod resources automatically, right? And those
+non-prod resources will switch off like at whatever schedule you have set. So for example, your
+team is working from 9:00 AM to 9:00 PM, and after 9:00 PM, you can set the schedule on a
+weekly schedule. And based on that, it will switch on and switch off. So that is mostly for
+non-prod. Right?
+
+[04:36] Divya: Can you please come again? Because I think for our case, it should not apply.
+
+[04:41] Maya: No, but non-prod, for example, Divya, you, like whatever is running on, on
+prod, it will not apply there, right? But your dev team might be working on some projects, right?
+There must be some environments, testing environment, dev environment, or any stage
+environment.
+
+[04:59] Divya: They have sandbox and all. Yeah.
+
+[05:00] Maya: Yeah. So those environments, those are mostly non-prod resources, and those
+are mostly ignored, like we don't switch off those, right? So we don't, so you, your team might
+have some scripts which are running, which can, you know, switch in on and switch off or some
+native scheduler of the, like what AWS or any other hyperscaler. But the coverage that they
+provide and the maintenance that you have to do to manage all those scripts, like, it's huge. It
+consumes a lot of time. Right? So what we do is we provide you a very simple scheduler
+through which you can schedule all these resources.
+
+[05:37] Divya: Okay.
+
+[05:39] Maya: Right. So that's why I wanted to ask you another question, like what is the
+segregation between non-prod and prod? But I guess it would be difficult to find out at the
+moment.
+
+[05:48] Divya: Yeah, actually. On cloud consumption basis, it is like hard to find.
+
+[05:52] Maya: Yeah. So what we do usually is, like once we, you know, once, you know, if, if
+you are comfortable, what you can do is, you can share your CUR report with us. So we do this
+analysis for you. Like how many prod resources and how many are running at what time, at
+what time of the day. And what is the, you know, approximately cost that we can save by
+switching off these resources at what particular time. So we, we do that analysis. But yeah, right
+now, let's not talk about that. So that is the one way of saving the cost, the scheduling part. And
+the second part is that we have these AI recommendations. Okay. That we give based on the
+usage. Okay. So that can be applicable for your prod resources as well.
+
+[06:33] Divya: Okay.
+[06:34] Maya: Right. So one is for non-prod, and other is for prod. But like recommendations
+can work on non-prod as well. So it's, uh, like but like scheduling cannot work on prod for sure.
+Right? So in recommendation, what we do is we help you tag your resources. Uh, the second
+thing is, we help you identify idle resources, orphaned resources, and we do the right-sizing
+recommendations as well. So for example, if your usage has been just 30%, or not more than
+40%, then we will give you right-sizing recommendations. Right? Obviously, you don't have to
+apply those recommendations immediately, but we can give you all the reasoning why we have
+given you whatever right-sizing recommendation we have given. We'll give you proper
+reasoning and will give you the amount that you can save if you apply this recommendation.
+
+[07:17] Divya: Okay. Right.
+
+[07:18] Maya: Right. So these are two ways, uh, through which we, uh, you know, help users
+save cost. Right? Can I, can we start the demo? Like, I can give you the, the demo.
+
+[07:29] Divya: Sure, sure.
+
+[07:30] Maya: One second.
+
+[07:59] Divya: You guys are based out of?
+
+[08:01] Maya: Bangalore.
+
+[08:02] Divya: Okay.
+
+[08:04] Maya: Yeah. Uh, can you see my screen?
+
+[08:06] Divya: Yeah, that is visible.
+
+[08:08] Maya: Uh, we have a presentation also, but I think we don't have that much time.
+That's why I directly jumped into the, you know, the demo.
+
+[08:15] Divya: No worries, no worries. At least I got to know about your product already.
+
+[08:19] Maya: Yeah. Okay. So this is our website, xyz.com, and this is the playground.
+You can also go and explore if you want to do any, you know, you just want to have a look at the
+product. So the, uh, two products that I talked about, XYZ Day is where you can spin up the
+infrastructure within 20 minutes, right? So this is the UI for that. But we're not going to talk about
+this today. So we are going to talk about XYZ.
+
+[08:41] Divya: XYZ.
+
+[08:42] Maya: Yeah. So once, once you connect your cloud account, Divya, so you will
+land on this page, All Resources page. Right? So through, from here, you can connect your
+cloud account. So this is the playground, this is on the dummy data, right? So what you can do
+is, you can connect your cloud account and you can connect multiple cloud accounts through
+different hyperscalers. So, so that is the one thing that we provide, the unified view of the
+resources. And once you connect your cloud account, you will see all your resources here.
+Right? So if, if you see these resources, right, this is the name of the resource. And you see
+these icons, this is the GCP. So this icon will tell you whether this resource is from GCP, Azure,
+or AWS. And this icon will tell you what is the type of the resource this is. Whether it's
+Kubernetes, whether it's SQL, whether it's another just VM. Right? And this is the region where
+it is spun up. So these are three things that we provide, and this is the name of the resources.
+And these are the tags, basically. So if you have tagged your resources on the cloud accounts,
+you will see all the tags here. Right? For example, if you have, mostly people, they tag prod
+resources very carefully, but all the non-prod resources they have not tagged properly. Right?
+So these are the tags. To enable them to use this platform, what we have done, we have, what
+we have done is, we have provided you this feature, which is XYZ, through which we help
+you tag the resource. Right? So what we do is, how we tag, how we recommend any tag, right?
+So what we do is, we read the metadata of the resources, and based on the metadata, we
+provide you some recommendations, essential tags. And again, you can review these tags, and
+you can apply if you, if you think that these will be helpful or these are the correct tags that you
+can apply to these resources.
+
+[10:33] Divya: Okay. Right.
+
+[10:34] Maya: Right? So these are the tag suggestions that we give. So you can, you know,
+just select one or two or just none of them and you can apply or cancel it. Right? So this is to
+help you tag your resources. And we are not going to, you know, sync it back to your cloud
+resources, sorry, cloud account, because we don't want to, you know, create a lot of tags from
+our side to your cloud account, because we don't want to, you know, make it look like a mess on
+your cloud account. So these tags are just for XYZ. And the third column is that, this is the
+toggle, right? The state of the resource. So basically, green means that your resource is
+switched on, it is in the running state. And if it is grey, it means this resource is off. It's not
+running. Right? So for example, if you have just 10 or 15 resources and you want to handle
+them individually, you can use this toggle to switch on and switch off the resource. Now we give
+you this message to make sure that you don't switch off the any of the production resource.
+
+[11:34] Divya: Right.
+
+[11:35] Maya: Right? So that you can read carefully and then do the action, then you can
+apply the action. So right, so this is the toggle button to switch on and switch off. And to, you
+know, automate this process, right, we have this scheduler. So if you see the scheduler, these
+are the, you know, each day of the week. And if you see the scheduler, this scheduler means,
+red means that these resources will be switched on on the weekdays and working on the
+weekends. But this is, I mean, this is just for the display purpose. What you can do is, you can
+create any schedule or if there are already some schedules and you want to attach those
+schedules to this resource, you can do that by attaching it. But for new schedule, what you can
+do is you can click on new schedule, you can name it, and you can select the time zone. So for
+example, if your team is working or your some application which are not working in Indian time
+zone, then you can select different time zone for the schedule to run. Right? Uh, you can add
+description. And what you can do is, this is these small capsules, right, this is 15 minutes of an
+hour. Right? For example, if your team is working from 9:00 to 6:00 PM. This is just an example.
+And from Monday to Friday. So you can do this thing, you can select these hours and you can
+click on create.
+
+[12:50] Divya: Right.
+
+[12:51] Maya: So basically, red means that your resources will be switched on at this point of
+time and green means they will be running. So when you select these, these hours, right, so you
+will see this estimated savings if you apply this schedule to your any of the resources or
+resource groups. And these are the number of active hours and non-active hours, inactive
+hours. So you can create, and you can attach this schedule to any of the resource. It will not, it
+will just work but, yeah. So this is the scheduler, scheduler part that I was talking to you about
+initially, that we can save cost from this, the cost saving is from 20 to 60% depending on how
+many resources you have and how many hours you want to switch off these resources.
+
+[13:39] Divya: Maya, I'm losing your voice.
+
+[13:42] Maya: Hello? Is it better now?
+
+[13:44] Divya: Oh, yeah.
+
+[13:45] Maya: Yeah. Sorry. Uh, should I repeat or you got the?
+
+[13:49] Divya: Scheduler I, I got that.
+
+[13:51] Maya: Okay. So that was the scheduler. So what you can do is, for example, if you
+want to govern your resources through the platform, what you can do is, for example, if some
+resource is there, if some very big resource is there, you want to assign any team who can
+manage those resources, you can, you know, select the team. And this is the cost and budget.
+Basically, cost is what is the cost of running this resource, that is the cost, and budget is
+basically, if you want to assign any budget to any team member or any resource. So for
+example, you have bunch of people who are using some of the resources, like four or five
+resources, and you want to make sure that those are running within the budget. So it does not
+mean that if your resources are consumed, like has consumed the budget, it will switch off. But it
+will give you a notification that this, this much percentage of your budget has been consumed.
+So basically, it will help you in budgeting as well.
+
+[14:40] Divya: Okay.
+
+[14:41] Maya: Yeah. So how, how can you configure all these things? So if you click on
+action, so this is where you can attach the team. So we have a separate tab also through which
+you can create the team and, you know, assign the different roles to the team. But you can from,
+you can do it from here as well. But if you have already created the team, you can just select it
+and you can attach the team. And the second part is, you can assign the budget. And if you
+want to get the alerts of this budget, for example, you can configure it here. For example, if you
+want to get an alert at 80%. You know, maybe then you can advise your team to use it a little
+mindfully, then you can, you know, notify them. Or these notification can go to a group also,
+where everybody can see that this much budget has been consumed. Right? Now, where do
+you get this notification? So there are three places that we have already configured: one is
+Slack, Teams, and Google Chat. But there is, if there is any custom webhook that you want to
+configure, that also you can do.
+
+[15:42] Divya: Okay.
+
+[15:43] Maya: Right? Now the other very important feature that we have is this Enable
+Scheduler Override. For example, you have set the schedule and the schedule is running. But
+at, for example, on Wednesday or Friday, if your team wants to work till 8:00 PM or maybe
+beyond the schedule that you have set. What you can do is, you can enable this scheduler
+override and you can select the number of minute it should, it should be allowed to, that this
+schedule should be allowed to override. It can be in days, it can be in hours as well.
+
+[16:11] Divya: Okay.
+
+[16:12] Maya: So basically, as a admin, you can do this configuration, and if somebody in
+your team wants to override this for a 30 minutes, 60 minutes, or one hour, you know, 2 hours,
+then they should be able to do that. But you are going to, you can define this limit.
+
+[16:25] Divya: Okay.
+
+[16:26] Maya: Updated and this configuration will be attached to this schedule, uh, this
+resource. Right? Uh, and this is related to the individual resources. This configuration is related
+to individual resources. But for example, if you have hundreds of resources, right, and one
+application is using 10 resources or 15 resources and you want to group this together and, you
+know, manage it in one go. So we have Resource Group. You can create Resource Group, you
+can name it as per your application, as per your environment, or any POC that you are doing or
+any marketing campaign that you are doing. That depends on the use case. So you can select
+the resources and these resources will remain in just one Resource Group. You can assign the
+team and you can assign, so whatever configuration we have done, that we can do on individual
+resources, you can do on the group as well. The difference is, so whatever you define on the
+group, all the resources within that group will have the similar configuration.
+
+[17:27] Divya: Okay. Any questions?
+
+[17:28] Divya: I'm good so far.
+
+[17:31] Maya: Okay. So another very important feature that we have is, for example, you have
+application and database in one group, right? And you want to make sure that your application,
+your database is switched on first, right, when, they, when the entire group is switching on. Your
+database should switch on first and the application should switch off second, because you don't
+want any failed request from your application. So this type of order that you can do. So we have
+this auto order that we do from back-end, from our side, but if you have any, you know, if you
+want any sequence, any particular sequence, that also you can do by selecting custom order
+and you can drag and drop the resources in this group.
+
+[18:11] Divya: Okay.
+
+[18:12] Maya: Yeah. So these are different things that you can do on a group. And this is
+simple, very, this is Teams. It is pretty simple, you can create the team and you can assign
+different, like members, different roles. And if you want to create any custom role, you can
+define that as well.
+
+[18:30] Divya: Okay.
+
+[18:31] Maya: Yeah. So this is Teams and Audit Logs, pretty straightforward, that whatever
+has happened on the product, on the platform, you will see all the logs here. And this green and
+red means because if there are some requests which has failed, you will see red marker.
+
+[18:48] Divya: Okay.
+
+[18:49] Maya: Yeah. And the other, the other way of saving the cost is Recommendations. So
+if you click on Recommendation, we'll give you recommendations on Right-sizing. So this is the
+right-sizing, this is the tag that you will see, and if you will see this, this is again right-sizing, but
+if I tell you something, okay, we don't have any other thing. But what we do is we identify the idle
+resources and the orphaned resources as well. So if you review this, right, you will see all the
+reasoning. This has not the reasoning, let me just pick up something else. Yeah. So if you see,
+so this is the current cost of this and saving opportunity is 100% if you right-size this. So you will
+see all the summary, why we have recommended and what is the reason behind it. And we also
+give you remediation steps. So for example, if you want to apply this recommendation through
+your CLI, you can do that as well. And we are working on, so this is across your storage,
+compute, Kubernetes, and Cloud SQL. And we're working on more, you know, to cover as many
+right-sizing opportunities as we can through our platform.
+
+[20:02] Divya: Right.
+
+[20:04] Maya: Uh, then we have Settings. So you can add integration, you can add different
+integration: Teams, Google Chat, Slack, or any custom webhook. Uh, then we finally have
+Overview Dashboard. So we are working on the dashboard, so it will be completely different. So
+this is the total savings that you, that this is the savings that you have incurred through our
+platform. Uh, and this is the cost up till whatever date. And these are the number of resources.
+So what we do is, Divya, we scan every 15 minutes. Sorry, sync every 15 minutes. So if you
+have added any new resources, you know, during the day or in this 15 minutes, we will see plus
+sign or minus sign. Uh, either added or deleted. Right? And you will, we will tell you like 30% of
+your resources are scheduled and there are still resources which you can schedule. And these
+are the Resource Group, if you have created any Resource Group, and these are the Team. Uh,
+and again, for example, if you have resources, we'll tell you what is the savings and what is the
+total cost of this at particular time or day of the month. For example, 7 days, within 7 days and
+30 days, what is the savings that you have done.
+[21:18] Divya: Okay.
+
+[21:19] Maya: Yeah. And Resource Group, what we do is we give you the different, we'll give
+you what is the cost across Storage, Networking, and Databases, and Compute. That depends
+on the resources which are there in the resource group. So for example, if there are any
+networking resources or database resources or compute resources, we'll give you segregation
+of those. Again, this is a Audit Logs, this is the success rate. For example, what happens
+sometimes is when we switch on any schedule, switch on any resource, right? Um, those
+requests are failed. It can be because of us, but it can be because of the hyperscaler as well. So
+we'll tell you the success rate and what is the reason behind whatever has failed. Again, this is
+Team Count. And if you have assigned budget, which teams are under budget, over budget, or
+no budget at all. Right? And this is Cloud Accounts. For example, if you have added multiple
+cloud accounts, you will see like how many of, like in those, in that particular cloud account, how
+many are VMs, how many are databases, and how many active resources are there within that
+cloud account.
+
+[22:34] Divya: Okay.
+
+[22:35] Maya: Yeah. So this is it about XYZ, Divya.
+
+[22:39] Divya: How would commercials go, Maya?
+
+[22:42] Maya: So it is, uh, depends on the number of resources. Uh, it is not based on users.
+So, uh, any number of users can use this platform. But it depends on how many number of
+resources we are governing from the platform.
+
+[22:57] Divya: Okay. And, um, what would be the process? How would you calculate it?
+
+[23:05] Maya: So basically, what we do is, uh, we, so I'll tell you like how do we usually go
+about all these things. So we'll, so if you're okay, so we can do the POC for like 2 to 4 weeks.
+And that depends on how many cloud accounts and how many number of resources that you
+have. I'm not sure like what is the number, if you have any number at the moment? Like do you
+know how many resources that you have on the cloud accounts?
+
+[23:31] Divya: Oh, by resources you mean like a Compute Cloud, then CDN, then S3, and
+all?
+
+[23:38] Maya: Yeah.
+
+[23:39] Divya: So we must be having approximately 15-16 resources there.
+
+[23:44] Maya: 15-16 resources.
+
+[23:45] Divya: Yep.
+
+[23:46] Maya: That's it?
+[23:47] Divya: Yeah.
+
+[23:48] Maya: Okay. Okay. Yeah. So for up to 10 resources, it's free. Right? And beyond that,
+it depends, like it start from $5 per month, but that also depends on how many resources that
+we are managing also through the platform. That we can work it out.
+
+[24:06] Divya: Okay. But that, that would multiply, right, because we have so many accounts
+there?
+
+[24:12] Maya: Yeah, so that depends, right? I think you would fall under enterprise. That also
+depends, like if, so we do a POC just to find out how much our platform is useful to you. If we
+are able to save any cost for you or not. But whatever we are going to cost, the amount that we
+are going to charge from you will not exceed 20% of that.
+
+[24:36] Divya: Hmm.
+
+[24:37] Maya: Yeah, that we make sure.
+
+[24:39] Divya: Yeah, yeah, that is obviously the main thing.
+
+[24:41] Maya: Yeah.
+
+[24:42] Divya: Okay. Good, Maya. Let me know, let me have an internal discussion over
+this with my team. I'll get back to you on this.
+
+[24:54] Maya: Sure. So did you find it useful or did you find it interesting?
+
+[24:59] Divya: Obviously, it is useful, but I will see, so the main part is I'll check how many
+resources are there in, like, non-prod section and prod section. That is the main segregation for
+us, basically.
+
+[25:13] Maya: Okay. Okay.
+
+[25:15] Divya: Okay.
+
+[25:16] Maya: Thank you, Divya. Thank you so much for your time.
+
+[25:19] Divya: Thank you, Maya. It was a lovely presentation.
+
+[25:21] Maya: Thank you.
+
+[25:22] Divya: Bye.
+
+[25:23] Maya: Bye-bye.
+QuadNet Wireless Solutions

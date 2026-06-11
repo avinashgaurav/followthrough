@@ -1,0 +1,124 @@
+Sprout
+ Engagement Type                                     Follow-up Product Demonstration after Exhibition
+                                                     Meeting
+
+ Client Attendee                                     Mohan - Sprout (Bangalore)
+
+ Prior Touchpoint                                    Brief exhibition / conference demo two days
+                                                     earlier
+
+ Cloud Used                                          AWS (primary) and Azure
+
+ Database                                            MongoDB hosted on AWS
+
+ Approx. Resource Count                              Fewer than 50
+
+ Resource Management                                 Used via third-party agents (client does not
+                                                     directly operate all resources)
+
+ Target Start Date                                   Monday (client commitment for sign-up)
+
+
+
+
+1. Context and Setup
+   1.​ Call conducted on a non-working day; Mohan joined while on the road, apologizing for ambient
+       noise.
+   2.​ Prior day's interaction was a short exhibition demo; this session positioned as the proper,
+       educational walkthrough.
+   3.​ Two distinct sessions framed: (1) capability overview (already done at the exhibition) and (2)
+       learning / education session (this call).
+
+2. Cloud Context
+   1.​ Hyperscalers: AWS (primary) and Azure.
+   2.​ Database: MongoDB, hosted on AWS.
+   3.​ Operational Model: Mohan does not personally operate all AWS resources; they are managed via
+       agents - one of his drivers for wanting third-party cost visibility.
+   4.​ Resource Count: Fewer than 50 resources across his AWS footprint.
+
+3. XYZ Walkthrough - What Was Shown
+Cloud Account Connection
+    1.​ Supports AWS, Azure, and GCP with unified multi-account view.
+    2.​ Columns: name, cloud, type, region.
+AI Tagging (XYZ)
+   1.​ Metadata-driven tag recommendations (who spun up the resource, prod vs. non-prod
+       inference).
+   2.​ Tags are advisory - apply or ignore.
+Scheduler
+    1.​ Premise: 40-50% of non-prod resources are still paid for when idle.
+    2.​ Toggle + time-zone-aware scheduler (example: 9 AM - 6 PM Mon-Fri).
+    3.​ 20-60% savings range based on non-prod mix.
+    4.​ Covers VMs, databases, Kubernetes clusters, and Lambda functions.
+Cost, Budget, Alerts
+   1.​ Cost of running shown per resource (exact cost when billing permissions are granted; rack rate
+       otherwise).
+   2.​ Budget is advisory; alerts configurable (example threshold: 80%).
+   3.​ Channels: Google Chat, Teams, Slack, plus custom webhook.
+Scheduler Override
+   1.​ Admin-defined override (example: 4 hours) for ad-hoc evening work or releases.
+Resource Groups
+   1.​ Group 50 resources by application, POC or environment; apply configuration to the whole group.
+   2.​ Auto Order and Custom Order (drag-and-drop); Start Delay / Stop Delay.
+Teams
+   1.​ Three built-in roles + custom role support; invite by email.
+Audit Logs
+   1.​ Green / red indicators for all actions on the platform.
+Recommendations
+   1.​ Delivered within 2-3 days after cloud account connection.
+   2.​ Types: idle resource detection, right-sizing, storage lifecycle policy suggestions.
+   3.​ Reasoning + remediation steps for each recommendation.
+   4.​ Coverage: storage (including S3 lifecycle), compute, Kubernetes, databases.
+   5.​ Upcoming: in-platform "Apply" button to open CLI and walk through apply steps.
+Overview Dashboard
+    1.​ Total savings and total cost to date.
+    2.​ 15-minute scan cadence with resource / group deltas.
+    3.​ Segregation of cost by storage / network / database / compute.
+    4.​ Scheduler success rate; team count by over / under / no-budget; per-cloud VM / database /
+        resource totals.
+4. Detailed Security / Data-Access Q&A
+Database Access Boundary
+   1.​ Mohan asked whether XYZ can query his database, enumerate collections / tables, or read
+       documents.
+   2.​ Response: No. XYZ cannot query, read contents, create, or delete database objects.
+   3.​ Visibility is limited to the database name / handle at the resource-metadata level and lifecycle
+       operations (start / stop).
+Connection String
+   1.​ XYZ does not request the database connection string.
+Metric Access
+    1.​ XYZ reads metrics such as storage size (used vs. unused) and CPU utilization to drive
+        recommendations.
+    2.​ These are metric endpoints, not data-layer reads - the actual database content remains a black
+        box to XYZ.
+Setup Guide Review
+    1.​ Gaurav shared the AWS setup guide live on the call.
+    2.​ AWS permissions summary displayed: EC2 (Start / Stop + Describe for recommendations), RDS
+        (Start / Stop), EKS, Lambda (ListFunctions), ECS (List / Describe Services), S3 (read-only style
+        permissions).
+    3.​ No Create, Delete, or mutate-beyond-lifecycle permissions are taken.
+    4.​ Script snippets for each service shown in the setup doc.
+
+5. Commercial Framing
+    1.​ Trial: Free of cost.
+    2.​ Free Tier: Up to 10 resources free, including during production after the trial.
+    3.​ Charging Structure: Two supported models - per-resource, or platform fee, or a combination of
+        both; structure depends on number of resources and number of connected cloud accounts.
+    4.​ Indicative Price Point: Approximately INR 7,000-10,000 per month for 10 chargeable resources
+        inclusive of platform fee.
+    5.​ Value Alignment: If savings do not cover the fee, pricing is negotiable.
+    6.​ Trial Cloud Coverage: All cloud accounts can be connected during trial at no cost.
+    7.​ Trial Length: One month typically sufficient; 3-4 weeks a reasonable window.
+
+6. Client Commitments
+    1.​ Mohan will sign up on the XYZ platform and connect his AWS account first (Azure follow-on).
+    2.​ Latest by Monday for sign-up; a half-hour onboarding slot offered.
+    3.​ XYZ to share AWS and Azure setup guides and to walk through the connection live if desired.
+
+7. Observations
+1.​ Mohan is educationally-minded - he repeatedly asked for layer-by-layer clarity on what XYZ
+    can and cannot see inside his cloud account.
+2.​ The single most important moment of the call was the live walk-through of the AWS setup guide
+    showing only Start / Stop + Describe / List permissions - this visibly resolved his data-access
+    concerns.
+3.​ Value-alignment statement (cap on charge relative to realized savings) is likely to be decisive in
+    the post-trial decision.
+Herald Media

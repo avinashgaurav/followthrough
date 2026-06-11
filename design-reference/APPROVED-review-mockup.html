@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en" data-variant="linear-nvidia">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Review — Variant A · Linear + Nvidia green</title>
+<style>
+  :root{
+    --canvas:#010102; --p1:#0f1011; --p2:#141516; --p3:#18191a;
+    --line:#23252a; --line-soft:#1b1d21;
+    --ink:#f7f8f8; --ink-muted:#8a8f98; --ink-subtle:#62666d;
+    --accent:#76b900; --accent-ink:#04130a; --danger:#e5484d;
+    --r:2px; --font:"Inter",-apple-system,system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--canvas);color:var(--ink);font-family:var(--font);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .app{display:grid;grid-template-columns:208px 1fr;height:100vh}
+  /* sidebar */
+  .side{background:var(--canvas);border-right:1px solid var(--line);padding:14px 10px;display:flex;flex-direction:column;gap:2px}
+  .brand{display:flex;align-items:center;gap:8px;padding:6px 8px 16px}
+  .brand .sq{width:14px;height:14px;background:var(--accent);border-radius:1px}
+  .brand b{font-size:13px;letter-spacing:-.01em}
+  .navlbl{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-subtle);padding:14px 8px 6px}
+  .nav{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:var(--r);color:var(--ink-muted);text-decoration:none;font-size:12.5px;cursor:pointer}
+  .nav:hover{background:var(--p1);color:var(--ink)}
+  .nav.active{background:var(--p2);color:var(--ink)}
+  .nav.active .dot{background:var(--accent)}
+  .nav .dot{width:6px;height:6px;border-radius:1px;background:var(--ink-subtle)}
+  /* main */
+  .main{display:flex;flex-direction:column;min-width:0}
+  .top{height:48px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:0 16px;flex:none}
+  .search{flex:1;max-width:380px;display:flex;align-items:center;gap:8px;background:var(--p1);border:1px solid var(--line);border-radius:var(--r);padding:6px 10px;color:var(--ink-subtle);font-size:12px}
+  .top .right{margin-left:auto;display:flex;align-items:center;gap:10px;color:var(--ink-muted);font-size:12px}
+  .avatar{width:24px;height:24px;border-radius:1px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:600;font-size:11px}
+  .head{padding:16px 18px 12px;border-bottom:1px solid var(--line-soft)}
+  .head h1{margin:0;font-size:19px;font-weight:600;letter-spacing:-.02em}
+  .head p{margin:3px 0 0;color:var(--ink-muted);font-size:12.5px}
+  /* split */
+  .split{flex:1;display:grid;grid-template-columns:340px 1fr;min-height:0}
+  .queue{border-right:1px solid var(--line);overflow:auto}
+  .qgroup{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-subtle);padding:14px 16px 7px;display:flex;justify-content:space-between}
+  .qgroup .n{color:var(--accent)}
+  .card{padding:11px 16px;border-bottom:1px solid var(--line-soft);cursor:pointer;border-left:2px solid transparent}
+  .card:hover{background:var(--p1)}
+  .card.sel{background:var(--p1);border-left-color:var(--accent)}
+  .card .t{font-size:13px;line-height:1.4;margin-bottom:6px}
+  .card .meta{display:flex;align-items:center;gap:8px;color:var(--ink-subtle);font-size:11px}
+  .pill{font-family:var(--mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line);border-radius:1px;padding:2px 5px;color:var(--ink-muted)}
+  .pill.feat{border-color:#2c4a16;color:#9ccb5e}
+  .pill.ins{border-color:#26343f;color:#7fa9c9}
+  /* detail */
+  .detail{overflow:auto;padding:20px 24px;position:relative}
+  .detail::before{content:"";position:absolute;top:14px;right:14px;width:10px;height:10px;background:var(--accent);border-radius:1px}
+  .states{display:flex;gap:5px;margin-bottom:16px;flex-wrap:wrap}
+  .st{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:3px 7px;border-radius:1px;border:1px solid var(--line);color:var(--ink-subtle)}
+  .st.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+  .st.done{border-color:#2c4a16;color:#9ccb5e}
+  .htitle{font-size:18px;font-weight:600;letter-spacing:-.02em;margin:0 0 4px;max-width:680px;line-height:1.3}
+  .hsub{color:var(--ink-subtle);font-size:11.5px;font-family:var(--mono);margin-bottom:18px}
+  .lbl{font-family:var(--mono);font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-muted);margin:18px 0 7px}
+  .quote{background:var(--p1);border:1px solid var(--line);border-left:2px solid var(--accent);border-radius:var(--r);padding:12px 14px;font-style:italic;color:#d0d6e0;font-size:13.5px;line-height:1.55;max-width:680px}
+  .quote .by{display:block;margin-top:8px;font-style:normal;font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--ink-subtle)}
+  .body{background:var(--p1);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;color:var(--ink);font-size:13px;line-height:1.6;max-width:680px}
+  .triage{display:flex;gap:18px;flex-wrap:wrap;margin-top:8px;max-width:680px}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field label{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-muted)}
+  .ctrl{background:var(--p2);border:1px solid var(--line);border-radius:var(--r);padding:6px 9px;color:var(--ink);font-size:12px;min-width:140px}
+  .chips{display:flex;gap:5px;align-items:center}
+  .chip{background:var(--p2);border:1px solid var(--line);border-radius:1px;padding:4px 8px;font-size:11px;color:var(--ink-muted)}
+  .aibox{margin-top:10px;background:rgba(118,185,0,.06);border:1px solid #2c4a16;border-radius:var(--r);padding:9px 12px;font-size:11.5px;color:#9ccb5e;max-width:680px}
+  .aibox b{color:#bfe38c}
+  .actions{display:flex;gap:8px;align-items:center;margin-top:24px;padding-top:16px;border-top:1px solid var(--line-soft);max-width:680px}
+  .btn{border-radius:var(--r);padding:8px 14px;font-size:12.5px;font-weight:500;cursor:pointer;border:1px solid var(--line);background:transparent;color:var(--ink)}
+  .btn:hover{background:var(--p2)}
+  .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+  .btn.ghost{color:var(--ink-muted)}
+  .btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+  .spacer{flex:1}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><span class="sq"></span><b>Insights Engine</b></div>
+    <div class="navlbl">Pipeline</div>
+    <a class="nav"><span class="dot"></span>Capture</a>
+    <a class="nav active"><span class="dot"></span>Review</a>
+    <a class="nav"><span class="dot"></span>Insights</a>
+    <a class="nav"><span class="dot"></span>Clients</a>
+    <a class="nav"><span class="dot"></span>Proof</a>
+    <div class="navlbl">Admin</div>
+    <a class="nav"><span class="dot"></span>Numbers</a>
+    <a class="nav"><span class="dot"></span>Settings</a>
+  </aside>
+  <div class="main">
+    <div class="top">
+      <div class="search">⌕ Search insights, clients, transcripts</div>
+      <div class="right"><span>Avinash</span><span class="avatar">A</span></div>
+    </div>
+    <div class="head">
+      <h1>Review</h1>
+      <p>Decide what each insight is and polish it before it moves.</p>
+    </div>
+    <div class="split">
+      <div class="queue">
+        <div class="qgroup"><span>New from AI — needs your eyes</span><span class="n">7</span></div>
+        <div class="card sel">
+          <div class="t">Tag-policy sync from AWS Organizations is the adoption gateway</div>
+          <div class="meta"><span class="pill feat">feature</span><span>Acme Life</span><span>·</span><span>2d</span></div>
+        </div>
+        <div class="card">
+          <div class="t">Business vs engineering conflict over cost accountability</div>
+          <div class="meta"><span class="pill ins">insight</span><span>Acme Life</span><span>·</span><span>2d</span></div>
+        </div>
+        <div class="card">
+          <div class="t">POC offered with no upfront fee, paid on proven savings</div>
+          <div class="meta"><span class="pill ins">insight</span><span>Acme Life</span><span>·</span><span>2d</span></div>
+        </div>
+        <div class="card">
+          <div class="t">Platform latency on portal load was called out</div>
+          <div class="meta"><span class="pill feat">complaint</span><span>Acme Life</span><span>·</span><span>2d</span></div>
+        </div>
+        <div class="qgroup"><span>Triaged — needs final wording</span><span class="n">3</span></div>
+        <div class="card">
+          <div class="t">Weekly cost anomaly digest emails requested</div>
+          <div class="meta"><span class="pill feat">feature</span><span>Acme Life</span><span>·</span><span>1d</span></div>
+        </div>
+      </div>
+      <div class="detail">
+        <div class="states">
+          <span class="st on">Extracted</span>
+          <span class="st">Triaged</span>
+          <span class="st">Finalized</span>
+          <span class="st">Ticketed</span>
+          <span class="st">Shipped</span>
+          <span class="st">Client told</span>
+        </div>
+        <h2 class="htitle">Tag-policy sync from AWS Organizations is the adoption gateway</h2>
+        <div class="hsub">INS-7K2QP4 · Acme Life · meeting 1 · Apr 17, 2026</div>
+
+        <div class="lbl">What the client actually said</div>
+        <div class="quote">
+          We need the tagging rules to come from our AWS org policies, not another rulebook we have to keep in sync.
+          <span class="by">Suresh, Infrastructure Lead · Acme Life · meeting 1</span>
+        </div>
+
+        <div class="lbl">Summary (edit before you finalize)</div>
+        <div class="body" contenteditable="true">Their cost allocation is blocked on tagging compliance. They want the platform to read mandatory tag rules (Environment, Application, Owner) directly from their AWS Organization SCPs and Tag Policies instead of maintaining a second rulebook. Until tagging is solved they cannot trust any cost-attribution feature, so this single capability gates the rest of the product's value for them.</div>
+
+        <div class="aibox"><b>AI suggests:</b> track engineering · owner product · person Imran &nbsp;<span style="color:var(--accent);cursor:pointer">Apply →</span></div>
+
+        <div class="lbl">Route it</div>
+        <div class="triage">
+          <div class="field"><label>Track</label><select class="ctrl"><option>engineering</option><option>product polish</option><option>marketing</option><option>other</option></select></div>
+          <div class="field"><label>Owner</label><select class="ctrl"><option>Pick a person</option><option>Imran</option><option>Avinash</option></select></div>
+          <div class="field"><label>Tags</label><div class="chips"><span class="chip">tagging</span><span class="chip">multi-cloud</span><span class="chip">+ add</span></div></div>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" title="Locks the wording. After this it can become a ticket or be marked shipped.">Finalize wording</button>
+          <button class="btn ghost danger" title="Wrong or not useful. It stays on record but stops here.">Reject</button>
+          <div class="spacer"></div>
+          <button class="btn" title="Draft a GitHub issue from this. You choose where to create it.">Draft ticket →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

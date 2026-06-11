@@ -1,0 +1,97 @@
+{
+  "transcript_file": "evals/golden/raw/13-plink.txt",
+  "client_name": "Plink",
+  "drafted_at_note": "corrected 2026-06-11 via 3-lens adversarial verification (refute/completeness/typecheck); founder spot-check welcome",
+  "expected_items": [
+    {
+      "item_type": "feature_request",
+      "title": "Single-pane unified ops panel to replace Azure console + manual RDP",
+      "body": "Nitin wants one unified 'XYZ panel' so his team never has to log into the Azure console or RDP into individual VMs to check state. The underlying job is consolidating fragmented infra visibility (Azure, on-prem, Hyper-V) into a single operational view. This matters because it signals he is evaluating XYZ as a unified monitoring console, not a cost tool, which stretches XYZ far beyond its current scope. If the team chases this it risks scope creep; if it ignores it the deal may not fit.",
+      "quote": "he wants a single unified panel to monitor everything (referred to as \"the XYZ panel\")."
+    },
+    {
+      "item_type": "feature_request",
+      "title": "Deep in-VM monitoring via PowerShell: disk health, telemetry, ransomware",
+      "body": "Nitin wants XYZ to run PowerShell scripts inside each Windows VM to capture performance metrics, disk sizing discrepancies (512 GB provisioned vs. 480-490 GB actual after OS install), disk health, and malware/ransomware indicators. The job is detecting hardware wear and security threats from inside the guest OS, not just at the cloud-resource layer. This is well outside XYZ's current capability and represents a major engineering commitment if pursued. It is a key signal that his true need is infrastructure/security monitoring rather than cost governance.",
+      "quote": "Running a PowerShell script inside each Windows VM to capture\n       performance metrics, disk sizing (e.g., 512 GB vs. actual 480-490 GB post-OS install), disk health,\n       and malware / ransomware indicators."
+    },
+    {
+      "item_type": "feature_request",
+      "title": "Access alerts for Azure console and RDP login/logout events",
+      "body": "Nitin wants login/logout alerts for the Azure console as well as RDP login/logout events on both Azure VMs and on-prem servers. The job here is access-audit and security visibility — knowing who connected to what and when. This is an access-security feature distinct from cost optimization and would require new auditing capabilities. Worth flagging to product as a recurring security-adjacent ask.",
+      "quote": "Login / logout alerts for Azure console and RDP login / logout events for\n       both Azure VMs and on-prem servers."
+    },
+    {
+      "item_type": "feature_request",
+      "title": "On-prem Dell iDRAC hardware management streamed into the panel",
+      "body": "Nitin wants iDRAC functions — BIOS/boot updates, RAID config, networking, CPU temperature, processor utilization, reboot controls, deployment pushes, and backups — surfaced inside the same unified panel. This is bare-metal hardware lifecycle management, an entirely different domain from cloud cost. Integrating physical server management is a substantial out-of-scope ask that pushes XYZ into DCIM/server-ops territory. It reinforces that this prospect's needs largely sit outside the product.",
+      "quote": "Wants iDRAC (BIOS / boot updates, RAID config, networking,\n       CPU temperature, processor utilization, reboot controls, deployment pushes, backups) streamed\n       into the same panel."
+    },
+    {
+      "item_type": "feature_request",
+      "title": "Hyper-V awareness: detect hypervisor and enumerate guest OSes",
+      "body": "Nitin wants visibility into whether Hyper-V is running on a given physical server and which guest OSes (Linux, Windows, Mac-based) exist inside it. The job is mapping the virtualization topology on mixed-OS clusters from within the unified panel. This is hypervisor-level introspection XYZ does not do today. Another data point that his expectation is a full infra monitoring platform.",
+      "quote": "Nitin wants visibility into whether Hyper-V is running and\n       which guest OSes exist inside."
+    },
+    {
+      "item_type": "feature_request",
+      "title": "DR transaction-flow visibility across data centers (OpManager-style)",
+      "body": "Nitin wants to track application transaction flow end-to-end across multiple DR data centers in a single pane, explicitly referencing Op Manager-style visibility. The job is monitoring application/transaction health across geographically distributed DR sites. The explicit OpManager comparison signals he is benchmarking XYZ against an incumbent monitoring tool, which sets expectations far from cost governance. This naming is a key competitive and scoping signal.",
+      "quote": "Multiple DR data centers, tracking application transaction\n       flow, end-to-end in a single pane - referenced as Op Manager-style visibility."
+    },
+    {
+      "item_type": "key_insight",
+      "title": "Prospect's true need is unified infra monitoring, not cost governance",
+      "body": "The team's own observation is that Nitin wants an infrastructure monitoring / unified ops platform in SCOM / ManageEngine OpManager territory, not a cloud cost governance tool. XYZ only overlaps on the 'see all resources and their state' surface; most asks (in-VM telemetry, iDRAC, Hyper-V, DR transaction tracking) are out of scope. This is the central qualification finding of the call and should shape whether sales continues to pursue. Misreading this as a buildable roadmap could waste significant engineering effort on a poor-fit account.",
+      "quote": "Client's true need is closer to an infrastructure monitoring / unified ops platform (SCOM /\n       ManageEngine OpManager territory) than a pure cloud cost governance tool."
+    },
+    {
+      "item_type": "key_insight",
+      "title": "Confidentiality policy blocks screen sharing — slows fit assessment",
+      "body": "Company policy prevents Nitin from sharing internal screens, which forced the team to work off verbal descriptions and share an Azure setup guide as a workaround. This cultural/compliance constraint slows the team's ability to assess product fit and could persist into onboarding if he becomes a customer. It is worth noting as a process friction point for any future engagement. The team mitigated by asking for written requirements with images instead.",
+      "quote": "Client constrained from sharing internal screens\n                                                     due to company policy"
+    },
+    {
+      "item_type": "status_update",
+      "title": "Only Kubernetes provisioning supported — individual VM provisioning not offered",
+      "body": "The product team clarified on the call that XYZ does not support individual VM provisioning/management today; only Kubernetes is supported for provisioning. This directly contradicts Nitin's expectation of managing/provisioning individual VMs through the panel. It is an important boundary to document so expectations are set in writing. This gap is part of why the account may not fit current scope.",
+      "quote": "individual VM provisioning / management is not supported - only Kubernetes is\n       supported for provisioning (clarified by product team on call)."
+    },
+    {
+      "item_type": "action_item_ours",
+      "title": "Product team to internally check feasibility/roadmap for deep monitoring & VM provisioning",
+      "body": "The product team committed to an internal check on whether deep in-VM monitoring and VM-provisioning functionality can be built or is already on the roadmap. This determines whether the account is salvageable within a reasonable timeframe. It should be resolved before further sales effort is invested, per the call's qualification discipline. Tie this back to Nitin's January-end internal initiative timeline.",
+      "quote": "Product team committed to internal check: whether deep monitoring and VM-provisioning\n       functionality can be built or is on the roadmap."
+    },
+    {
+      "item_type": "action_item_ours",
+      "title": "Product team to respond by next afternoon",
+      "body": "The product team committed to respond to Nitin by the next afternoon, presumably with the feasibility/roadmap findings and scope confirmation. This is a near-term deadline that the team must hit to maintain credibility with the prospect. It aligns with the disciplined plan to confirm in-scope, roadmap, and out-of-scope items in writing.",
+      "quote": "Product team committed to respond by the next afternoon."
+    },
+    {
+      "item_type": "commitment_theirs",
+      "title": "Nitin to document full requirements over email with images",
+      "body": "The client agreed to write up his full requirement set over email, including images, to compensate for the screen-sharing restriction. This gives the team a concrete artifact to assess fit and to delineate in-scope vs. out-of-scope. Worth tracking that it arrives promptly, since the team has its own next-afternoon response commitment in flight.",
+      "quote": "Client agreed to document his full requirement over email, with images included."
+    },
+    {
+      "item_type": "feature_request",
+      "title": "All monitoring must be surfaced with complete security compliance",
+      "body": "Nitin stated as a standing requirement (item 7 of his list) that everything surfaced in the unified panel must come 'with complete security compliance.' This is a blanket constraint layered over all six other asks, not a nice-to-have: any agent-based in-VM scripting, access-log collection, or iDRAC integration would have to clear his organization's compliance bar. Given the company-policy restriction that already blocks screen sharing, compliance review is likely to be a real gate in this account, and the written scope response should address how XYZ handles security/compliance posture explicitly.",
+      "quote": "Everything must be surfaced \"with complete security compliance.\""
+    },
+    {
+      "item_type": "action_item_ours",
+      "title": "Confirm in writing what is in scope, roadmap, and permanently out of scope before further effort",
+      "body": "The call's stated qualification outcome is a concrete action for our side: send Nitin a written breakdown classifying each of his asks as in-scope today, on the roadmap, or permanently out of scope — and do this before investing further sales or engineering effort. This is distinct from the generic 'respond by next afternoon' commitment; it defines the required content and discipline of that response. Tracking it separately matters because most of his asks are out of scope, and an ambiguous reply risks dragging the team into building a monitoring platform for a poor-fit account.",
+      "quote": "confirm in writing what is in scope, what is roadmap, and\n       what is permanently out of scope before further effort."
+    },
+    {
+      "item_type": "key_insight",
+      "title": "Client's internal initiative is targeted for January-end — hard timeline driving the evaluation",
+      "body": "Plink's evaluation is tied to an internal initiative targeted for January-end, which is the deadline driving Nitin's urgency and the window in which any feasibility answer is meaningful. Given that most of his requirements are outside XYZ's current scope, this timeline makes a 'build it for him' path effectively impossible and strengthens the case for a fast, honest scope qualification. The draft references this date only in passing inside another item's body; it should be tracked as a first-class deal-timing fact.",
+      "quote": "Internal initiative targeted for January-end"
+    }
+  ]
+}

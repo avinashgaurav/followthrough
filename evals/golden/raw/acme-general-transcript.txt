@@ -1,0 +1,773 @@
+Acme - 8th June 2026
+Here is the transcription of the audio file. The conversation is primarily in a mix of Hindi and
+English (Hinglish), typical of technical meetings. I have identified the speakers based on their
+roles in the conversation (e.g., Presenter, Client, Rohan, etc.).
+
+
+
+
+Presenter: ...kuch unko bhejo, humko paani vagaira... Background Voice: Haan.
+
+Presenter: Nahi, ye actually thoda sa product ki language ka problem hai, to be very honest.
+"Auto resolved" gives an indication that humne auto resolve kiya hai. Humne actually auto
+resolve nahi kiya. Metric badal raha hai, jiske basis pe humne flag kiya tha. Toh abhi, for
+example, machine ka CPU usage x percent pahuncha tha, uske chakkar mein humne ek certain
+portion pe measure kiya, humne recommendation de diya. Theek hai? Lekin by that time,
+do-teen din ho chuke hain, so by that time, second jab second time jab measure kiya gaya toh
+already ek...
+
+Client (Arnab): Toh matlab fir unlogo ko samajhna hai ki agar jaise aap bol rahe ho, toh us
+hisaab se... main... Female Voice: Haan correct. Client: Us hisaab se agar aap non-technical...
+toh Friday isko integrate kiya. Presenter: So Saturday, Sunday mein kuch hua... wo hum log ek
+ek karke nikal ke dekh sakte hain ki kya hua hai exactly. But... Client: Saturday, Sunday hum
+logo ne kuch nahi kiya, toh apne aap hi auto resolve hua tha isme. Presenter: Uh, iska metric
+badla hoga. Changed... by this kyunki mujhe pata hai cloud infra team ke side se toh kuch nahi
+hua cloud side se.
+
+Presenter: So iska metric hi gaya hoga, upar niche gaya hoga. We can go into each one of
+them. Rohan will join and he can actually help out. RDS instance so and so averages 3.2% CPU.
+Ek baar click kijiye zara iske upar. Niche jayiye. Haan, so... ye dekh rahe ho aap? 3.2% humne
+average kiya tha because maybe... purana ke hisaab se, lekin ye CPU ka usage badha hai. Isi
+karan wo jo upar ka recommendation tha usko nullify kar diya ki ye actually hai nahi
+over-provisioned. Ye 3.2% ki bajaye... upar dekh rahe ho... is over-provisioned, CPU utilization
+average 3.2% below 10% threshold. Downsizing one instance class typically reduces cost 50%.
+Ye hamara recommendation tha. Lekin abhi aap dekho, last few days ka, toh wo that has... that
+is consistently above 3.2%. So hence the original recommendation doesn't hold. Toh iski jo copy
+hai, jis tarike se present kiya hai, usme gadbad hai. "Auto resolved" nahi bolna chahiye tha, isko
+kuch aur bolna chahiye tha. That would have solved the problem, confusion khatam ho jata.
+
+Client: Ye actually wo terms terminology waha se thoda confusing hai. Presenter: Haan wahi
+main bol raha hoon ki terminology jo hai, "Auto resolved", that's a... that is causing confusion.
+We will change that term to something else, or maybe add one more tag to it.
+
+Client: "Auto resolved" kaisa hai ki UAT/SIT mein auto resolve agar apne aap hota hai toh it is
+very good. Toh matlab apne aap agar ye ho jata hai. But kaisa hai ki auto resolve karte hue,
+mera instance ka IP change nahi hona chahiye. Presenter: Correct, correct. Client: Kyunki jo
+auto scaling mein rahega ya fir jahan pe aapka ECS mein hai toh waha pe IP change ho jata
+hai, so wo mere liye... Presenter: Nahi, sir, nothing... see, we will not, we can't touch or make
+such changes in general. But I do understand that the terminology has a good feedback for us.
+Wo terminology hum log thoda change kar denge.
+
+Client: Toh ye aap confirm hai na ki ye matlab auto resolve matlab it is automatically...
+Presenter: Nahi, hamare end se nahi... haan hamare end se. Client: Call karke puchhiye.
+Thoda sa time lagega. Aap ye WhatsApp mein message kijiye unko. 6 log hain, 6-7 log. Thoda
+sa padho isme se... approximately 15 minutes. WhatsApp pe call kar sakte hain kya? Chalu kar
+lo WhatsApp pe hain. Female Voice: ...waha pe the hum log kahan pe the waha pe the. Client:
+Waha pe just there were just new people who were joining the conversations toh usme time lag
+gaya. Presenter: Fatafat dekh lete hain. Ye aap sure hai na, ye mujhe ensure kijiye, agar sure
+hain... Client: Ensure hain, as soon as he joins, I think wo bhi clarify kar denge.
+
+Client: Ye auto tagging wala jo option hai, haan ji. Ye main dekh raha tha isme tag kya karne
+wale hain? Mera toh matlab already tagged hai. Presenter: Sir if it's all tagged... see predicted
+tags niche mein jo dikh rahe hain: stop safety protected, owner agri business hai, aur ye
+environment QA hai. Kya ye sahi hai? Client: Nahi ye galat hai. Presenter: Ye galat hai tags?
+Client: Ye, yahi recommendations hai kya?
+
+Presenter: Ye tagging ke recommendations hain. Predicted tags. Client: Matlab agar main
+yaha pe isko accept karta hoon. Presenter: Haan so basically... Client: Isko main accept select
+karta hoon... Presenter: Haan, toh ye add ho jayega. Client: Toh ye add ho jayega. Presenter:
+Haan, so yaha pe, yaha pe likha hai na ki resources cloud tag value UAT, isi karan humein laga
+ki ye stage hai toh humne environment mein stage de diya. Client: Environment mein UAT
+aayega na. Environment mein stage nahi aayega. Haan toh nahi, toh fir ye galat hai issue hai.
+Accha. Ye cheez galat hai. Owner mein hum log kya... application owner mein hum log
+specifically jo application team ka jo owner hai, uska naam dalte hain. Presenter: Accha.
+Client: Suppose maine kuch applications ke liye Kunal ka naam dala. Accha. Koi application hai
+jahan pe main hoon. Okay. Toh aise application in-person... matlab aise person ka naam dala
+jata hai. Toh yahi agar tag waha dikha raha hai... wahi main janna chahta tha.
+
+Presenter: So ab isko uncheck kar denge agar... Client: Nahi, theek hai toh mujhe wahi janna
+tha ye tag kya add karne wale hain? Jaise toh yaha bata rahe the ki ye tag hai. Presenter: Ye
+tags add ho jayenge. Environment ke... stop safety. Client: Ye wala agar properly karta na, toh
+mera bahut pain point kam ho jata. Presenter: So can you help us understand ki what will be
+proper for you? So basically agar ye fine tune kar sake... Female Voice: Mera shayad internet
+slow hai isliye connect nahi kar pa rahi... Client: Mere 9 mandatory tags hain. Theek hai. Wo
+mere har ek resources mein aana chahiye jo taggable hai. Presenter: Aap unko boliye join
+karne theek hai.
+
+Client: 9 mere compulsory tags hain. Theek hai. Wo mere compulsory aane hi chahiye. Toh
+there I have a list of tags ki kaunse kaunse hain. Aapko chahiye toh aap application wise tag ka
+value bhi pehle de sakte hain. Presenter: Agar aap mujhe de sakte ho toh hum log enforce kar
+sakte hain. So humne internally humne bana rakha hai system ki mandatory tags hone chahiye,
+char ya panch humne tags khud ke liye bana rakhe hain. Which is tenant specific, yaani ki
+aapke case mein aapke ban sakte hain, dusre ke case mein dusre ban sakte hain. So if you
+give me that, we can automatically surface, we can automatically do this. Kyunki aaj hamare
+paas... humein pata nahi koi koi company team level pe owner banati hai...
+
+(Someone joining the call) Client: Hi. Rohan: Hi. Just give me one minute haan. Client: Sure.
+Ho jayega na connect? Rohan: Hello. Client: Yes, Rohan. Tell me. Yeah we are ready you know.
+Should I just share my screen? Rohan: Yeah. Theek hai. Fatafat ho jayega.
+
+Rohan: So tags ka humse discuss karna hai so many questions about auto tagging. Client: First
+of all this auto resolved wala jo details dikha raha hai. So we just want to understand whether it
+has resolved an job failed or this auto resolved part is for something else? Rohan: So auto
+resolved are those which are actually... nothing has been tracked like they haven't run from the
+platform. When we read the metrics, and based on the metrics when the values change, the
+recommendation engine itself auto-resolves that, that this recommendation is no more valid and
+it has been auto-resolved. Client: Accha. Presenter: Iska terms, iska term hum log kuch...
+workshop kar lenge Rohan, we will figure out a better term for this so that it doesn't indicate that
+XYZ has become sentient and automatically doing things. Rohan: Sure, sure.
+
+Client: And this open, toh ye open ka toh samajh mein aa raha hai ki these are open and we
+need to re-validate this and that... Presenter: This is something that you have to evaluate for
+yourself. If you click on any one of them... just tap on, tag on, tap on any one of them. Haan, so
+ye "Stop" hai, consider right-sizing or scheduling. Just click on this. Client: Ye mujhe toh AWS
+mein jaake hi karna padega na. Presenter: Haan. So... Client: Yahan se again main chahta
+hoon ki isko right sizing kar de, to solve it. It's not resolved, we cannot take action on it.
+Presenter: Correct. So yaha pe ab aap humein ye aap suggestion dena shuru kar sakte ho for
+example, ki which of these recommendations you would want a platform to have an
+auto-remediation? Client: Accha. Presenter: Jaise hum log usko default nahi on rakhte,
+because humein permissions chahiye hongi, right, tabhi ho payega. So you can tell us ki
+kaun-kaun se permissions, kaun-kaun se case mein one-click and auto-remediate.
+
+Client: Main ek cheez batata hoon. So why I want that facility to be here. But woh kaisa hai ki
+agar dekhiye, yaha pe mujhe agar mil raha hai. Presenter: Hmm. Client: Agar main isko
+remediate karna chahta hoon, so main yaha pe click karoon aur wo remediate ho jaye.
+Presenter: Ho jayega, haan. Client: Par agar main click nahi karunga toh remediation nahi
+hoga. Correct? Theek hai? Par ye main chahta isliye hoon kyunki main yaha se dekhoon, fir
+main AWS console mein jaaun, fir usko remediate karoon, fir aane ke baad dekhoon ki yahan
+pe refresh hua hai ki nahi. So that is a hectic task. Aur usme kaisa hai na ki wo, wo main point
+jo hai na maine ye aage bhi dekha hai ki AWS bhi jo recommendations bhejte hain, usme kya
+hota hai na wo ek recommendation bhej dete hain. Wo recommendations ko humko usko
+resolve karte karte mahina bhar, dedh mahina lag jata hai, do mahina lag jata hai, tab tak
+recommendations change ho jata hai. Aur fir kaisa hota hai na ki fir main ek time... Presenter:
+Fully agreed. Client: Ye jo tha ye humne resolve kiya hai ki nahi kiya hai wo manual tracking ho
+jata hai. Presenter: Correct, correct, correct. Client: Toh yahan pe agar ho jaye... ho sakta hai,
+so that will be very good. Presenter: We will be more than happy to do this because ye hamari
+actually capability hai, and one of the main value that we provide is ki hum completely detect bhi
+kar rahe hain, continuously remediate bhi kar rahe hain. Client: Auto remediate nahi hona
+chahiye. Presenter: Haan haan. Approval based. Human in the loop hai. Client: Nahi. Matlab
+stage aana chahiye ki agar main ye auto remediate kar raha hoon, Arnab ne agar clean
+erase kiya, toh Arnab approve karega aa ke. Presenter: Wo toh TaskFlow ka... nahi
+TaskFlow nahi, iske iske andar hi agar production pe raha... Client: Iske andar woh fir wo
+faaltu ka unka jo standard uska jo solution hai na wo har ek organization mein alag alag tag ho
+jayega.
+
+Presenter: So see, hum log do cheezein kar rahe hain. One is places where we have the right
+permissions and you are okay, you can click on it and it will remediate. Jahan pe aapko
+workflows chahiye, waha pe hum log workflows bhi enable kar rahe hain. So for example...
+Client: Production downsize karna hai. Presenter: Haan, haan. Client: Manual. Presenter: So
+for example aaj hamare paas Slack integration... I think aapke case mein nahi hoga, lekin Slack
+integration ya koi bhi any web hook endpoint is available. Toh wahan pe chala jayega ek card
+that hey, this recommendation is available. Now you can choose to then trigger ki accha main
+accept karta hoon, nahi karta hoon. Some companies are okay with just Slack ka
+recommendation itself, that is enough for them to as an approval. For some, they want to go
+through the whole cycle of human approvals, teen char logo ko batana padega. Toh us case
+mein hum log ITSM tool jo bhi aapka hai uske sath integrate kar sakte hain. It will trigger a
+change request that hey this is the evidence, this is what we are suggesting. Then it will go to
+you, maybe you will escalate to you... Client: Production ke liye vo... Presenter: Production ke
+liye hua na. Client: Production ke liye wo hua toh wo toh bahut hi accha hai. Theek hai toh fir
+matlab yahan pe agar mujhe lower environment mein utna bhi chahiye... actually kya hai na
+changes jyada lower environment mein hota hai, not in production. But change management
+production mein maintain karna is mandatory. Presenter: Aur wo haan plus aapko trail bhi
+rakhna padega na ki kisne kisne trigger kiya tha, kis... Client: Plus there's a good chance jo
+banda actually change karega in your cloud, wo banda dusra ho sakta hai compared to the
+person jisne flag off kiya hai. Presenter: Correct, so which is why the trail has to be maintained.
+
+Client: Toh production ka wo lower, but changes maximum hota hai ki mere lower environment
+mein. Kyunki lower environment mein capacity bahut jyada changes hota hai. Kyunki utilization
+kam rehta hai, kabhi utilization ho raha hai, kabhi utilization nahi ho raha hai. So in that case
+changes mera lower environment mein sabse jyada hota hai. But lower environment mein kaisa
+hai na, lower environment mein wo trail follow karne ke liye jayenge na toh bahut time lag
+jayega aur nahi hoga. Presenter: And uski value bhi nahi utni hai, matlab value add bhi nahi
+hai. Hmm, hmm, hmm. Client: Toh best way kaisa hai ki yahan pe ek option rahe. Theek hai? Ki
+SR raise ho jaye TaskFlow mein. Theek hai? Agar karna hai, toh wo jaise click karega SR
+raise ho jayega. SR main approve karunga, fir aage jayega. Presenter: So TaskFlow mein
+you have an API, I'm assuming? Client: RSS ka API. Presenter: Ya fir API nahi bhi aayega toh
+usko hum Jira mein bhi... Jira hai na aapke paas? Jira mein bhi raise hota hai kya? Jira mein
+hum log automatically bhej sakte hain. Client: Whatever you use. As long as the entire team
+uses it. Presenter: I think TaskFlow hi hamara standard hai. Toh TaskFlow ko hi integrate
+karte hain. That will be... Client: Ji. Theek hai.
+
+Client: Ye ho gaya, fir mere ko ek... tagging ka toh maine baat kar liya aapse. Actually yahan pe
+agar aap pichhe jaoge wapas, iska koi report download ho sakta hai? Yahan pe jaise likha hai
+issues fixed without action. Lekin theek hai auto resolved is not the... Presenter: Correct. Is the
+not the best obvious term haan. Naye pe bhi likh do. Client: Accha yahan pe ye jo report hai, ye
+report... matlab kuch download ho sakta hai kya? Presenter: Cost reports ke andar hoga.
+Maya, can you confirm if... Maya (Female Voice): Cost reports in the recommendations, we
+can send emails also of required. Presenter: Recommendations agar aapko email pe aa jayega
+chalega? Client: Chalega. Presenter: Daily ka agar aapko ek summary mil jaye, digest mil
+jaye... Client: Daily ka bhi nahi chahiye. Weekly chahiye. Presenter: Weekly chahiye? Weekly
+agar samne report aa gaya.
+
+Client: Dekho anomaly detection chahiye ki matlab kis... matlab ab samjho mera EC2 ye week
+spike kiya, toh wo reason... matlab anomaly dikhna chahiye ek anomaly detection bhi hona
+chahiye ki why was the cost increased from 200 to 400. Presenter: Ye actually dashboard pe
+agar aap jao, close this. Go to dashboard on the top. Yeah, yeah, right. Everyone. So yahan pe
+na abhi of course data hamare paas bahut data hai nahi to actually show you... but yahan pe
+hum log anomalies dikhana shuru kar dete hain. Client: Exactly. Presenter: Nahi but abhi toh
+ek din ho gaya hai, matlab almost 3 din ho gaye... 3 din ho gaye na. Presenter: Haan. Abhi koi
+anomalies dikhi nahi hain, cost anomaly nahi dikhi hai, but anomalies yaha dikhti hai, and then
+we also show ki kaunse resources affect hue the, kisne shuru kiya tha, ya... whatever info that
+we can discover. Theek hai. Client: Pehla base mera hai tagging ko fix karna hai. Uske theek
+hai... aap mujhe bata sakte ho kya tagging ke liye aap logo ne list diya tha tag ka kuch... usme
+se... usme kitna empty hai usko kaise dekhein ki what are untagged... theek hai waisa kuch filter
+ho sakta hai? Presenter: At least itna hi agar nahi hota, so if you can give me that... untagged...
+un tagged wahi main bata raha tha. Client: Nahi wo toh hai hamare paas, aapke paas list hai
+uska kya format... main batata hoon... you can you can share your screen maybe... my laptop
+joining. Mere ko pull karne do, main batata hoon... main dikhata hoon na. Mere paas vo ye hai
+list hai. Ye mandatory tags kya hain ye mere paas end list hai. Yes. Can you go to
+recommendation and some EBS orphan recommendation options will come up over there? Let
+me check there also.
+
+Rohan: Just a second, I am sharing my screen. Yeah. Client: Theek hai. So the tag ka main
+aapse discuss kar raha tha, I'm just telling you what I mean... Rohan: There we have some
+tagging you know. So I'm just sharing my screen. Client: Yeah. Theek hai. Presenter: Toh tag
+ka hum aapse discuss kar rahe the... The various components... The tagging. Client: Tagging
+ka matlab mera ye rule hai tagging ka matlab main bata raha hoon aapse... mandatory tags
+mere hone chahiye... what exactly are these environment, theek hai, the product category, this
+workload classification whatever the environment stages, application department jo application
+ka jo list hai theek hai.
+Presenter: So do you do this manually right now or you have a rule based thing on your AWS
+account? Client: The rule is there that you need to have a manual entry for that your owner
+basically based on who the owner will be... so suppose you add to an EC2 instance that owner
+should be defined basically based on the logic of finding it in the code pipeline. Presenter: What
+happens when an owner gets fired or he resigns? How do you update that automatically?
+Client: We have a separate tag resource basically mapping to an OU. So it's basically taking up
+the tag over that OU. Presenter: Got it. Client: The organization level jo structure hai tag wahi
+se pull hota hai. Presenter: Oh so basically you are relying on AWS tag policies to read these
+tag properties... Client: The tag properties. Yes correct. Presenter: Got it. So ye I think this is
+totally fine. So what we'll do is if you are using AWS tag policy we can pull right from there and
+we don't have to define it twice here. So we can directly read from AWS tag policy if it is set. If
+you get into policy there are properties basically we take care of property creation as well there
+is some SCP rule that gets generated... Rohan: SCP policy. SCP right. Tag policy and SCP yeah
+we have SCP rule that generated based on the rule configuration. Presenter: The tag policies.
+The tag configuration itself defines what the policies look like. Client: Yeah absolutely.
+
+Client: Can you filter this untagged resources from everywhere? Like where some something
+was attached? The orphaned. Where the tagging was missed out? Rohan: Let me go to the
+list... Wait... I will show you... we have this uh... orphaned list... Let me show. Go to the top, so
+yes. We click here, this shows the list of tags. We have defined here... click on orphan. So what
+happens here is you can also find unattached resources right... unattached EC2 disks... those
+will automatically feature. Client: One quick question here. We do not have latency on our
+internal portal right? There is a severe latency... that why it takes so much time to load up...
+Rohan: Uh yeah... yeah we are basically optimizing... wait this is just wait for a minute let me
+click on it. Okay it's loaded... so in orphan section we show you know resources not mapped
+right... Client: Correct, it is orphaned but the EBS list you see... basically see... we have an EC2
+standard machine which has multiple attached disks... let me show that... basically we have a
+main disk which comes up... the basic data... and another data disk mapped over there. We
+want to know if there's usage on that or not... that comes to idle resource or what? Presenter:
+So see basically we calculate whether there are unattached or if they are in idle state. The idle
+state is a completely different mechanism... what you are saying right? So those are those will
+not appear here. Those are those are idle. They are idle... attached but idle. This is for
+unattached resources, orphaned ones.
+
+Client: Correct, unattached. So you show snapshots here? Presenter: Yeah snapshots are
+there if you go and see... the snapshot one. Client: So sometimes we see an AMI has been
+deleted but the snapshot that corresponds to the AMI does not delete automatically on AWS.
+Presenter: Yeah that comes under the orphan category. Snapshot ID... Client: Will this also
+show which AMI the snapshot belonged to, or whether the AMI was deleted? Like is there a list
+of deleted AMIs that corresponding to this snapshot? Because if it gets orphaned, it doesn't give
+context.
+
+Rohan: Let me check it out. Yeah... yeah... so here is the list. If you see... Client: Let me copy
+this ID and check out what exactly it tells. Oh it says standard image... what is the status of this
+right now? It says stopped here? Oh it has to be completely unattached, right? Let me see this...
+Okay I see it here. Let me search that here... the snapshot ID... Oh it's saying standard image
+snapshot... not found... what is this... AMI not found snapshot but the volume persists. Correct.
+It's actually that the AMI is missing. Ok ok. Presenter: Yeah that's why it was tagged as
+orphaned. So if you can verify it, it helps us. Client: True. Now this looks better for me. And
+what else did you have?
+
+Client: Now about scheduling... scheduling mein we have... let me show my Lambda setup for
+scheduling... like when our applications stop at night... UAT environment... we need to schedule.
+But the problem here is we want a portal to handle it and schedule based on our policies. Does
+this scheduling do the same? Presenter: Yes yes we can force scheduling and create overrides
+for any time zone that you want. Client: So can we set it up to start at 8am and stop at 10pm
+based on IST? Presenter: Yes we have IST setup... we have timezone scheduling setup. You
+can even force a start or stop and put an override... and that should trigger based on tags. The
+tagging gives you the group context.
+
+Client: Tagging is really the paramount then. We must get tagging correct first. Presenter: Yes
+we use tagging extensively... also if you check your cost view. You go to cost... we show the
+billing based on tag distribution. We categorize how much your environment tags cost you or
+which department costs you... you can filter it down. Client: Basically it would tell me the exact
+cost by application? It will have EC2, RDS, API gateways everything related to the tag?
+Presenter: Exactly, precisely it captures that from the tags. Whatever service the tag covers,
+you can check it. So right here you can click on an application, click and then slice it by the
+service type... say you want to see just the RDS cost... or unallocated, un-tagged. Client: This
+unallocated is what we must resolve... we don't want anything untagged... we have to fix all
+these. Because even in Cloudwatch we can't figure out some untagged values. The SCP rule
+you mentioned, if you have a rule like that so users cannot create without mandatory tags... we
+need to push that. Presenter: Right we will provide you those SCP rules. Let's do that. Client:
+Let's keep a session for Wednesday or somewhere around to configure this as a PoC on
+scheduling. So we'll have it running. Let's send the SCP policies on mail. I have to get it
+approved by the team. Let's check from there... It will be really helpful.
+
+Presenter: Done. We'll send the details and set up the workshop on Wednesday. Thank you
+guys! Client: Thank you. Thank you everyone!Presenter: ...kuch unko bhejo, humko paani
+vagaira...
+
+Background Voice: Haan.
+
+Presenter: Nahi, ye actually thoda sa product ki language ka problem hai, to be very honest.
+"Auto resolved" gives an indication that humne auto resolve kiya hai. Humne actually auto
+resolve nahi kiya. Metric badal raha hai, jiske basis pe humne flag kiya tha. Toh abhi, for
+example, machine ka CPU usage x percent pahuncha tha, uske chakkar mein humne ek certain
+portion pe measure kiya, humne recommendation de diya. Theek hai? Lekin by that time,
+do-teen din ho chuke hain, so by that time, second jab second time jab measure kiya gaya toh
+already ek...
+
+Client (Arnab): Toh matlab fir unlogo ko samajhna hai ki agar jaise aap bol rahe ho, toh us
+hisaab se... main...
+
+Female Voice: Haan correct.
+
+Client: Us hisaab se agar aap non-technical... toh Friday isko integrate kiya.
+
+Presenter: So Saturday, Sunday mein kuch hua... wo hum log ek ek karke nikal ke dekh sakte
+hain ki kya hua hai exactly. But...
+
+Client: Saturday, Sunday hum logo ne kuch nahi kiya, toh apne aap hi auto resolve hua tha
+isme.
+
+Presenter: Uh, iska metric badla hoga. Changed... by this kyunki mujhe pata hai cloud infra
+team ke side se toh kuch nahi hua cloud side se. So iska metric hi gaya hoga, upar niche gaya
+hoga. We can go into each one of them. Rohan will join and he can actually help out. RDS
+instance so and so averages 3.2% CPU. Ek baar click kijiye zara iske upar. Niche jayiye. Haan,
+so... ye dekh rahe ho aap? 3.2% humne average kiya tha because maybe... purana ke hisaab
+se, lekin ye CPU ka usage badha hai. Isi karan wo jo upar ka recommendation tha usko nullify
+kar diya ki ye actually hai nahi over-provisioned. Ye 3.2% ki bajaye... upar dekh rahe ho... is
+over-provisioned, CPU utilization average 3.2% below 10% threshold. Downsizing one instance
+class typically reduces cost 50%. Ye hamara recommendation tha. Lekin abhi aap dekho, last
+few days ka, toh wo that has... that is consistently above 3.2%. So hence the original
+recommendation doesn't hold. Toh iski jo copy hai, jis tarike se present kiya hai, usme gadbad
+hai. "Auto resolved" nahi bolna chahiye tha, isko kuch aur bolna chahiye tha. That would have
+solved the problem, confusion khatam ho jata.
+
+Client: Ye actually wo terms terminology waha se thoda confusing hai.
+
+Presenter: Haan wahi main bol raha hoon ki terminology jo hai, "Auto resolved", that's a... that
+is causing confusion. We will change that term to something else, or maybe add one more tab to
+it.
+
+Client: "Auto resolved" kaisa hai ki UAT/SIT mein auto resolve agar apne aap hota hai toh it is
+very good. Toh matlab apne aap agar ye ho jata hai. But kaisa hai ki auto resolve karte hue,
+mera instance ka IP change nahi hona chahiye.
+
+Presenter: Correct, correct.
+
+Client: Kyunki jo auto scaling mein rahega ya fir jahan pe aapka ECS mein hai toh waha pe IP
+change ho jata hai, so wo mere liye...
+Presenter: Nahi, sir, nothing... see, we will not, we can't touch or make such changes in
+general. But I do understand that the terminology has a good feedback for us. Wo terminology
+hum log thoda change kar denge.
+
+Client: Toh ye aap confirm hai na ki ye matlab auto resolve matlab it is automatically...
+
+Presenter: Nahi, hamare end se nahi... haan hamare end se.
+
+Client: Call karke puchhiye. Thoda sa time lagega. Aap ye WhatsApp mein message kijiye
+unko. 6 log hain, 6-7 log. Thoda sa padho isme se... approximately 15 minutes. WhatsApp pe
+call kar sakte hain kya? Chalu kar lo WhatsApp pe hain.
+
+Female Voice: ...waha pe the hum log kahan pe the waha pe the.
+
+Client: Waha pe just there were just new people who were joining the conversations toh usme
+time lag gaya.
+
+Presenter: Fatafat dekh lete hain. Ye aap sure hai na, ye mujhe ensure kijiye, agar sure hain...
+
+Client: Ensure hain, as soon as he joins, I think wo bhi clarify kar denge. Ye auto tagging wala
+jo option hai, haan ji. Ye main dekh raha tha isme tag kya karne wale hain? Mera toh matlab
+already tagged hai.
+
+Presenter: Sir if it's all tagged... see predicted tags niche mein jo dikh rahe hain: stop safety
+protected, owner agri business hai, aur ye environment stage hai. Kya ye sahi hai?
+
+Client: Nahi ye galat hai.
+
+Presenter: Ye galat hai tags?
+
+Client: Ye, yahi recommendations hai kya?
+
+Presenter: Ye tagging ke recommendations hain. Predicted tags. Haan.
+
+Client: Matlab agar main yaha pe isko accept karta hoon.
+
+Presenter: Haan so basically...
+
+Client: Isko main accept select karta hoon...
+
+Presenter: Haan, toh ye add ho jayega.
+
+Client: Toh ye add ho jayega.
+Presenter: Haan, so yaha pe, yaha pe likha hai na ki resources a cloud tag value UAT, isi karan
+humein laga ki ye stage hai toh humne environment mein stage de diya.
+
+Client: Environment mein UAT aayega na. Environment mein stage nahi aayega. Haan toh
+nahi, toh fir ye galat hai issue hai. Accha. Ye cheez galat hai. Owner mein hum log kya...
+application owner mein hum log specifically jo application team ka jo owner hai, uska naam
+dalte hain.
+
+Presenter: Accha.
+
+Client: Suppose maine kuch applications ke liye Kunal ka naam dala. Accha. Koi application hai
+jahan pe main hoon. Okay. Toh aise application in-person... matlab aise person ka naam dala
+jata hai. Toh yahi agar tag waha dikha raha hai... wahi main janna chahta tha.
+
+Presenter: So ab isko uncheck kar denge agar...
+
+Client: Nahi, theek hai toh mujhe wahi janna tha ye tag kya add karne wale hain? Jaise toh
+yaha bata rahe the ki ye tag hai.
+
+Presenter: Ye tags add ho jayenge. Environment ke... stop safety.
+
+Client: Ye wala agar properly karta na, toh mera bahut pain point kam ho jata.
+
+Presenter: So can you help us understand ki what will be proper for you? So basically agar ye
+fine tune kar sake...
+
+Female Voice: Mera shayad internet slow hai isliye connect nahi kar pa rahi...
+
+Client: Mere 9 mandatory tags hain. Theek hai. Wo mere har ek resources mein aana chahiye
+jo taggable hai.
+
+Presenter: Aap unko boliye join karne theek hai.
+
+Client: 9 mere compulsory tags hain. Theek hai. Wo mere compulsory aane hi chahiye. Toh
+there I have a list of tags ki kaunse kaunse hain. Aapko chahiye toh aap application wise tag ka
+value bhi pehle de sakte hain.
+
+Presenter: Agar aap mujhe de sakte ho toh hum log enforce kar sakte hain. So humne
+internally humne bana rakha hai system ki mandatory tags hone chahiye, char ya panch humne
+tags khud ke liye bana rakhe hain. Which is tenant specific, yaani ki aapke case mein aapke
+ban sakte hain, dusre ke case mein dusre ban sakte hain. So if you give me that, we can
+automatically surface, we can automatically do this. Kyunki aaj hamare paas... humein pata nahi
+koi koi company team level pe owner banati hai...
+(Phone ringing / Someone joining the call)
+
+Client: Hi. Rohan: Hi. Just give me one minute haan. Client: Sure. Ho jayega na connect?
+Rohan: Hello. Client: Yes, Rohan. Tell me. Yeah we are ready you know. Should I just share my
+screen? Rohan: Yeah. Theek hai. Fatafat ho jayega. Client: So tags ka humse discuss karna
+hai so many questions about auto tagging. First of all this auto resolved wala jo details dikha
+raha hai. So we just want to understand whether it has resolved an job failed or this auto
+resolved part is for something else?
+
+Rohan: So auto resolved are those which are actually... nothing has been tracked like they
+haven't run from the platform. When we read the metrics, and based on the metrics when the
+values change, the recommendation engine itself auto-resolves that, that this recommendation
+is no more valid and it has been auto-resolved.
+
+Client: Accha.
+
+Presenter: Iska terms, iska term hum log kuch... workshop kar lenge Rohan, we will figure out a
+better term for this so that it doesn't indicate that XYZ has become sentient and
+automatically doing things.
+
+Rohan: Sure, sure.
+
+Client: And this open, toh ye open ka toh samajh mein aa raha hai ki these are open and we
+need to re-validate this and that...
+
+Presenter: This is something that you have to evaluate for yourself. If you click on any one of
+them... just tap on, tag on, tap on any one of them. Haan, so ye "Stop" hai, consider right-sizing
+or scheduling. Just click on this.
+
+Client: Ye mujhe toh AWS mein jaake hi karna padega na.
+
+Presenter: Haan. So...
+
+Client: Yahan se again main chahta hoon ki isko right sizing kar de, to solve it. It's not resolved,
+we cannot take action on it.
+
+Presenter: Correct. So yaha pe ab aap humein ye aap suggestion dena shuru kar sakte ho for
+example, ki which of these recommendations you would want a platform to have an
+auto-remediation?
+
+Client: Accha.
+Presenter: Jaise hum log usko default nahi on rakhte, because humein permissions chahiye
+hongi, right, tabhi ho payega. So you can tell us ki kaun-kaun se permissions, kaun-kaun se
+case mein one-click and auto-remediate.
+
+Client: Main ek cheez batata hoon. So why I want that facility to be here. But woh kaisa hai ki
+agar dekhiye, yaha pe mujhe agar mil raha hai.
+
+Presenter: Hmm.
+
+Client: Agar main isko remediate karna chahta hoon, so main yaha pe click karoon aur wo
+remediate ho jaye.
+
+Presenter: Ho jayega, haan.
+
+Client: Par agar main click nahi karunga toh remediation nahi hoga. Correct? Theek hai? Par
+ye main chahta isliye hoon kyunki main yaha se dekhoon, fir main AWS console mein jaaun, fir
+usko remediate karoon, fir aane ke baad dekhoon ki yahan pe refresh hua hai ki nahi. So that is
+a hectic task. Aur usme kaisa hai na ki wo, wo main point jo hai na maine ye aage bhi dekha hai
+ki AWS bhi jo recommendations bhejte hain, usme kya hota hai na wo ek recommendation bhej
+dete hain. Wo recommendations ko humko usko resolve karte karte mahina bhar, dedh mahina
+lag jata hai, do mahina lag jata hai, tab tak recommendations change ho jata hai. Aur fir kaisa
+hota hai na ki fir main ek time...
+
+Presenter: Fully agreed.
+
+Client: Ye jo tha ye humne resolve kiya hai ki nahi kiya hai wo manual tracking ho jata hai.
+
+Presenter: Correct, correct, correct.
+
+Client: Toh yahan pe agar ho jaye... ho sakta hai, so that will be very good.
+
+Presenter: We will be more than happy to do this because ye hamari actually capability hai, and
+one of the main value that we provide is ki hum completely detect bhi kar rahe hain,
+continuously remediate bhi kar rahe hain.
+
+Client: Auto remediate nahi hona chahiye.
+
+Presenter: Haan haan. Approval based. Human in the loop hai.
+
+Client: Nahi. Matlab stage aana chahiye ki agar main ye auto remediate kar raha hoon,
+Arnab ne agar clean erase kiya, toh Arnab approve karega aa ke.
+
+Presenter: Wo toh TaskFlow ka... nahi TaskFlow nahi, iske iske andar hi agar production
+pe raha...
+Client: Iske andar woh fir wo faaltu ka unka jo standard uska jo solution hai na wo har ek
+organization mein alag alag tag ho jayega.
+
+Presenter: So see, hum log do cheezein kar rahe hain. One is places where we have the right
+permissions and you are okay, you can click on it and it will remediate. Jahan pe aapko
+workflows chahiye, waha pe hum log workflows bhi enable kar rahe hain. So for example...
+
+Client: Production downsize karna hai.
+
+Presenter: Haan, haan.
+
+Client: Manual.
+
+Presenter: So for example aaj hamare paas Slack integration... I think aapke case mein nahi
+hoga, lekin Slack integration ya koi bhi any web hook endpoint is available. Toh wahan pe chala
+jayega ek card that hey, this recommendation is available. Now you can choose to then trigger
+ki accha main accept karta hoon, nahi karta hoon. Some companies are okay with just Slack ka
+recommendation itself, that is enough for them to as an approval. For some, they want to go
+through the whole cycle of human approvals, teen char logo ko batana padega. Toh us case
+mein hum log ITSM tool jo bhi aapka hai uske sath integrate kar sakte hain. It will trigger a
+change request that hey this is the evidence, this is what we are suggesting. Then it will go to
+you, maybe you will escalate to you...
+
+Client: Production ke liye vo...
+
+Presenter: Production ke liye hua na.
+
+Client: Production ke liye wo hua toh wo toh bahut hi accha hai. Theek hai toh fir matlab yahan
+pe agar mujhe lower environment mein utna bhi chahiye... actually kya hai na changes jyada
+lower environment mein hota hai, not in production. But change management production mein
+maintain karna is mandatory.
+
+Presenter: Aur wo haan plus aapko trail bhi rakhna padega na ki kisne kisne trigger kiya tha,
+kis...
+
+Client: Plus there's a good chance jo banda actually change karega in your cloud, wo banda
+dusra ho sakta hai compared to the person jisne flag off kiya hai.
+
+Presenter: Correct, so which is why the trail has to be maintained.
+
+Client: Toh production ka wo lower, but changes maximum hota hai ki mere lower environment
+mein. Kyunki lower environment mein capacity bahut jyada changes hota hai. Kyunki utilization
+kam rehta hai, kabhi utilization ho raha hai, kabhi utilization nahi ho raha hai. So in that case
+changes mera lower environment mein sabse jyada hota hai. But lower environment mein kaisa
+hai na, lower environment mein wo trail follow karne ke liye jayenge na toh bahut time lag
+jayega aur nahi hoga.
+
+Presenter: And uski value bhi nahi utni hai, matlab value add bhi nahi hai. Hmm, hmm, hmm.
+
+Client: Toh best way kaisa hai ki yahan pe ek option rahe. Theek hai? Ki SR raise ho jaye
+TaskFlow mein. Theek hai? Agar karna hai, toh wo jaise click karega SR raise ho jayega. SR
+main approve karunga, fir aage jayega.
+
+Presenter: So TaskFlow mein you have an API, I'm assuming?
+
+Client: RSS ka API.
+
+Presenter: Ya fir API nahi bhi aayega toh usko hum Jira mein bhi... Jira hai na aapke paas? Jira
+mein bhi raise hota hai kya? Jira mein hum log automatically bhej sakte hain.
+
+Client: Whatever you use. As long as the entire team uses it.
+
+Presenter: I think TaskFlow hi hamara standard hai. Toh TaskFlow ko hi integrate karte
+hain. That will be...
+
+Client: Ji. Theek hai. Ye ho gaya, fir mere ko ek... tagging ka toh maine baat kar liya aapse.
+Actually yahan pe agar aap pichhe jaoge wapas, iska koi report download ho sakta hai? Yahan
+pe jaise likha hai issues fixed without action. Lekin theek hai auto resolved is not the...
+
+Presenter: Correct. Is the not the best obvious term haan. Naye pe bhi likh do.
+
+Client: Accha yahan pe ye jo report hai, ye report... matlab kuch download ho sakta hai kya?
+
+Presenter: Cost reports ke andar hoga. Maya, can you confirm if...
+
+Rohan: Cost reports in the recommendations, we can send emails also if required.
+
+Presenter: Recommendations agar aapko email pe aa jayega chalega?
+
+Client: Chalega.
+
+Presenter: Daily ka agar aapko ek summary mil jaye, digest mil jaye...
+
+Client: Daily ka bhi nahi chahiye. Weekly chahiye.
+
+Presenter: Weekly chahiye? Weekly agar samne report aa gaya. Dekho anomaly detection
+chahiye ki matlab kis... matlab ab samjho mera EC2 ye week spike kiya, toh wo reason... matlab
+anomaly dikhna chahiye ek anomaly detection bhi hona chahiye ki why was the cost increased
+from 200 to 400.
+
+Presenter: Ye actually dashboard pe agar aap jao, close this. Go to dashboard on the top.
+Yeah, yeah, right. Everyone. So yahan pe na abhi of course data hamare paas bahut data hai
+nahi to actually show you... but yahan pe hum log anomalies dikhana shuru kar dete hain.
+
+Client: Exactly.
+
+Presenter: Nahi but abhi toh ek din ho gaya hai, matlab almost 3 din ho gaye... 3 din ho gaye
+na.
+
+Client: Haan. Abhi koi anomalies dikhi nahi hain, cost anomaly nahi dikhi hai, but anomalies
+yaha dikhti hai, and then we also show ki kaunse resources affect hue the, kisne shuru kiya tha,
+ya... whatever info that we can discover. Theek hai.
+
+Client: Pehla base mera hai tagging ko fix karna hai. Uske theek hai... aap mujhe bata sakte ho
+kya tagging ke liye aap logo ne list diya tha tag ka kuch... usme se... usme kitna empty hai usko
+kaise dekhein ki what are untagged... theek hai waisa kuch filter ho sakta hai?
+
+Presenter: At least itna hi agar nahi hota, so if you can give me that... untagged... un tagged
+wahi main bata raha tha.
+
+Client: Nahi wo toh hai hamare paas, aapke paas list hai uska kya format... main batata hoon...
+you can you can share your screen maybe... my laptop joining. Mere ko pull karne do, main
+batata hoon... main dikhata hoon na. Mere paas vo ye hai list hai. Ye mandatory tags kya hain
+ye mere paas end list hai. Yes. Can you go to recommendation and some EBS orphan
+recommendation options will come up over there? Let me check there also.
+
+Rohan: Just a second, I am sharing my screen. Yeah.
+
+Client: Theek hai. So the tag ka main aapse discuss kar raha tha, I'm just telling you what I
+mean...
+
+Rohan: There we have some tagging you know. So I'm just sharing my screen.
+
+Client: Yeah. Theek hai.
+
+Presenter: Toh tag ka hum aapse discuss kar rahe the... The various components... The
+tagging.
+
+Client: Tagging ka matlab mera ye rule hai tagging ka matlab main bata raha hoon aapse...
+mandatory tags mere hone chahiye... what exactly are these environment, theek hai, the
+product category, this workload classification whatever the environment stages, application
+department jo application ka jo list hai theek hai.
+
+Presenter: So do you do this manually right now or you have a rule based thing on your AWS
+account?
+
+Client: The rule is there that you need to have a manual entry for that your owner basically
+based on who the owner will be... so suppose you add to an EC2 instance that owner should be
+defined basically based on the logic of finding it in the code pipeline.
+
+Presenter: What happens when an owner gets fired or he resigns? How do you update that
+automatically?
+
+Client: We have a separate tag resource basically mapping to an OU. So it's basically taking up
+the tag over that OU.
+
+Presenter: Got it.
+
+Client: The organization level jo structure hai tag wahi se pull hota hai.
+
+Presenter: Oh so basically you are relying on AWS tag policies to read these tag properties...
+
+Client: The tag properties. Yes correct.
+
+Presenter: Got it. So ye I think this is totally fine. So what we'll do is if you are using AWS tag
+policy we can pull right from there and we don't have to define it twice here. So we can directly
+read from AWS tag policy if it is set. If you get into policy there are properties basically we take
+care of property creation as well there is some SCP rule that gets generated...
+
+Rohan: SCP policy. SCP right. Tag policy and SCP yeah we have SCP rule that generated
+based on the rule configuration.
+
+Presenter: The tag policies. The tag configuration itself defines what the policies look like.
+
+Client: Yeah absolutely. Can you filter this untagged resources from everywhere? Like where
+some something was attached? The orphaned. Where the tagging was missed out?
+
+Rohan: Let me go to the list... Wait... I will show you... we have this uh... orphaned list... Let me
+show. Go to the top, so yes. We click here, this shows the list of tags. We have defined here...
+click on orphan. So what happens here is you can also find unattached resources right...
+unattached EC2 disks... those will automatically feature.
+
+Client: One quick question here. We do not have latency on our internal portal right? There is a
+severe latency... that why it takes so much time to load up...
+Rohan: Uh yeah... yeah we are basically optimizing... wait this is just wait for a minute let me
+click on it. Okay it's loaded... so in orphan section we show you know resources not mapped
+right...
+
+Client: Correct, it is orphaned but the EBS list you see... basically see... we have an EC2
+standard machine which has multiple attached disks... let me show that... basically we have a
+main disk which comes up... the basic data... and another data disk mapped over there. We
+want to know if there's usage on that or not... that comes to idle resource or what?
+
+Presenter: So see basically we calculate whether there are unattached or if they are in idle
+state. The idle state is a completely different mechanism... what you are saying right? So those
+are those will not appear here. Those are those are idle. They are idle... attached but idle. This
+is for unattached resources, orphaned ones.
+
+Client: Correct, unattached. So you show snapshots here?
+
+Presenter: Yeah snapshots are there if you go and see... the snapshot one.
+
+Client: So sometimes we see an AMI has been deleted but the snapshot that corresponds to
+the AMI does not delete automatically on AWS.
+
+Presenter: Yeah that comes under the orphan category. Snapshot ID...
+
+Client: Will this also show which AMI the snapshot belonged to, or whether the AMI was
+deleted? Like is there a list of deleted AMIs that corresponding to this snapshot? Because if it
+gets orphaned, it doesn't give context.
+
+Rohan: Let me check it out. Yeah... yeah... so here is the list. If you see...
+
+Client: Let me copy this ID and check out what exactly it tells. Oh it says standard image... what
+is the status of this right now? It says stopped here? Oh it has to be completely unattached,
+right? Let me see this... Okay I see it here. Let me search that here... the snapshot ID... Oh it's
+saying standard image snapshot... not found... what is this... AMI not found snapshot but the
+volume persists. Correct. It's actually that the AMI is missing. Ok ok.
+
+Presenter: Yeah that's why it was tagged as orphaned. So if you can verify it, it helps us.
+
+Client: True. Now this looks better for me. And what else did you have? Now about
+scheduling... scheduling mein we have... let me show my Lambda setup for scheduling... like
+when our applications stop at night... UAT environment... we need to schedule. But the problem
+here is we want a portal to handle it and schedule based on our policies. Does this scheduling
+do the same?
+Presenter: Yes yes we can force scheduling and create overrides for any time zone that you
+want.
+
+Client: So can we set it up to start at 8am and stop at 10pm based on IST?
+
+Presenter: Yes we have IST setup... we have timezone scheduling setup. You can even force a
+start or stop and put an override... and that should trigger based on tags. The tagging gives you
+the group context.
+
+Client: Tagging is really the paramount then. We must get tagging correct first.
+
+Presenter: Yes we use tagging extensively... also if you check your cost view. You go to cost...
+we show the billing based on tag distribution. We categorize how much your environment tags
+cost you or which department costs you... you can filter it down.
+
+Client: Basically it would tell me the exact cost by application? It will have EC2, RDS, API
+gateways everything related to the tag?
+
+Presenter: Exactly, precisely it captures that from the tags. Whatever service the tag covers,
+you can check it. So right here you can click on an application, click and then slice it by the
+service type... say you want to see just the RDS cost... or unallocated, un-tagged.
+
+Client: This unallocated is what we must resolve... we don't want anything untagged... we have
+to fix all these. Because even in Cloudwatch we can't figure out some untagged values. The
+SCP rule you mentioned, if you have a rule like that so users cannot create without mandatory
+tags... we need to push that.
+
+Presenter: Right we will provide you those SCP rules. Let's do that.
+
+Client: Let's keep a session for Wednesday or somewhere around to configure this as a PoC on
+scheduling. So we'll have it running. Let's send the SCP policies on mail. I have to get it
+approved by the team. Let's check from there... It will be really helpful.
+
+Presenter: Done. We'll send the details and set up the workshop on Wednesday. Thank you
+guys!
+

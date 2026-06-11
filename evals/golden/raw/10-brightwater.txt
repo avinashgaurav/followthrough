@@ -1,0 +1,82 @@
+Brightwater
+ Engagement Type                                      Strategic Discussion - Cost Optimization,
+                                                      Recommendation Lifecycle, Pricing,
+                                                      Implementation Constraints
+
+ Call Date                                            April 21, 2026
+
+ Attendees                                            XYZ Team and Brightwater Team
+
+ Key Theme                                            Realized savings lag recommendation generation
+                                                      by 1 - 2 quarters because the implementation
+                                                      team is separate and may delay or reject
+                                                      execution.
+
+ Production Topology                                  Primary + Secondary + Disaster Recovery
+                                                      architecture (no active autoscaling).
+
+
+
+
+1. Realized Savings vs. Recommendation Potential
+    1.​ Brightwater highlighted that realized savings lag recommendation generation, with a typical
+        realization cycle of 1 - 2 quarters.
+    2.​ Root Cause: XYZ provides recommendations, but the implementation team (a separate
+        team at Brightwater) may delay or reject execution.
+Key Insight
+   1.​ Month 1 example: recommendation potential roughly $18K - the majority can be applied
+        initially.
+   2.​ Subsequent months: remaining optimizations shrink significantly to roughly $2 - 3K, mostly
+        limited to disk optimization and snapshot cleanup.
+Implication
+   1.​ The savings curve is front-loaded, then tapers. This requires clear expectation-setting in
+       dashboards and pricing models.
+
+2. Need for Turnaround Time (TAT) Tracking
+Required Metrics
+   1.​ Recommendation created date.
+   2.​ Recommendation sent-to-implementation-team date.
+   3.​ Date of execution.
+   4.​ TAT (execution delay).
+Additional Tracking
+   1.​ Percentage of recommendations implemented / rejected / pending.
+Purpose
+   1.​ Measure execution efficiency, identify bottlenecks in implementation, and strengthen
+       governance and reporting.
+
+3. Pricing Model Discussion
+    1.​ Suggested approach: a quarterly pricing model.
+Rationale
+   1.​ Real savings become visible by the second quarter, which allows for performance validation and
+       pricing adjustments post-value realization.
+
+4. Onboarding Timeline Expectations
+   1.​ MSME clients: approximately 45 days.
+   2.​ Enterprise clients: approximately 90 days.
+   3.​ Implication: Sales and onboarding timelines must be factored into revenue realization
+       forecasting.
+
+5. Product and Feature Feedback
+Positive Feedback
+   1.​ Canvas View was well received.
+Operational Constraints
+   1.​ No active use of autoscaling at Brightwater.
+Production Setup
+   1.​ Typical architecture includes Primary, Secondary and Disaster Recovery resources.
+Implication
+   1.​ Recommendations must respect redundancy setups and avoid aggressive downsizing in DR /
+       secondary layers.
+
+6. MCP and Chatbot Commercial Questions
+   1.​ Is the free version of MCP sufficient, or is paid required?
+   2.​ Inferred concern: if the chatbot is used, will token usage be billed separately?
+   3.​ Clarification Needed: MCP pricing tiers and chatbot / token billing model to be documented.
+
+7. Key Takeaways - Blunt Assessment
+   1.​ The current savings narrative is misleading if it does not show decay over time.
+   2.​ Without TAT tracking, the product looks like a recommendation engine rather than a system of
+    action.
+3.​ Pricing must align with realized savings (not potential) and with the time lag (1 - 2 quarters).
+4.​ If implementation is external, accountability layers must be built, otherwise ROI attribution
+    breaks.
+Solis Tech

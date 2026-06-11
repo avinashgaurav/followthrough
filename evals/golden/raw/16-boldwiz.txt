@@ -1,0 +1,90 @@
+Boldwiz
+ Engagement Type                                     XYZ Product Demonstration
+
+ Client Attendee                                     Vishal - Boldwiz
+
+ Cloud Used                                          AWS only
+
+ Resource Types                                      EC2, serverless / Lambda, AWS email and
+                                                     scheduling services, databases, Kubernetes
+                                                     (some)
+
+ Monthly Spend                                       ~USD 250 for Boldwiz itself
+
+ Client-Side Spend                                   ~USD 250-350 per client account (prospect /
+                                                     pilot); combined ~USD 500-600/month
+
+ Business Model                                      Deploys analytics solutions on customers' own
+                                                     AWS infrastructure
+
+ Client Industry Focus                               Healthcare (customers own and operate their
+                                                     cloud infrastructure)
+
+
+
+
+1. Company Context
+    1.​ Business: Analytics solutions provider; deploys on AWS.
+    2.​ Own Spend: Modest - roughly USD 250 per month on Boldwiz's own AWS account.
+    3.​ Client Deployments: Clients (primarily healthcare) host on their own AWS infrastructure and
+        bear that cost themselves.
+    4.​ Combined Footprint Referenced: Around USD 500-600 per month including one pilot client.
+
+2. XYZ Walkthrough Highlights
+Multi-Cloud Reach and Auto-Tagging
+    1.​ AWS, Azure, GCP, Oracle, plus on-prem local servers.
+    2.​ Auto-tags live only inside XYZ's ecosystem - they do not mutate tags on the underlying
+         cloud.
+State, Scheduler, Resource Groups, Teams
+    1.​ Manual toggle with warning review for critical actions.
+    2.​ Default Nightly Shutdown / Weekend Pause plus custom schedule creation (name, time zone,
+       description, weekday active hours).
+   3.​ Resource groups with Auto / Custom order for frontend / backend / database sequencing; Start
+       Delay and Stop Delay for fine-grained control.
+   4.​ Teams with custom roles (admin, automation lead, editor) and granular access (delete / create /
+       edit / view).
+Budgets and Alerts
+   1.​ Budget per resource group (example: USD 1,000 per month) with threshold (example: 75%)
+       producing instant notifications to integrated channels.
+Schedule Override, Audit Log, Recommendations
+    1.​ One-off schedule override (example: 4 extra hours).
+    2.​ Audit log with success / failure markers and reference IDs.
+    3.​ Recommendations across cloud storage, compute engines, Kubernetes, and cloud SQL.
+Integrations and Overview
+    1.​ Slack, Microsoft Teams, Google Chat, custom webhooks.
+    2.​ Overview: savings by time window, scheduler success rate, team budget visibility, per-cloud VM /
+        database counts.
+
+3. Client Questions - Governance and Onboarding
+Team Management
+  1.​ Admin user defines teams; XYZ itself never gets write access that would let it disrupt
+      production.
+  2.​ Only read-only plus metadata and lifecycle permissions are taken.
+  3.​ Adding a member: enter the organization email, assign a role (e.g., Admin) and click Save - team
+      and access are provisioned.
+AWS Resource Coverage
+    1.​ Claim made: XYZ is highly compatible with AWS (their earliest cloud supported).
+    2.​ Coverage includes Kubernetes, EC2, databases, and other services; client to be sent a PDF
+        enumerating supported resources across AWS, Azure and Oracle.
+Cloud Integration Mechanics
+    1.​ Integration via "Connect your cloud account" wizard; AWS-specific permission explained as
+        read-only plus lifecycle permissions only.
+    2.​ No server IPs, usernames, or passwords are required.
+    3.​ XYZ reads metadata, not application or network data.
+
+4. Healthcare Client Constraints - The Key Friction Point
+    1.​ Vishal's clients are healthcare organizations that own their infrastructure and are restrictive
+        about third-party access.
+    2.​ He needs simple, concise documentation answering: What details must be shared? Is it
+        compliant? Are IP / credentials required?
+   3.​ He explicitly asked for the answers to be compressed into the email (not a 5-6 page PDF) for easy
+       forwarding to client IT teams.
+   4.​ He indicated that realistic adoption is a couple of months out and will go through multiple
+       phases.
+
+5. Commitments for Follow-up
+   1.​ Share the AWS permissions brief (specifically the permissions detail needed for connection).
+   2.​ Share a security brief.
+   3.​ Ensure the mail itself contains high-level essentials so it can be forwarded to the client's IT team
+       without requiring a heavy PDF read.
+Maverick

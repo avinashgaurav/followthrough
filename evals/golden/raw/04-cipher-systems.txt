@@ -1,0 +1,61 @@
+Cipher Systems
+ Engagement Type                                     Product Demonstration (Discovery)
+
+ Call Date                                           December 18, 2025
+
+ Client Attendee                                     Aakash - Cipher Systems
+
+ Cloud Providers                                     Hybrid - AWS and GCP
+
+ Resource Mix                                        Primarily VMs (AWS M4 xLarge/Large; GCP N1
+                                                     Standard, 16 GB RAM), plus storage and database
+                                                     hosting for media servers.
+
+ Test Build Spend                                    ~INR 30,000 / month (~USD 360)
+
+ Production Spend                                    Multiple lakhs of INR per month (several
+                                                     thousand USD)
+
+
+
+
+1. Infrastructure and Cloud Spend Context
+    1.​ Providers: A hybrid environment running on both AWS and GCP.
+    2.​ Resource Mix: Predominantly VMs. On AWS: M4 xLarge / Large instance types. On GCP: N1
+        Standard instances with 16 GB RAM. Additionally, object storage and managed databases
+        supporting media-server workloads.
+    3.​ Test-Build Spend: Roughly INR 30,000 / month, approximately USD 360.
+    4.​ Production Spend: Substantially higher, running into multiple lakhs of INR per month - equivalent
+        to several thousand USD.
+
+2. XYZ Product Walkthrough
+A. Centralized Multi-Cloud Visibility
+    1.​ XYZ synchronizes instances and databases from AWS, GCP, Azure, Oracle Cloud and local
+        servers into a single view.
+B. Manual and Automated Control
+    1.​ Supports one-click manual resource shutdowns as well as automated scheduling via the visual
+        heat-map.
+C. No-Code Scheduling
+    1.​ Product managers or DevOps leads can set Nightly Shutdowns or Weekend Pauses through the
+        UI - no scripts or YAML required.
+D. Budgeting and Governance
+    1.​ Teams (Dev, QA, Ops) can be created with role-specific permissions.
+    2.​ Monthly budgets (e.g., $1,000) can be assigned, with automated alerts triggered at 75%
+        consumption.
+E. Schedule Overrides
+     1.​ Teams can temporarily extend resource runtimes for a specific day without mutating the
+         permanent schedule.
+F. Recommendations Engine
+    1.​ Provides data-driven insights on underutilized and orphaned resources.
+G. XYZ Day Mention
+   1.​ XYZ Day was briefly positioned as a companion tool for rapid deployment and CI/CD / cron /
+       Helm setup in 30 minutes, but was not the focus of this engagement.
+
+3. Feedback and Observed Positioning
+   1.​ Aakash acknowledged the value of centralized visibility and the reduction in
+       script-maintenance overhead.
+   2.​ However, he indicated that Cipher Systems does not have an immediate requirement for a new FinOps
+       tool at this moment - a timing-based gating factor rather than a feature-fit objection.
+   3.​ He indicated that XYZ will be kept in mind for future needs as their production workloads
+       scale further.
+Fairway

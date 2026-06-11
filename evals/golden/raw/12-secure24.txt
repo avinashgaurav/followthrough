@@ -1,0 +1,257 @@
+Secure24
+ Engagement Type                                 XYZ Product Demonstration
+
+ Client Attendee                                 Deepak - Secure24
+
+ Cloud Environment                               Azure and AWS
+
+ Workload Composition                            Storage, Virtual Machines, and App Services
+
+ Monthly Cloud Spend (estimate)                  ~USD 15,000 (variable with usage)
+
+ Non-Prod Spend Visibility                       Not known to attendee at call time
+
+ Service Portfolio                               Internal cloud usage plus managed services /
+                                                 migration support for external customers
+
+
+
+
+Secure24
+
+Here is a transcript of the call between the XYZ representative and Deepak:
+
+XYZ: Hello, hi Deepak.
+
+Deepak: Yeah, hi.
+
+XYZ: So, can we start?
+
+Deepak: Yes, please.
+
+XYZ: Your company is using any cloud?
+
+Deepak: Yeah, we are using Azure, AWS.
+
+XYZ: Okay, and what kind of resources are you using?
+
+Deepak: Storage, virtual machines, and some app services.
+
+XYZ: Cool, cool, cool. Can you also mention the cloud cost, your monthly cloud cost?
+Estimated.
+Deepak: It depends on the usage, but average cost is around 15,000 USD.
+
+XYZ: 15,000 USD? And you can also mention the non-prod cloud cost? Non-production
+cloud cost, dev/test?
+
+Deepak: I have no idea, actually.
+
+XYZ: Okay, cool. And your company also, like, your company provides deployment as well,
+like, helps also provide the cloud solution, right?
+
+Deepak: No, we only—we have some development work, so we use our own services in cloud,
+and we also support other customers on managing their own cloud.
+
+XYZ: So you guys can help us help in deployment as well, like for moving from one cloud to
+another?
+
+Deepak: Yeah, migration, yes.
+
+XYZ: Cool, cool. Okay. And also your company helps in managing the resources?
+
+Deepak: Yes, we do.
+
+XYZ: Like turning off and turning on the resource?
+
+Deepak: Yeah.
+
+XYZ: Okay, so this is what we also do. That's the thing. Similarly, we also do such things. So
+I was just checking your website, I just saw the migration part and the resources management
+part.
+
+Deepak: Okay, mm-hmm.
+
+XYZ: Yeah, yeah. So do you want to see a small demo of it?
+
+Deepak: Yes, let's see if we can use it somewhere in our environment. That would be nice.
+
+XYZ: Sure, sure, I'll show you. I'll share my screen, just a second. Okay, you can see my
+screen, right?
+
+Deepak: Yes.
+
+XYZ: So we are XYZ company, and at XYZ we have two products, one is XYZ Day,
+another one is XYZ. So I'll just go through with the product. I will click on "Playground," this
+is based on dummy data. I'll talk about XYZ. XYZ Day is the same thing, similar—help we
+help in spinning up the cluster in 30 minutes.
+XYZ: So we are focusing on XYZ. So once you click on XYZ, you can see you get
+the "All Resources" page where it is a listing of all the resources from your across your multiple
+cloud accounts. It can be GCP, Azure, AWS. And once you sync these resources, you can have
+an "Auto Tagging," so it will give the tagging to all these resources and it will help you find out
+which resource is being used or not.
+
+XYZ: And then we have this "State" where you can just schedule it manually also, and you
+can also do it—okay, you can also do it manually, you can also put a scheduler. So in
+"Scheduler," you can just create a new schedule or either you can attach "Nightly Shutdown."
+
+Deepak: Okay, so these resources will be available only during that time?
+
+XYZ: Actually right, yeah. So it will be running in this green part only and the rest of the part
+it will be stopped. And you can directly see the savings—70% and 50 active hours and 118
+inactive hours. So once you click on this "Create," whatever name you have given to the
+scheduler, the name will be visible here and you can attach it to any one of these resources.
+
+XYZ: Then we have this "Team" part, I'll come to that, this is a separate section only. And
+then we have this "Cost Budget Status" where you'll see the cost that you have assigned and
+how much of it is being used.
+
+XYZ: Then I'll come to this "Resource Group." So, you know, you can group the resources.
+Let's say you have 300 resources, so you don't want to do it manually. You can just group it, like
+the use case of it is maybe you can have an application, and that application has like 20
+resources. You can just group it and you can control that application. You can apply the same
+thing, scheduler, or you can do it manually as well.
+
+XYZ: And the other thing is we also look into this "Order" of turning on and turning off the
+event. It can be "Auto Order" and "Custom Order." So you don't want your backend—you don't
+want your database to turn on later than the application, so we have this "Auto Order" as well
+and "Custom Order" as well.
+
+XYZ: And then you can create a new resource group. I'll come to this creation part, but
+before that I'll explain "Team," then I'll come to that. So "Team" is where you can make multiple
+teams like Backend, DevOps teams, and then you can assign them budget. So while creating a
+team, there's a complete role-based access control. You can give them delete, create, edit
+access. And once you create a team, it will be visible here.
+
+XYZ: And now I'll come to this "Resource Group" and I'll create a new resource group. So
+you have to write the resource group name, description, and then select the resources that you
+wanted to group. And then you can assign it to the teams that you have created, let's say QA
+team, and then you can assign them budget—1000 per month. And you can turn on this
+"Budget Alert" to get notified, let's say 75%. So once they will exceed the 75% of the budget,
+you'll get the instant notification.
+XYZ: And one more feature we have here, "Schedule Override." Once you turn it on, it will
+just override the schedule, like let's say your resource is scheduled for two hours every day from
+6 to 8 and one day you wanted to work two more extra hours. So you can just write "2" here,
+you can select two hours and just write "2," it will override the schedule and you can work for
+two more extra hours on that particular day.
+
+Deepak: Okay. So for that particular resource or for a particular team?
+
+XYZ: It can be for a particular resource and for a particular group as well, like entirely group
+also you can override a schedule. Now we have covered the resource group, team also. You
+can create a resource group, once you click on the "Create," it will be visible here and then the
+same thing, the capsules are there, you can just put the scheduler.
+
+XYZ: Then we have this "Audit Log" where you'll see all the actions that you have taken on
+this XYZ platform. It will be visible here and it can be in green and red color. Red is what
+unsuccessful—unsuccessful event. You can just copy this reference ID for that and we will try to
+resolve it. And the green is where the event was successful and completed. You can also see a
+graph here, but it is based on dummy data that's why it's not visible.
+
+XYZ: Then we have this "Recommendation" page where we'll give you the recommendation
+based on the pattern of your resource use. So we provide a recommendation based on your
+cloud storage, compute engines, and it's up to you, like for the optimal use of our product, you
+have to follow this recommendation. It's based on the right sizing and auto tagging as well. So
+this is the recommendation page.
+
+XYZ: And then we have "Settings" where we can integrate with multiple channels like Slack,
+Microsoft Teams, Google Chats, custom webhooks. So once you integrate with these channels,
+you'll get the notification there for whatever things happen, like if they exceed the budget you'll
+get the notification. So integration is very easy.
+
+XYZ: Now I'll come to this "Overview" page and you can see on this overview page you can
+see the instant cost savings per week, per month, even three months, six months. You can put
+the filter and you'll see how much cost you have saved using the product XYZ. You can
+also see the number of resources that is being like that is added across the multiple cloud
+account and also local servers as well.
+
+XYZ: Then we have this "Resource Group" where you can see the number of resource
+groups that you have created and number of teams that you have created. Now I'll come to this
+scheduling event. So this is the same thing, scheduler success event where it shows—ideally it
+will be 100%, it is just a representation, it is showing how much of those scheduler event was
+successful. Here it is showing 90% and 10 is in red color, you can same way you can just copy
+the reference ID and we will resolve it.
+
+XYZ: Then we have this "Team Counts" where you can see the number of teams that is
+created and how many of them are over budget, under budget, and running with no budget. So
+you have a full visibility of your team and number of resources that are connected with them and
+how many people are there in the team. Then lastly we show the number of cloud accounts that
+you have connected with XYZ and how many of the resources are connected, how many
+virtual machines are there, how many databases are there, so you'll get the full visibility. So
+yeah, and this is all about the XYZ product.
+
+Deepak: Okay, it looks simple. And what is the cost for this product?
+
+XYZ: Cost wise, actually we are charging based on the number of resources connected.
+And so initially we are not focusing on—for the first month the POC is free. And based on the
+impact that we create, we are charging that. And so it's around 7,500 for resources above 10.
+And till 10 it is free. Like if the resources are below 10, it is free.
+
+Deepak: Okay, and resources are counted or like on the basis of what? Application, virtual
+machines, or how is it?
+
+XYZ: Yeah, so it is counted as application as well, as a virtual machine, and entirely also
+and individually also, right.
+
+Deepak: Okay, so that what you—let's say 7,000, so is it per month basis or how is it?
+
+XYZ: Yeah, it's per month basis and it can vary, it's just an estimate and yeah, it can vary
+depending on how impact that we have created here. Apart from this we have a lot of things
+coming up on the roadmap. This is just a basic thing that I've explained. So the lot things are on
+the roadmap, yeah.
+
+Deepak: Okay, so how the storage are monitored and used in this? For example, I have because
+we rely heavily on storage in cloud, and sometimes you know storage also we store the
+backups, yeah, and the backups sometimes after retention those backups are still lying there
+instead of you know sometimes we have to delete manually. So is there any way you have that
+kind of monitoring?
+
+XYZ: Yeah, actually the XYZ, so we have this XYZ somewhere here, XYZ Insight. So
+this will identify all those backups which are—it uses a snapshot, like if it is not being used for
+like last 30 days, it will show you here and based on the check you can take actions.
+
+Deepak: Okay.
+
+XYZ: Yeah.
+
+Deepak: Got it. Sounds great. Looks simple and easy to use, looks like. Fine, so what I will do is I
+will talk to my team and then revert back to you guys. And you are saying the first month POC is
+free?
+
+XYZ: Free, yeah, yeah. Do you think this is going to be useful for you for your company?
+Deepak: Yeah, if it can help me saving the cost, yes. But if it saves me 5,000 and I pay 7,000,
+that's no use, right?
+
+XYZ: So if it saves 5,000—like what, can you repeat?
+
+Deepak: Let's say for example if I go with the subscription, I pay 7,000 rupees... oh sorry, 7,000
+USD?
+
+XYZ: No, not USD, it's rupees, rupees.
+
+Deepak: Okay, it's rupees. Okay, that makes sense. Yeah.
+
+XYZ: So we have onboarded a lot of companies and yeah, one of the largest FMCG
+company also we have onboarded last month. So we are doing great here and the companies
+are loving this feature, XYZ and recommendation part more.
+
+Deepak: Absolutely. Yeah, when you have too many of the resources it's highly impossible to
+monitor manually. So we have used some onboard insight from Microsoft Cloud itself for now in
+Azure, at least that is helping us a bit, but again you know this looks okay to me. Let me revert
+back to you guys.
+
+XYZ: Yeah, and charging only we started—we start implementing charging after you know
+certain impact like also. It's not like we are going to put the subscription without doing any
+impact and all. So.
+
+Deepak: Looks good. Thanks buddy, thanks for your time. I will revert back to you guys over the
+email, right?
+
+XYZ: Okay, so do I need to inform my team to call you back certain time like for a feedback
+or something or you can just...
+
+Deepak: Yeah, I will drop the email. If I don't, then they can follow up.
+
+XYZ: Okay, sure Deepak. Thank you.
+
+Deepak: No worries, thank you so much. Yeah, bye-bye.
+Plink

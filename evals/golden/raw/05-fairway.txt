@@ -1,0 +1,79 @@
+Fairway
+ Engagement Type                                     Technical Demonstration / Governance Evaluation
+
+ Call Date                                           April 2026
+
+ Client Attendees                                    Daniel (Fairway Lead); Brandon (Fairway Tech
+                                                     Lead)
+
+ Cloud Environment                                   Azure - 40+ subscriptions
+
+ Business Context                                    Navigating a multi-year migration off legacy
+                                                     e-commerce (Hybris) onto Shopify. Core business
+                                                     logic is moving to a SaaS platform.
+
+ Primary Ask                                         Find the "hidden ghosts" in the Azure estate -
+                                                     legacy resources with unknown ownership - so
+                                                     they can be decommissioned with
+                                                     evidence-backed confidence.
+
+
+
+
+1. Core Objective - Solving the Legacy Sprawl
+   1.​ The Problem: Fairway's Azure environment is a mix of modern resources and "ghost" systems -
+       servers and databases spun up over the last two decades by employees who have since left the
+       company. There is a deep-seated hesitation to delete anything because ownership and
+       dependencies are not known.
+   2.​ The Requirement: Fairway is looking for data-driven evidence (for example, zero network traffic
+       over six months) that provides the "political cover" needed to decommission legacy nodes
+       without fear of breaking hidden dependencies.
+
+2. Feature Deep-Dive and Technical Walkthrough
+A. Visualization and Architecture Topography
+   1.​ A high-level view of Fairway's entire cloud topography across 40+ subscriptions was
+       demonstrated.
+   2.​ Traffic Signals: It was proposed that, with read access to Network Interface Cards (NICs), the
+       platform could surface Geo-IP data (for example, resources only receiving traffic from suspicious
+       regions such as Russia) to help isolate compromised or useless assets.
+   3.​ Client Response: Brandon and Daniel were drawn to this "signal-to-noise" approach and specifically
+       asked for resources with zero traffic to be bubbled up to the top of the dashboard so they could
+        prioritize investigation.
+B. The Shopify Migration and Hybris Redundancy
+    1.​ Fairway has already migrated its e-commerce functionality to Shopify. A significant portion of
+        the demo involved reviewing resources labeled "HY" (Hybris).
+    2.​ Brandon noted that they are already aware of these Hybris boxes and are in the process of shutting
+        them down. For the tool to add value, it must surface resources that Fairway does not already
+        have on their internal "to-delete" list.
+C. Proprietary Scheduling vs. Azure Native Tools
+    1.​ The Scheduling and Overrides module was presented as a lever that can save roughly 20% in
+        costs by shutting down non-production environments during off-hours.
+    2.​ Brandon, as the technical gatekeeper, asked whether this is simply a wrapper over Azure
+        Automation.
+    3.​ Differentiator: XYZ uses dependency-aware logic - unlike basic Azure scripts, it understands
+        the order in which resources must be powered on or off (Database > App Server > Load
+        Balancer) to prevent errors, and it offers one-click manual overrides when a developer needs a
+        server kept online for an extra hour.
+D. Orphaned Resources and Tagging
+    1.​ The tool identified orphaned disks and unattached IP addresses still incurring cost.
+    2.​ Brandon expressed healthy skepticism - he indicated he would cross-check the tool's "Orphaned
+        List" against his internal spreadsheets. If the tool finds items he missed, it proves its value; if it
+        misses items he found, it loses credibility.
+
+3. Key Observations and Subtext
+    1.​ "Business Context is 90% of the Work": Daniel framed the real bottleneck clearly - the technical
+        act of deleting a server takes minutes, but the months of meetings required to get a department
+        to admit they don't need a server is the actual bottleneck. Fairway wants XYZ to act as a
+        "truth engine" that accelerates those human negotiations.
+    2.​ Vendor Pivot: Once it became clear that Fairway's e-commerce is now on Shopify, the narrative
+        pivoted away from "Event Readiness" (managing high-traffic sales windows) and toward
+        "Governance and Visibility."
+    3.​ Buy vs. Build ROI: Fairway is weighing the cost of a XYZ license against the engineering
+        hours Brandon and Daniel currently spend doing this investigative work manually.
+
+4. Closing Assessment
+    1.​ The meeting ended in a "wait and see" stance. The platform was visually impressive and the
+        dependency-aware automation landed well, but the final decision hinges on XYZ proving it
+        can surface hidden ghosts in the architecture that Fairway's existing manual processes have
+        missed.
+Acme Life

@@ -1,0 +1,73 @@
+TalentBridge Recruitment
+ Engagement Type                                     XYZ Product Demonstration
+
+ Call Date                                           December 19, 2025
+
+ Client Attendee                                     Anjali - TalentBridge Recruitment
+
+ Cloud Provider                                      Exclusively AWS
+
+ Monthly Cloud Spend                                 INR 15,000 - 20,000 (approx. USD 180 - 240)
+
+ Non-Prod Share                                      Approximately INR 12,000 / month spent on
+                                                     non-production / maintenance environments -
+                                                     the primary optimization candidate.
+
+ Internal Responsibility                             Anjali oversees the budget; a dedicated
+                                                     architect handles infrastructure specifics (VMs vs.
+                                                     Kubernetes decisions).
+
+
+
+
+1. Infrastructure Context Gathered
+   1.​ Cloud Provider: Exclusively AWS; no Azure, GCP or multi-cloud footprint at present.
+   2.​ Total Spend: Monthly cloud spend was estimated at INR 15,000 - 20,000, roughly USD 180 - 240
+       at prevailing rates.
+   3.​ Spend Breakdown: Of this total, approximately INR 12,000 per month was attributable to
+       non-production and maintenance workloads - a very high proportion, which made TalentBridge a
+       naturally strong fit for XYZ's scheduler-driven savings model.
+   4.​ Decision Stack: Anjali's role is budget oversight; the technical infrastructure decisions (VMs vs.
+       Kubernetes, instance sizing, etc.) are made by a dedicated architect. This shaped the demo to
+       emphasize outcomes and savings rather than low-level configuration mechanics.
+
+2. XYZ Day vs. XYZ Clarification
+Anjali asked for clarification on the difference between the two products in the XYZ portfolio. The
+positioning was conveyed as follows:
+   1.​ XYZ Day: Deployment and production-readiness tool. It stands up CI/CD pipelines and
+       observability to make an application production-ready in roughly 30 minutes.
+   2.​ XYZ: Cloud cost optimization tool that intelligently shuts down resources when they are not
+       in use and surfaces savings recommendations. The focus of this call was XYZ.
+3. Feature Walkthrough - Tailored for Maintenance Cost Optimization
+A. Automated Resource Sync
+    1.​ Once AWS credentials are connected, XYZ automatically lists every resource (VMs,
+        databases, etc.) and applies its own internal tagging via XYZ, without interfering with any
+        existing AWS tags.
+B. Visual Scheduling via Heat-Map
+    1.​ Active (green) and stopped (red) hours can be painted onto a weekly grid through the UI.
+    2.​ This is the primary lever for shutting down non-prod environments overnight and on weekends -
+        directly relevant to the INR 12,000 / month non-prod bucket identified above.
+C. Schedule Overrides
+    1.​ If extra work is needed on a given day, the schedule can be overridden for a set number of hours
+        without mutating the permanent schedule.
+D. Budgetary Controls
+    1.​ Budgets can be assigned to individual teams or resource groups.
+    2.​ Alert thresholds (for instance, 75% of monthly budget consumed) trigger proactive warnings in
+        configured channels.
+E. Centralized Visibility
+    1.​ The Overview dashboard shows total savings, team performance, and resource counts. The
+        demo sandbox surfaced over $1,800 of savings in a mock environment, which provided a
+        quantitative anchor for discussion.
+F. Governance, Audit and Recommendations
+    1.​ Granular role-based access control plus color-coded audit logs make it possible to track exactly
+        who changed the state of which resource and when.
+    2.​ The recommendations engine continuously scans for idle resources and proposes specific
+        remediation steps to reduce cost further.
+
+4. Observed Fit
+    1.​ Given that the majority of TalentBridge's AWS spend (roughly 60-80%) is concentrated in
+        non-production / maintenance workloads, the XYZ scheduler directly targets the most
+        expensive line item in the account.
+    2.​ The size of the estate is modest, so the conversation naturally centered on clear ROI rather than
+        large enterprise-scale governance workflows.
+Zentech Technologies Pvt Ltd

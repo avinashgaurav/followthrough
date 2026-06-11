@@ -1,0 +1,93 @@
+Acme Life
+Engagement Type                                      Infrastructure and Cost Governance Overview
+
+Call Date / Time                                     April 17, 2026, 5:16 PM
+
+Client Attendee                                      Suresh - Infrastructure / Cloud Lead
+
+Facilitator                                          Priya (XYZ Group)
+
+Primary Cost Centers                                 EC2, storage, Kubernetes
+
+Cultural Context                                     Significant business-vs-engineering conflict over
+                                                     cost accountability; small infra team with limited
+                                                     bandwidth to chase application owners.
+
+Identity / Access                                    Entra ID is already in use (XYZ also supports
+                                                     Okta) for RBAC.
+
+
+
+
+1. Current Cloud Environment and Pain Points
+   1.​ Primary Cost Centers: EC2, storage and Kubernetes.
+   2.​ Business vs. Engineering Conflict: Business teams often demand extreme performance - reacting,
+       for instance, to a one-second latency spike - without visibility into the associated compute cost.
+   3.​ Cultural Hurdles: Developers focus on meeting business requirements and "getting the job done"
+       rather than code optimization, and there is a general lack of clarity on who owns cost - the
+       person incurring it or the person monitoring it.
+   4.​ Operational Constraints: The team is small and lacks the bandwidth to manually chase dozens of
+       application owners for approval on downsizing or optimization recommendations.
+
+2. Corporate Background of XYZ Group Group (Established Credibility)
+   1.​ Origins: Started in 2012-13 as GroceryCo, one of India's first quick-commerce grocery apps.
+   2.​ Evolution: Internal infrastructure was robust enough that retailers asked to use the software,
+       which led to XYZ Group.
+   3.​ Scale: Currently 550-600 employees supporting global clients including a major US grocery chain, a global apparel retailer, Banana
+       Republic and a security software vendor.
+   4.​ Leadership: Includes Rajan (who scaled a major tech company's India development center to 4,000 people)
+       and Arvind (CTO, IIT Bombay).
+
+3. Product Feature Deep-Dive - XYZ (Cost and Governance)
+A. Active Governance and Detections
+    1.​ Over 317 policies across AWS, Azure and GCP.
+    2.​ Coverage spans high-level services like EC2 and Kubernetes down to niche services like
+        Databricks and SageMaker.
+    3.​ Typical identified savings in the 24% - 60% range.
+B. Advanced Scheduling
+    1.​ Dependency-aware logic sequences shutdowns (app layer first, then database) and start-ups to
+        prevent errors.
+    2.​ The "math" of savings was highlighted: developers work roughly 200 hours per month, while a
+        month has roughly 750 hours, leaving a massive window for non-prod shutdowns.
+C. Visualization Tools
+    1.​ Canvas View: A live architecture diagram showing resource relationships and metrics (for
+        example, Lambda invocations, cost per node).
+    2.​ Globe View: A "Google Earth" style interface for infrastructure, mapping resources
+        geographically across regions and visualizing data flows and connections.
+D. Workflow and Accountability (Specifically Requested)
+    1.​ Requirement: A system that sends alerts to resource owners and tracks whether they acted,
+         ignored or denied the recommendation.
+    2.​ Solution: "Showback" - a dashboard that tracks individual team performance against budgets
+         and optimization tasks, with "nudge" notifications and management-level reporting on who is
+         actually participating in cost-saving.
+E. AI Integration via MCP Server
+    1.​ XYZ exposes 43 tools to coding agents like GitHub Copilot via the Model Context Protocol
+        (MCP).
+    2.​ Use case: a developer can query their IDE ("What is the current cost of this Redis instance?") or
+        ask the AI to analyze a Cost and Usage Report (CUR) to identify high-cost items, without leaving
+        their coding environment.
+
+4. Product Feature Deep-Dive - XYZ Day (Infra Assistant)
+    1.​ Application-Centric View: Organized by environments (Dev, Stage, Prod) across multiple clouds
+        (for example, Dev on GCP, Prod on AWS).
+    2.​ Developer Self-Service: Developers can spin up services or databases using "Golden Templates"
+        set by the infra team to maintain guardrails.
+    3.​ Ephemeral Environments: "Quick Host" feature uses XYZ domains to deploy experiments for
+        internal review with one click.
+    4.​ Data Store Management: Supports 22+ in-cluster databases (Redis, Kafka, Postgres and others)
+        that can be connected to services via a drag-and-drop interface.
+    5.​ Observability Destinations: A central hub that routes logs, traces and metrics to destinations like
+        Datadog or Loki via drag-and-drop.
+5. Commercial Model and POC Offer
+   1.​ Pricing Structure: Platform fee for governance features plus a percentage of realized savings.
+   2.​ POC Structure: No upfront fee; a fee is requested only after "implementable savings" are proven
+       and accepted by the client.
+   3.​ Security: Secure by design; supports Entra ID (confirmed in use at the client) and Okta for RBAC.
+
+6. Client Disposition
+   1.​ High interest in the feature set - particularly the automated reporting and the MCP / Copilot
+       context for developers.
+   2.​ Key constraint flagged: the team is currently occupied with two massive, high-priority projects
+       with unconfirmed timelines. Suresh wants to avoid a "checkbox" POC and prefers to wait
+       until he can give the system the attention it deserves.
+Saffron Enterprises Ltd

@@ -1,0 +1,133 @@
+Herald Media
+Engagement Type                                       Short Discovery Call (No Demo Conducted)
+
+Client Attendee                                       Sanjay - Herald Media (Digital Vertical, Data
+                                                      Analyst role)
+
+Parent Organization Footprint                         News, books vertical, and a music label
+
+Cloud Used                                            GCP (confirmed)
+
+Existing Optimization Support                         Google team + Snowflake team
+
+Decision Authority of Attendee                        Not the decision-maker; manager handles cloud
+                                                      management
+
+Outcome                                               No demo delivered; request to connect with
+                                                      manager
+
+
+
+
+1. Organization and Role Context
+   1.​ Parent Group: Herald Media - active across news, books, and a music label.
+   2.​ Attendee Role: Works in the digital vertical as a Data Analyst - limited direct ownership of cloud /
+       DevOps decisions.
+   3.​ Cloud Used: GCP.
+
+2. Current Optimization Approach
+   1.​ Google's own team actively helps Herald Media with cost / platform optimization.
+   2.​ Snowflake's team provides direct support for optimizing the data pipelines and platform usage.
+   3.​ Manager (recent addition) has already implemented changes to the tech stack and is content
+       with the current state.
+   4.​ Attendee's understanding of "optimization" is constrained to avoiding credit wastage / overuse
+       of cloud storage.
+
+3. XYZ Framing During This Call
+   1.​ Clarified that XYZ is a product for governance and cost optimization - not a
+       professional-services engagement.
+   2.​ Positioned as distinct from Google's support or Snowflake's pipeline support.
+   3.​ Requested a conversation with the actual cloud decision-maker (the manager) to determine fit.
+   4.​ Offered the option of a future call where a DevOps contact could speak with the Herald Media
+       team so the technical content is received appropriately.
+
+4. Attendee's Posture
+   1.​ Does not have decision rights; explicitly stated the product demo "won't really help me."\
+   2.​ Agreed to check internally with his manager whether there is any interest in a cloud optimization
+       tool.
+   3.​ Expressed mild skepticism that the manager would be looking for additional tools.
+
+5. Outcome
+   1.​ No formal product demo conducted during this call.
+   2.​ Agreement: Sanjay will ask his manager; if there is interest, a follow-up conversation will be
+       scheduled with the right stakeholder.
+   3.​ Alternatively, a future call with a XYZ DevOps contact on one side and the Herald Media
+       cloud owner on the other side was offered as a reset path.
+Brightwater - 12 May 2026
+                   Minutes of Meeting (MoM)
+Meeting Summary
+Discussion focused on the cloud cost optimization recommendations, practical feasibility of
+identified savings, and alignment with Brightwater’s operational and business constraints.
+
+
+
+Key Discussion Points
+   1.​ Brightwater mentioned that the realistically achievable savings are approximately
+       $400/month. Most of the remaining recommendations were considered unsuitable for
+       their environment.
+
+   2.​ Brightwater currently uses Reserved Instances (RI) and already has an existing Azure
+       contract valid until 2027, which limits optimization flexibility.
+
+   3.​ There is a mismatch between the utilization metrics considered by our system and the
+       metrics used internally by Brightwater:
+
+           ○​ Our system considers a maximum utilization threshold of around 36% while
+              generating recommendations.
+
+           ○​ Brightwater evaluates based on approximately 78% peak utilization, which impacts
+              rightsizing recommendations.
+
+   4.​ Additional concerns and observations highlighted by Brightwater from the recommendation
+       remarks:
+
+           ○​ Several recommendations were identified as false positives or operationally
+              impractical.
+
+           ○​ Rightsizing should consider both CPU and memory peak usage together.
+
+           ○​ Some SQL and licensing-related recommendations lack environment-specific
+              clarity.
+
+           ○​ Certain disks and premium storage recommendations are required for SAP
+              HANA workloads and cannot be downgraded.
+
+           ○​ Backup vaults and reserved resources are actively in use and cannot be deleted.
+
+           ○​ Development and QA systems have licensing exceptions or special
+              configurations.
+ 5.​ Brightwater stated that the current business case does not provide enough value internally:
+
+        ○​ They require at least $2,400/month in savings to justify the initiative to the CIO.
+
+        ○​ Current practical savings identified are significantly below this threshold.
+
+ 6.​ Operational and governance constraints shared by Brightwater:
+
+        ○​ They cannot use Spot instances.
+
+        ○​ Different departments (e.g., Marketing) operate under separate Azure
+           subscriptions.
+
+        ○​ They do not want to implement or rely on autoscaling.
+
+
+
+Conclusion
+ ●​ Most recommendations require deeper environment awareness and business-context
+    validation before being considered actionable.
+
+ ●​ Current optimization opportunities do not meet Brightwater’s minimum expected savings
+    threshold.
+
+ ●​ Future recommendation improvements should better account for:
+
+        ○​ Peak CPU + memory utilization
+
+        ○​ Licensing constraints
+
+        ○​ Reserved capacity commitments
+
+        ○​ Business-critical workload dependencies
+
+        ○​ Organizational governance limitations

@@ -1,0 +1,61 @@
+Plink
+ Engagement Type                                     XYZ Scoping and Requirements Call
+
+ Client Attendee                                     Nitin - Plink
+
+ Client Timeline Reference                           Internal initiative targeted for January-end
+
+ Cloud / Infra Context                               Azure (virtual machines), on-prem Dell servers
+                                                     with iDRAC, Hyper-V clusters hosting mixed-OS
+                                                     VMs
+
+ Confidentiality Note                                Client constrained from sharing internal screens
+                                                     due to company policy
+
+
+
+
+1. Client's Expressed Requirements
+   1.​ Single-Pane Monitoring: Nitin wants to avoid logging into Azure console or RDP-ing into VMs
+       manually - he wants a single unified panel to monitor everything (referred to as "the XYZ panel").
+   2.​ Azure VM Monitoring Scope: Running a PowerShell script inside each Windows VM to capture
+       performance metrics, disk sizing (e.g., 512 GB vs. actual 480-490 GB post-OS install), disk health,
+       and malware / ransomware indicators.
+   3.​ Azure Access Alerts: Login / logout alerts for Azure console and RDP login / logout events for
+       both Azure VMs and on-prem servers.
+   4.​ On-Prem Dell iDRAC Integration: Wants iDRAC (BIOS / boot updates, RAID config, networking,
+       CPU temperature, processor utilization, reboot controls, deployment pushes, backups) streamed
+       into the same panel.
+   5.​ Hyper-V Awareness: A given physical server has Hyper-V enabled and hosts multiple guest VMs
+       (Linux, Windows, Mac-based). Nitin wants visibility into whether Hyper-V is running and
+       which guest OSes exist inside.
+   6.​ Disaster Recovery Across Data Centers: Multiple DR data centers, tracking application transaction
+       flow, end-to-end in a single pane - referenced as Op Manager-style visibility.
+   7.​ Security Compliance: Everything must be surfaced "with complete security compliance."
+
+2. Product Position vs. Expectation - Gaps Identified
+   1.​ XYZ currently scans the cloud account and shows resources and their state (running / not
+       running).
+   2.​ XYZ does not today provide the deep in-VM monitoring Nitin described (disk wear, CPU
+       telemetry, malware / ransomware detection, data movement tracking).
+   3.​ XYZ does not currently integrate with iDRAC / on-prem server hardware management.
+   4.​ At present, individual VM provisioning / management is not supported - only Kubernetes is
+       supported for provisioning (clarified by product team on call).
+
+3. Clarifications Provided
+   1.​ Suggested that Nitin share a screen instead of relying on verbal description so the team
+       could assess fit; the Azure setup guide was shared as an alternative when confidentiality
+       prevented screen sharing.
+   2.​ Product team committed to internal check: whether deep monitoring and VM-provisioning
+       functionality can be built or is on the roadmap.
+   3.​ Client agreed to document his full requirement over email, with images included.
+   4.​ Product team committed to respond by the next afternoon.
+
+4. Observations
+   1.​ Client's true need is closer to an infrastructure monitoring / unified ops platform (SCOM /
+       ManageEngine OpManager territory) than a pure cloud cost governance tool.
+   2.​ XYZ overlaps only in the "see all resources and their state" surface; most of Nitin's asks
+       are outside current scope.
+   3.​ A disciplined qualification outcome: confirm in writing what is in scope, what is roadmap, and
+       what is permanently out of scope before further effort.
+Tempo

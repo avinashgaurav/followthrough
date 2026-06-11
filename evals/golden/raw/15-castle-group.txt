@@ -1,0 +1,301 @@
+Castle Group
+ Engagement Type                                   XYZ Product Demonstration and Discovery
+
+ Client Attendee                                   Vivek - Castle Group
+
+ Primary ERP                                       SAP S/4HANA hosted on-premises in the group's
+                                                   own data center
+
+ Other Apps                                        In-house CRM and other applications - all
+                                                   on-prem, published via VPN
+
+ Cloud Footprint                                   Limited AWS presence (a few websites hosted on
+                                                   AWS)
+
+ Annual AWS Cost                                   INR 5-10 lakh (seasonality-dependent)
+
+ Non-Prod / Prod Split                             Entire SAP landscape (dev, quality, prod) on-prem;
+                                                   split not applicable to cloud
+
+
+
+
+Castle Group
+
+Certainly! Here is the transcript for the call:
+
+00:00 - 01:25: [General background noise and muffled conversation as the participants join the
+meeting.]
+
+01:25 - Maya: Hi Vivek, how are you?
+
+01:28 - Vivek: Hi, fine, Maya. How are you?
+
+01:30 - Maya: Fine. So, thanks for your time, Vivek. My name is Maya, and I am taking care
+of growth and a little bit of product at XYZ. Our company name is XYZ, and what we are
+doing is operating on two vectors of cloud. One is your infrastructure—the actual infrastructure,
+how do we automate the creation of the entire infrastructure and make it easy to use? I mean,
+how easily you can create those infrastructures, like creating the Kubernetes cluster and
+connecting the databases to it. And the second thing is the cost around this infrastructure. So,
+how do we save the cost that is associated with all this infrastructure? These are the two things
+that we are working on specifically. So, the first product is XYZ Day, which is in the infrastructure
+space, and the second product is XYZ, which is the cost optimization tool. Right? So,
+before we go deep, Vivek, how big is your cloud estate? I just wanted to have an idea so that we
+can, you know, cater this conversation as per that.
+
+03:22 - Vivek: So, you know, we have SAP S/4HANA as an ERP, which is on-prem. So, we
+have our own data center wherein we have hosted these SAP servers.
+
+03:37 - Maya: So, you have your own data center, is it?
+
+03:39 - Vivek: Yes, yes. So, it's on-prem.
+
+03:41 - Maya: Oh, so you are not using AWS, Azure, or any hyper-scalers?
+
+03:46 - Vivek: No, no, in fact, we have a very lesser presence on cloud. So, we have our
+ERP—SAP S/4HANA—on-prem, a couple of applications—those are also on-prem—and we
+have an in-house designed CRM, which is again hosted on-prem and, you know, published
+through VPN.
+
+04:14 - Maya: Okay, so whatever you are using, can you tell me, like, how much is the cost for
+AWS or Azure, if you are using it?
+
+04:23 - Vivek: So, we have a couple of websites hosted on AWS, but again, if you ask me, it
+would go around some, you know, 5 to 10 lakhs a year.
+
+04:36 - Maya: 5 to 10 lakhs a year. Okay. And do you know, or have an idea, like, how much
+is on non-prod? Like, how much cost goes into non-prod?
+
+05:03 - Vivek: Sorry, could you come again? I didn't get you.
+
+05:06 - Maya: So, you might have different environments, right? Prod, non-prod—for
+example, dev, test, or any other environment other than prod. Do you know the cost segregation
+between these environments?
+
+05:18 - Vivek: So, these all environments, I told you, SAP, you know, dev, quality system,
+prod—everything is on-prem only. So, our entire SAP landscape is on-prem.
+
+05:34 - Maya: On-prem. Okay. Anyway, so right now, Vivek, we are not catering for on-prem.
+So, our product is not designed to handle on-prem, but I can, you know, check with my tech
+team whether we can enable this product for on-prem as well. So, right now, I'm not sure if we
+can do that or not, but I think for—
+
+05:58 - Vivek: In fact, I would request you to, you know, just give me a quick walkthrough of the
+product so that I can also understand whether it could be applicable for on-prem and even, you
+know, whatever extent I am using on cloud also, whether it applies or not.
+
+06:22 - Maya: Sure. So, I have just shared my screen. Can you see my screen?
+
+06:25 - Vivek: Yes, I can.
+06:28 - Maya: So, this is the product which is XYZ Day, which is related to infrastructure, but
+we are not going to discuss that right now. So, I'll come onto XYZ. So, this is—once you
+connect your cloud account, right? From here, once you connect your cloud account—so, this is
+the playground, this is on dummy data, this is not on the actual data—so, from here, you can
+add your cloud account: AWS, Azure, and GCP. So, we take a global view, resource life cycle
+permission, and some of the metrics that we need for recommendation. So, these are the
+permissions that we take, right?
+
+07:05 - Vivek: So, any cloud you work with?
+
+07:06 - Maya: Yes. And you can add multiple cloud accounts from different hyper-scalers as
+well, Vivek. So, for example, a lot of big organizations have a multi-cloud strategy, and they
+have, for example, if they are using AWS, they might have some of the resources on Azure or
+GCP as well. So, if you have two or three cloud accounts, you can connect all your cloud
+accounts here. And the first feature that we have is, so once you connect your cloud account,
+what we'll do is we will sync all the resources from your cloud account to our platform. So, on
+the 'All Resources' page, you will see all the resources from your cloud account. It can be 10, it
+can be 100, it can be 1,000—so, all the 1,000 resources you will see on this page. And how do
+we segregate—how would you know whether this is from AWS, Azure, or what kind of where it
+is hosted, etc.? So, if you see these icons, this will represent GCP, this is Azure, this is the type
+of resource that this resource is, sorry, and this is the region where it is located. And this is the
+name of the resource. Right? So, this information we provide for the resources because it will
+help you in many things that I'll tell you. Right?
+
+And this column is 'All Tags.' These are the tags that you might have already tagged in your
+cloud account. What we show is exactly the same thing. When we sync the resources, we sync
+the tags as well. And also, we have this XYZ inside, right? So, there are a lot of resources
+which are not tagged. So, when you have, like, a lot of resources, some of the resources might
+not be tagged. To help in tagging, we have this feature—AI tagging. So, we read the metadata
+of the resource and, based on those metadata, we recommend you some of the tags. Right?
+So, for example, this, you can review it and you can select whatever tag you want to tag your
+resources and apply. And you can choose to ignore it as well, so it's not mandatory that you
+have to use these tags. If you find this useful, then only you can use it, otherwise you can skip it.
+Right?
+
+So, these are the tags. And this is the state of the resource. For example, this green means that
+your resource is in 'on' state, and if it is grey, it means it is switched off. And to automate this
+toggling part, right? This is a toggle. So, this is the confirmation that we'll ask from you. For
+example, if it is prod, then we will not advise you to switch off those resources. If I confirm, then
+only it will be switched off. Right? So, since this is the playground, it will not be changed, but this
+is how you can do once you connect your cloud.
+
+Right? To automate this, we have this scheduler. What you can do is you can create a scheduler
+for a week, and this scheduler will work every week. You can name it, you can select the time
+zone, and these capsules, right—these small-small capsules—this is 15 minutes of an hour. So,
+for example, if you are working from 8:00 to 6:00, you can select it. Saturday, Sunday off. Sorry,
+this... this is what you can do and you can set it. So, once you select this configuration, you will
+see this is the estimated savings that we are going to be able to save from the scheduler itself.
+
+10:41 - Vivek: So, does this integrate with the service provider to inform them that I won't be
+using services during these time slots?
+
+10:49 - Maya: Sorry, sorry, can you repeat again?
+
+10:51 - Vivek: So, I said, does it integrate with the service provider to inform that you are not
+going to use these services during this particular time slot?
+
+11:02 - Maya: Integrate, meaning? I didn't understand your question. So, we already
+integrated with your cloud account, right? So, this is the configuration that you'll have to do
+manually at the moment, but we are planning to automate this. For example, once we have your
+metrics data, we will tell you what time of the day you can switch off these resources. Right? So,
+once you create it, your schedule is there. For example, you have created 10 schedules, and in
+order for the schedule to work against the resource, you have to attach this schedule to that
+resource. So, once you attach it, it means that particular resource will work against this
+schedule. Right?
+
+And for example, I'll tell you the scheduler as well. So, these are seven days of the week:
+Monday, Tuesday... so, once you set the schedule against the resources, you will see, like, what
+time of the day it will be—the name of the schedule. So, if you see this nightly shutdown, you
+will see whatever you set here. Right?
+
+And for example, if you have multiple resources and there are multiple applications that you are
+working on, or there are different projects that you are working on, you can create a team and
+you can assign it to individual resources as well, or you can assign it to resource groups as well.
+I'll tell you what a resource group is, but this is the idea of assigning a team.
+
+And also, this is not just about the cost, Vivek. So, the entire platform is for governance as well.
+For example, if you have two or three cloud accounts, right, and you want to make sure that you
+have control over the resources, you know what is happening, what resources are there, how
+much cost is there for each resource, and if you assign the budget, how much budget this
+resource is consuming from my budget. For example, at the start of the year, you might be
+budgeting your cloud, like how much you want to spend on the cloud. So, this can help you in
+budgeting as well. Because there are some of the databases or some of the resources which
+are very expensive. So, maybe based on that, if you set this, you can plan your resources as
+well. For example, if you have one big resource, you can have maybe two or three cheaper
+resources. But if you have two big resources, then you can maybe—you can just perform
+permutations and combinations of different resources. Right?
+
+So, how do you do this configuration? If you click on the action button, from here, you can
+assign the team, you can create the team as well. So, we have a different page altogether
+dedicated to teams, through which you can create a team, delete a team, etc. Now, this is the
+budget. You can assign whatever budget you want. And these are the budget alerts. So, if you
+want to set the budget alerts—for example, if your resource has consumed 70% or 75% of your
+budget, you should get a notification. And where are you going to get this notification? So, right
+now, we support Teams, Google Chat, and Slack. Right? And there is an option for custom
+webhooks as well. From here, you can select the channel if you have configured it. Right?
+
+The other very important feature that we have is the scheduler—enable scheduler override. For
+example, you have set the schedule for the entire week, and the resources are going off at 6:00
+PM. But because of some release or something like that, some issue, your team is working on
+those resources. What you can do is you can override the schedule. For example, they will be
+working till 8:00 PM, so from 6:00 to 8:00 PM, you can override the schedule. And that can
+happen, like, if you have that requirement for every day, you can change the schedule, but if you
+have just for one or two days, you can override the schedule. I can add 120 minutes, so this
+schedule can be overridden for 120 minutes.
+
+Right? So, this is the configuration that you can do, and these are for the resources. The same
+configuration you can do on resource groups as well. So, maybe you want to group four or five
+resources together and you want to set the same schedule, you can do so. So, from here, you
+can set the schedule, and whatever you decide, it will work on all the resources of this group.
+And you can group these resources based on your environment, your project, or your
+application, or whatever—if there is any marketing campaign going on or any POC going on, so
+you can group as per that. Right?
+
+The other thing is that, for example, if you have applications and databases in one group, and
+you want to make sure that those applications—so there should not be any request which is not
+fulfilled. So, what you will do is you will switch off your application first and then the database.
+And when you are switching on, you should switch on your database and then the application.
+So, this type of configuration that you can also do. 'Auto order' is that we will decide the order for
+you; the 'custom order' is that you can choose the custom order. For example, if you want this to
+switch on first or switch off first, this you can do for multiple applications. Right?
+
+Any questions, Vivek?
+
+16:21 - Vivek: No, no, in fact, not.
+
+16:24 - Maya: Okay. So, once you do this, you save it and work on the schedule. And this is
+the team—pretty simple. You can create the team, you can add the team members in the team,
+and you can assign the roles, different roles, to these team members: admin, automation lead,
+editor, or you can create your custom role as well. Right? Then we have audit logs. So,
+whatever you do on the platform, you can see all the logs here. Sorry, it's slow. So, you will see
+everything here.
+
+And then the other thing is, so there are two ways through which you can do the saving: one is
+through the scheduler, and the second is through recommendations. So, what we do is we
+check the utilization—so, we call it utilization-based saving. So, we check the utilization of the
+resources and then we recommend—we'll give you different recommendations based on
+right-sizing, idle resource detection, and orphan resources. And there are two other things that
+we do recommendation on. For example, right-sizing—you don't need maybe that bigger
+machine or smaller machine, so based on that, we will recommend you right-sizing, right size of
+the machine. And idle resource—for example, if a resource is not idle at a certain point of time,
+we'll tell you that. And orphan resources—basically, suppose if there is any IP address or
+anything which is not attached for a longer period of time, or it has been idle, we'll tell you that
+as well.
+
+Right? So, what you can do is you can review this recommendation and you can apply these
+recommendations. And we're also working on this—so, for example, if you're comfortable with
+these recommendations and you are confident, you can apply these recommendations through
+our platform as well. So, right now, it's not there, but we are working on that. Right?
+
+Taking a lot of time. And this is the settings page. You can add integration: Slack, Microsoft
+Teams, and Google Chat, or any custom webhook. You can do that integration. And the last
+thing is that this is the kind of overview of whatever is happening on the platform. So, for
+example, so if you see this 'Total Savings,' so if we have done any savings through the platform,
+you will see savings here. And this is the total cost of your resources, whatever is tagged. And
+these are the number of resources that you will have.
+
+So, what we do, Vivek, is we scan every 15 minutes. So, if there is anything that has been
+changed in the last 15 minutes, you will see the change here. For example, if you have added
+two resources or if you have deleted 10 resources, you will see +2 or -10 here. Right? And
+these are the resource groups, if you have created any resource groups, and these are the
+teams, if you have created any teams. Right? And this is basically an overview. So, for example,
+if you select any resource, you will see, like, what is the saving of that resource at a particular
+day of—like, for example, 18th December. You can select for seven days, 30 days, or three
+months, or any custom. So, you will see all this information here for resources and for resource
+groups as well.
+
+And also, what we do is we give you segregation of storage, network, database, and compute
+so that you know where your cost is going. Right? And this is the scheduler success rate. For
+example, when we are running the schedules, right—if you have set any schedule for switching
+on or off of the resources, you will see, like, for example, like 90% of the time the scheduler has
+run properly, and maybe two or three times it has not run. It can be because of our mistake or it
+can be because maybe AWS is down or there is some issue with AWS or Azure or any
+hyper-scaler. So, we'll tell you the exact picture. These are the audit logs and this is again the
+summary. For example, how many teams you have, how many teams are over budget, no
+budget, or under budget. So, you will see all the information here. And the last row is about your
+cloud accounts. If you have multiple cloud accounts added, you will see, for example, this is the
+cloud account, these are the number of—like, resources, number of resources, and how much
+of them are databases or VMs. So, we'll tell you this information also. If there is any SQL—sorry,
+any question?
+20:59 - Vivek: No, no, in fact, I was just trying to, you know, relate how this could be of any use
+to ours right now.
+
+21:12 - Maya: Okay. So, what do you think?
+
+21:14 - Vivek: So, our presence being so low on cloud, I don't see any relevance right now.
+
+21:24 - Maya: But Vivek, you said, right, from 5 to 10 lakhs you have annual cost on the
+cloud—AWS, I guess. So, I think there—
+
+21:32 - Vivek: So, why I said 5 to 10, see, some of the sites are, you know, seasonality
+dependent. That's what—some particular year we have it 5.5 lakhs, some year we also have 9
+lakhs. That was the reason I was saying. Because it was all based on seasonality. But see, let
+me, let me go through. I already have, you know, a few documents shared by your team. Okay.
+And I'll get back to you if I could, you know, see any relevance and I could see, you know, this
+can be used at somewhere.
+
+22:15 - Maya: Also, I think maybe Vivek, if you want, I can check with my tech team if this can
+be used for on-prem resources as well, if you want.
+
+22:26 - Vivek: No, on-prem I don't see this could use us because, you know, we are not an IT
+company. We have a limited team who is taking care of these SAP on-prem things. And the
+team is doing fine, in fact. So, they actually don't need any tool as such right now.
+
+22:51 - Maya: Okay. Great. Anyway, so thanks for your time, Vivek.
+
+22:57 - Vivek: Thank you for your time.
+
+23:04 - Maya: Okay, bye. Have a good day.
+
+23:06 - Vivek: Bye.
+Boldwiz

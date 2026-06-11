@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Insights Engine Recorder",
+  "version": "0.1.0",
+  "description": "Records the current tab's audio and uploads it to the XYZ Insights Engine as a client meeting.",
+  "minimum_chrome_version": "116",
+  "permissions": ["tabCapture", "offscreen", "storage", "activeTab"],
+  "host_permissions": ["http://localhost:4500/*"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Insights Engine Recorder"
+  }
+}

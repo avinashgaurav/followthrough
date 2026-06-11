@@ -1,0 +1,111 @@
+QuadNet Wireless Solutions
+Engagement Type                                    XYZ Product Demonstration + Company
+                                                   Credibility Overview
+
+Client Attendees                                   Ramesh Iyer - Business Development Director
+                                                   (East India); Tanmay - Core technical evaluator;
+                                                   Lata, Kiran, Ajay - Data-center team
+
+QuadNet Business                                   System integrator - designs, builds, and manages
+                                                   data centers, city surveillance, smart-city projects
+
+Flagship Reference Project                         a state Smart City project (started 2018, in
+                                                   maintenance until 2030)
+
+DC / DR Locations                                  Primary DC in Bhubaneswar; DR at Chandigarh /
+                                                   Mohali
+
+Current Cloud Usage                                Proposing cloud in selected projects (remote /
+                                                   smaller districts); not using any hyperscaler for
+                                                   own workloads yet
+
+Government Engagements                             One government client onboarded; result
+                                                   pending
+
+XYZ Customer Mix                                Predominantly private; primary ICP: FMCG and
+                                                   media
+
+
+
+
+1. QuadNet Context
+   1.​ Business Lines: Design, build, and manage data centers, city surveillance, city Wi-Fi, Cisco
+       backbones - positioned as a major System Integrator.
+   2.​ Flagship: a state Smart City project - rated as India's number one smart city - contract runs
+       through 2030.
+   3.​ Geography: Operations remote-controlled from Bhubaneswar and Mohali; projects span
+       Bhubaneswar, Delhi, Bangalore, Hyderabad, Vizag.
+   4.​ Why Cloud Enters the Conversation: In smaller districts and remote DHQ-level projects, on-prem
+       infrastructure is not secure or feasible, so QuadNet proposes cloud-based deployments.
+
+2. Product Briefings Delivered
+XYZ Day (Quick Overview)
+   1.​ Supports AWS, GCP, Azure, and OCI.
+   2.​ Kubernetes cluster spin-up in ~20-30 minutes after connecting a cloud account.
+   3.​ Applications = namespaces (logical separations).
+   4.​ GitHub / GitLab / local machine CI/CD workflow auto-generated; copy-paste into repo to activate
+       deployment automation.
+   5.​ Data store attachment in ~5 minutes.
+   6.​ Observability: logs, traces, metrics.
+XYZ (Main Focus)
+    1.​ Permissions: read-only plus lifecycle permissions to switch resources on/off.
+    2.​ Unified resource listing with cloud / type / region icons.
+    3.​ Toggle supports 20-60% savings for non-prod resources when well-scheduled.
+    4.​ Weekly scheduler with time-zone selection, capsule-based hour selection, drag-selection,
+        estimated savings display.
+    5.​ Team assignment, cost / budget display, budget alerts via Google Chat, Teams, Slack (custom
+        webhook supported).
+    6.​ Admin-only Scheduler Override (example: up to 5 hours).
+    7.​ Resource Groups with Auto Order + Custom Order (drag-and-drop) + Start Delay / Stop Delay.
+    8.​ Teams with custom roles.
+    9.​ Recommendations engine based on 7-14 day utilization: right-sizing, idle detection, orphan
+        detection; remediation steps for each; auto-apply on roadmap.
+    10.​Storage policies addressable (acknowledging that many large organizations know the policies but
+        have not applied them).
+    11.​Settings / integrations to route switch on / off and budget notifications.
+    12.​Overview dashboard: total savings to date, sync every 15 minutes, resource / group / team
+        counts with delta indicators, time-window savings, storage / network / database / compute split,
+        scheduler success rate with reason attribution (internal vs. hyperscaler).
+    13.​AI Tagging via metadata for untagged estates - particularly relevant for large organizations.
+
+3. Technical Evaluation - Tanmay's Probing Questions
+Differentiation vs. Hyperscaler-Native Tools
+   1.​ AWS / Azure natively provide some alerting and recommendations (including email and
+       WhatsApp notification).
+   2.​ XYZ differentiation: broader coverage, particularly Kubernetes stateful sets and deployment
+       sets cannot be "switched off" to zero compute via native tools (only pod-level autoscaling).
+   3.​ XYZ's recommendation posture includes proactive machine-size reduction - hyperscalers
+       historically avoid such recommendations.
+   4.​ Roadmap direction: suggest optimal schedule windows based on observed idle periods.
+Recommendation Data Cadence
+    1.​ Current observation windows: 7 days and 14 days.
+Existing Clients and Case Studies
+   1.​ One government client submitted last month (result pending).
+   2.​ Private clients: a good number; ICP focus on FMCG and media.
+   3.​ 7-8 active POCs with large organizations ongoing.
+   4.​ Savings figure shared: 26% savings realized for a customer paying INR 60-70 crore annually to
+       AWS.
+Onboarding Effort
+    1.​ Roughly 5-10 minutes to connect a cloud account.
+    2.​ Roughly half an hour to walk through the platform with actual resources.
+    3.​ Self-service post-onboarding - customer does not need XYZ to run the platform day-to-day.
+
+4. Company Credibility Overview
+    1.​ Founders: Rajan Mehta (IIT Kanpur, MIT alumnus; founded first a major tech company's India development center in
+        2009; founded GroceryCo and XYZ Group), Arvind Nair (IIT Bombay; creator of the Flux framework
+        used for the platform; CTO), Sameer Kapoor (IIT Bombay; ex-CEO an edtech startup; ex-Product
+        Head a hospitality startup 2015/16).
+    2.​ Timeline: GroceryCo (2012-2018) - four-hour grocery delivery; XYZ Group (2018 onwards) -
+        enterprise retail; ShopApp - small / medium enterprises; XYZ (2024) with XYZ Day first and
+        XYZ current focus.
+
+5. Client Outcome and Stated Requirements
+    1.​ Client intent: promote XYZ's solutions where appropriate, subject to validating real-world
+        savings ("not just logical").
+    2.​ Requested: pre- and post-deployment case studies; architectural description; backend
+        technology / methodology detail; security posture; ISO / SOC2 and any other certifications;
+        case-study figures with savings percentages.
+    3.​ XYZ committed to share architecture and security posture; percentages allowed in case
+        study, absolute numbers restricted.
+    4.​ Explicit alignment: POC-led engagement - "until and unless you see value, we will not push it."
+Sprout

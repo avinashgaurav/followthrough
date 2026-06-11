@@ -1,0 +1,102 @@
+Maverick Apparel
+Engagement Type                                      XYZ Product Demonstration
+
+Client Attendee                                      Farhan - Maverick Apparel (and technical interlocutor)
+
+Current Cloud                                        AWS, limited footprint
+
+Current AWS Bill                                     INR 9,000-12,000 per month (not USD)
+
+Historical AWS Bill                                  INR 25-30 lakh when e-commerce ran on
+                                                     WooCommerce / EC2
+
+Platform Change                                      Migrated e-commerce to Shopify in 2024;
+                                                     dependence on AWS dropped significantly
+
+Remaining AWS Usage                                  A few Lambda functions supporting the mobile
+                                                     app; no EC2, no databases currently
+
+Environment Model                                    Prod and non-prod share the same server (no
+                                                     dedicated non-prod infra)
+
+
+
+
+1. Company Context
+   1.​ Previous State: AWS billing once ran at INR 25-30 lakh per month when the e-commerce stack
+       was WooCommerce hosted on EC2 - a resource-heavy setup.
+   2.​ Migration: Completely migrated to Shopify in 2024, which substantially reduced AWS
+       dependence.
+   3.​ Current Remaining Usage: A few Lambda functions supporting the mobile app. No EC2. No
+       databases (RDS has been decommissioned).
+   4.​ Environment Strategy: Non-prod (testing) occurs on the same server as prod when required.
+   5.​ Current Monthly AWS Bill: INR 9,000-12,000 (rupees, not USD).
+
+2. XYZ Positioning For This Account
+   1.​ Value proposition framed as solving two cloud problems - (a) cost optimization and (b)
+       infrastructure spin-up - with XYZ focused squarely on (a).
+   2.​ Two saving levers emphasized: time-based scheduling (non-prod) and utilization-based
+       recommendations (right-sizing, idle detection, and additional recommendation types).
+   3.​ Explicit acknowledgement: script-based scheduling is common, but the maintenance burden -
+       especially when the original author leaves - is the main pain point XYZ is positioned against.
+   4.​ Savings ambition: up to 15% of cloud cost via recommendations, in addition to scheduling
+       savings.
+
+3. Client Pushback - "Is There Anything Left To Optimize?"
+   1.​ Client directly asked whether a INR 9,000-12,000 per month bill has room to optimize.
+   2.​ Response: still possible - there may be orphan resources; non-prod resources can be scheduled;
+       realistic estimate would be savings of INR 2,000-3,000 from the existing ~INR 12,000 bill, subject
+       to validation.
+   3.​ Onboarding is fast: ~5 minutes via global view + resource lifecycle permissions; additional
+       permissions only required for utilization-driven recommendations.
+   4.​ Security posture mentioned: ISO, SOC 2 compliant.
+   5.​ Typical engagement: 3-4 weeks of platform access to evaluate; continue if savings are seen,
+       otherwise close the chapter.
+
+4. XYZ Feature Walkthrough - What Was Shown
+All Resources and State
+   1.​ Unified listing across clouds + local servers; icons for cloud / type / region.
+   2.​ Auto-tagging for resource-usage clarity; tags remain inside XYZ.
+   3.​ State toggle with production-aware warnings (triggered when the target may be a production
+       resource).
+Scheduler and Resource Groups
+   1.​ Default schedules plus custom schedule creation with visual active-zone (green) / inactive-zone
+       (red).
+   2.​ Drag-to-select support for quickly defining ranges; estimated savings (example shown: 61%) and
+       active-hour counts surfaced at configuration time.
+   3.​ Resource groups for environment / application grouping with Auto Order / Custom Order plus
+       Start Delay and Stop Delay.
+Teams, Budgets and Overrides
+   1.​ Role-based access with custom roles - delete / create / edit / view.
+   2.​ Group-level budgets and threshold alerts to integrated channels.
+   3.​ Schedule Override per day / hour without touching the base schedule.
+Audit Log and Recommendations
+   1.​ Audit log with reference IDs for unsuccessful events.
+   2.​ Recommendations across cloud storage, compute, Kubernetes, and cloud SQL.
+   3.​ "Right-Sizing" tag highlighted; in-platform remediation steps shown, with automated apply
+       planned for release next month.
+   4.​ Example recommendation walked through: USD 159 savings opportunity, reasoning plus
+       remediation steps.
+   5.​ Recommendations prioritized for non-prod; observation window cited as 7-14 days.
+   6.​ For Kubernetes: deployments and stateful sets can be selectively switched off via the platform.
+Integrations and Overview
+   1.​ Slack, Microsoft Teams, Google Chat, custom webhooks.
+   2.​ Overview dashboard: total savings by 7 / 30 / 90-day windows; resources, groups, teams,
+       scheduler success rate (with red markers for failures), team budget status, per-cloud resource
+       and VM / database totals.
+
+5. Client Self-Reference - Prior Scheduling Experience
+   1.​ Client confirmed they had previously built an internal script on WooCommerce to switch off
+       non-prod after 6:00 PM.
+   2.​ Script coverage was limited; XYZ's pitch emphasizes broader coverage and reliability,
+       including Kubernetes-level granularity that scripts typically cannot match.
+
+6. Pricing Clarification
+   1.​ Up to 10 resources: free.
+   2.​ Above 10: pricing depends on the count - exact count not known to client on call.
+
+7. Forward Plan
+   1.​ Internal alignment required - multiple teams own different AWS resources.
+   2.​ Client indicated positive interest in the ability to switch off unused resources.
+   3.​ Follow-up conversation scheduled for Wednesday (time TBD).
+Verox Technology Pvt Ltd
