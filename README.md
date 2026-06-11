@@ -38,6 +38,25 @@ Each arrow is a tracked, timestamped state transition. The funnel, the turnaroun
 
 ---
 
+## Screenshots
+
+> [!NOTE]
+> Screenshots are being refreshed alongside the upcoming UI update — coming soon.
+
+<!--
+  TODO: drop final UI screenshots into docs/screenshots/ and uncomment.
+
+| Review (triage) | Clients (timeline + promise ledger) |
+|:---:|:---:|
+| ![Review screen](docs/screenshots/review.png) | ![Clients screen](docs/screenshots/clients.png) |
+
+| Proof (changelog match) | Numbers (closed-loop metrics) |
+|:---:|:---:|
+| ![Proof screen](docs/screenshots/proof.png) | ![Numbers screen](docs/screenshots/numbers.png) |
+-->
+
+---
+
 ## Why it's different
 
 | Most "meeting summarizers" | Followthrough |
