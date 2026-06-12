@@ -95,6 +95,29 @@ export interface AuthedUser {
   role: "admin" | "member";
 }
 
+/**
+ * Open-access guest. When login is NOT required (the default), unauthenticated
+ * requests resolve to this real admin row so the whole app is usable with no
+ * sign-in. It has no code_hash, so nobody can ever log in AS the guest.
+ */
+export const GUEST_USER_ID = "open-access-guest";
+const GUEST_EMAIL = "open-access@guest.local";
+
+export function isGuestUser(u: AuthedUser | null | undefined): boolean {
+  return !!u && u.id === GUEST_USER_ID;
+}
+
+export function guestUser(db: Database): AuthedUser {
+  const existing = db
+    .query("SELECT id, email, name, role FROM users WHERE id = ?")
+    .get(GUEST_USER_ID) as AuthedUser | null;
+  if (existing) return existing;
+  db.query(
+    "INSERT OR IGNORE INTO users (id, email, name, role, created_at) VALUES (?, ?, 'Guest', 'admin', ?)",
+  ).run(GUEST_USER_ID, GUEST_EMAIL, nowIso());
+  return { id: GUEST_USER_ID, email: GUEST_EMAIL, name: "Guest", role: "admin" };
+}
+
 export function userForSession(db: Database, sessionId: string | null): AuthedUser | null {
   if (!sessionId) return null;
   const row = db

@@ -359,9 +359,8 @@ export function Insights() {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Ref</th>
-                    <th>Title</th>
                     <th>Client</th>
+                    <th>Ask</th>
                     <th>Track</th>
                     <th>State</th>
                     <th>
@@ -385,6 +384,7 @@ export function Insights() {
                         </button>
                       </Tooltip>
                     </th>
+                    <th>Ref</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -405,14 +405,20 @@ export function Insights() {
                           }
                         }}
                       >
-                        <td className="mono tiny subtle">{handle}</td>
+                        <td>
+                          <div style={{ fontWeight: 600 }}>{i.client_name || "Unknown client"}</div>
+                          {i.meeting_seq != null && (
+                            <div className="mono tiny subtle" style={{ marginTop: 2 }}>
+                              meeting {String(i.meeting_seq)}
+                            </div>
+                          )}
+                        </td>
                         <td>
                           <div className="row" style={{ gap: 8 }}>
                             <span>{i.title || "Untitled insight"}</span>
                             {i.item_type && <ItemTypePill type={i.item_type} />}
                           </div>
                         </td>
-                        <td className="muted">{i.client_name || "-"}</td>
                         <td className="muted">{trackLabel(i.track)}</td>
                         <td>
                           <StatePill state={i.state} />
@@ -421,6 +427,7 @@ export function Insights() {
                         <td className="num">
                           {typeof i.priority === "number" ? i.priority : "-"}
                         </td>
+                        <td className="mono tiny subtle">{handle}</td>
                       </tr>
                     );
                   })}
@@ -641,7 +648,7 @@ const INSIGHTS_CSS = `
   line-height: 1.55;
 }
 .snippet mark {
-  background: rgba(118, 185, 0, 0.18);
+  background: var(--signal-wash);
   color: var(--accent-soft);
   border-radius: 1px;
   padding: 0 1px;

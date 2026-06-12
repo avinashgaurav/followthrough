@@ -11,6 +11,8 @@ import {
   Pill,
   SectionHead,
   Skeleton,
+  Spine,
+  SpineItem,
   StatePill,
   Tooltip,
   useToast,
@@ -345,44 +347,45 @@ export function ClientDetail() {
               </Btn>
             </div>
           ) : (
-            <div className="card" style={{ padding: 0 }}>
-              {orderedMeetings.map((m) => {
-                const seq = meetingSeq(m);
-                return (
-                  <Link
-                    key={m.id}
-                    to={`/capture?meeting=${m.id}`}
-                    className="lcard"
-                    aria-label={`Open meeting ${m.title || ""}`}
-                  >
-                    <div className="t" style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                      {seq !== null && (
-                        <Tooltip title="Meeting order" content={`This is meeting number ${seq} with this client.`}>
-                          <span className="num subtle" style={{ fontSize: 11 }}>
-                            #{seq}
-                          </span>
-                        </Tooltip>
-                      )}
-                      <span>{m.title || "Untitled meeting"}</span>
-                    </div>
-                    <div className="meta">
-                      <span>{formatDate(m.meeting_date)}</span>
-                      {m.meeting_type ? (
-                        <>
-                          <span aria-hidden="true">·</span>
-                          <span>{titleCase(m.meeting_type)}</span>
-                        </>
-                      ) : null}
-                      {m.status ? (
-                        <>
-                          <span aria-hidden="true">·</span>
-                          <StatePill state={m.status} />
-                        </>
-                      ) : null}
-                    </div>
-                  </Link>
-                );
-              })}
+            <div className="card">
+              <Spine>
+                {orderedMeetings.map((m, i) => {
+                  const seq = meetingSeq(m);
+                  // Oldest first; the most recent meeting (last) sits at the live playhead.
+                  const isLatest = i === orderedMeetings.length - 1;
+                  return (
+                    <SpineItem
+                      key={m.id}
+                      timecode={formatDate(m.meeting_date)}
+                      state={isLatest ? "live" : "done"}
+                    >
+                      {/* Plain (non-link) meeting row: Capture has no working meeting deep-link (audit A1). */}
+                      <div className="t" style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                        {seq !== null && (
+                          <Tooltip
+                            title="Meeting order"
+                            content={`This is meeting number ${seq} with this client.`}
+                          >
+                            <span className="num subtle" style={{ fontSize: 11 }}>
+                              #{seq}
+                            </span>
+                          </Tooltip>
+                        )}
+                        <span>{m.title || "Untitled meeting"}</span>
+                      </div>
+                      <div className="meta">
+                        {m.meeting_type ? <span>{titleCase(m.meeting_type)}</span> : null}
+                        {m.status ? (
+                          <>
+                            {m.meeting_type ? <span aria-hidden="true">·</span> : null}
+                            <StatePill state={m.status} />
+                          </>
+                        ) : null}
+                      </div>
+                    </SpineItem>
+                  );
+                })}
+              </Spine>
             </div>
           )}
         </section>

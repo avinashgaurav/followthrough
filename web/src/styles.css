@@ -1,33 +1,62 @@
-/* Insights Engine — Variant A: Linear structure + NVIDIA green.
-   Dark only. Near-black canvas, charcoal panels, 1px hairlines, angular 2px corners.
-   Green is the only accent. Matches design-reference/APPROVED-review-mockup.html. */
+/* Followthrough — "The Transcript Spine" design system.
+   See design-reference/SPINE.md. Dual surface: cinematic dark to work, warm paper
+   to read. One accent: golden signal-amber = the live present. 1px hairlines,
+   angular 2px corners on dark chrome. Editorial serif for testimony + H1. */
 
 :root {
-  --canvas: #010102;
-  --p1: #0f1011;
-  --p2: #141516;
-  --p3: #18191a;
-  --line: #23252a;
-  --line-soft: #1b1d21;
-  --ink: #f7f8f8;
+  /* ---- work surface (cinematic dark) ---- */
+  --canvas: #0a0b0d;
+  --p1: #101214;
+  --p2: #16181b;
+  --p3: #1c1f22;
+  --line: #24272c;
+  --line-soft: #1a1d21;
+  --ink: #f6f7f8;
   --ink-muted: #8a8f98;
-  --ink-subtle: #7b8089; /* lightened from the mockup's #62666d to clear WCAG AA (4.5:1) on all surfaces */
-  --accent: #76b900;
-  --accent-ink: #04130a;
-  --accent-line: #2c4a16;
-  --accent-soft: #9ccb5e;
+  --ink-subtle: #7b8089; /* holds WCAG AA (4.5:1) on all dark surfaces */
+
+  /* ---- read surface (warm paper — reading bands only) ---- */
+  --paper: #faf9f5;
+  --paper-soft: #f2efe8;
+  --paper-line: #e6dfd3;
+  --paper-ink: #1a1916;
+  --paper-body: #3d3a34;
+  --paper-muted: #6c685f;
+
+  /* ---- signal amber (the one accent = the live present) ---- */
+  --accent: #f4a521; /* alias: --signal */
+  --signal: #f4a521;
+  --signal-hi: #ffc24a; /* live / now glow */
+  --accent-soft: #ffc24a; /* light amber for text + hover */
+  --accent-ink: #1a1206; /* text on amber fills */
+  --accent-line: #5a3f12; /* amber hairline on dark */
+  --signal-wash: rgba(244, 165, 33, 0.12); /* active row / current-step wash */
+
+  /* ---- semantic (sparing) ---- */
   --danger: #e5484d;
+  --warn: #d9a531;
   --info-ink: #7fa9c9;
   --info-line: #26343f;
-  --r: 2px;
+
+  /* ---- type ---- */
+  --serif: "Newsreader", Georgia, "Times New Roman", serif;
   --font: "Inter", -apple-system, system-ui, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* ---- shape ---- */
+  --r: 2px;
+  --r-paper: 8px;
+
+  /* ---- metrics ---- */
   --side-w: 208px;
   --top-h: 48px;
   --max: 1180px;
+
+  /* ---- motion ---- */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --dur-fast: 120ms;
   --dur-med: 200ms;
+  --dur-spine: 320ms; /* playhead scrub — the one cinematic motion */
 }
 
 * {
@@ -44,7 +73,7 @@ body {
   background: var(--canvas);
   color: var(--ink);
   font-family: var(--font);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -343,9 +372,10 @@ button {
 }
 
 .head h1 {
-  font-size: 19px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-family: var(--serif);
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
 
 .head p {
@@ -443,7 +473,7 @@ button {
 }
 
 .btn.primary:hover:not(:disabled) {
-  background: #82c80a;
+  background: #ffb733;
 }
 
 .btn.ghost {
@@ -752,12 +782,13 @@ select.ctrl {
 
 /* detail header (per APPROVED-review-mockup.html lines 60-61) */
 .htitle {
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-family: var(--serif);
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
   margin: 0 0 4px;
   max-width: 680px;
-  line-height: 1.3;
+  line-height: 1.25;
 }
 
 .hsub {
@@ -777,27 +808,30 @@ select.ctrl {
   margin: 18px 0 7px;
 }
 
+/* testimony quote — the citation centerpiece: warm paper, editorial serif (move C) */
 .quote {
-  background: var(--p1);
-  border: 1px solid var(--line);
+  background: var(--paper);
+  border: 1px solid var(--paper-line);
   border-left: 2px solid var(--accent);
-  border-radius: var(--r);
-  padding: 12px 14px;
+  border-radius: var(--r-paper);
+  padding: 18px 22px;
+  font-family: var(--serif);
   font-style: italic;
-  color: #d0d6e0;
-  font-size: 13.5px;
-  line-height: 1.55;
+  color: var(--paper-ink);
+  font-size: 22px;
+  line-height: 1.4;
   max-width: 680px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
 }
 
 .quote .by {
   display: block;
-  margin-top: 8px;
+  margin-top: 12px;
   font-style: normal;
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.04em;
-  color: var(--ink-subtle);
+  color: var(--paper-muted);
 }
 
 .bodybox {
@@ -813,7 +847,7 @@ select.ctrl {
 
 .aibox {
   margin-top: 10px;
-  background: rgba(118, 185, 0, 0.06);
+  background: var(--signal-wash);
   border: 1px solid var(--accent-line);
   border-radius: var(--r);
   padding: 9px 12px;
@@ -823,7 +857,7 @@ select.ctrl {
 }
 
 .aibox b {
-  color: #bfe38c;
+  color: #ffd27a;
 }
 
 /* ---------------------------------------------------------------- two-pane split (Review etc.) */
@@ -859,6 +893,14 @@ select.ctrl {
 
 .qgroup .n {
   color: var(--accent);
+}
+
+/* client sub-header inside a queue bucket (groups the wall by client) */
+.qclient {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 16px 3px 16px;
 }
 
 @media (max-width: 900px) {
@@ -1612,4 +1654,164 @@ select.ctrl {
   border: none;
   border-top: 1px solid var(--line);
   margin: 18px 0;
+}
+
+/* ================================================================ SPINE SYSTEM
+   The vertical time-axis. Used on Review (call timeline), Clients (meeting
+   timeline), Proof/Numbers (said->shipped->told). See design-reference/SPINE.md. */
+
+.spine {
+  position: relative;
+  padding-left: 64px;
+}
+.spine::before {
+  content: "";
+  position: absolute;
+  left: 47px;
+  top: 4px;
+  bottom: 4px;
+  width: 1px;
+  background: var(--line);
+}
+.spine-row {
+  position: relative;
+  padding: 10px 0;
+}
+.spine-tc {
+  position: absolute;
+  left: -64px;
+  width: 44px;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-subtle);
+  top: 12px;
+}
+.spine-tick {
+  position: absolute;
+  left: -20px;
+  top: 14px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink-subtle);
+  border: 2px solid var(--canvas);
+}
+.spine-row.done .spine-tick {
+  background: var(--accent);
+}
+.spine-row.future .spine-tick {
+  background: var(--line);
+}
+.spine-row.live .spine-tick {
+  background: var(--signal);
+  width: 11px;
+  height: 11px;
+  left: -22px;
+  top: 13px;
+  box-shadow:
+    0 0 0 4px var(--signal-wash),
+    0 0 12px 2px rgba(244, 165, 33, 0.45);
+}
+
+/* the live playhead — the one cinematic motion */
+.playhead {
+  position: absolute;
+  left: 43px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--signal);
+  box-shadow:
+    0 0 0 4px var(--signal-wash),
+    0 0 12px 2px rgba(244, 165, 33, 0.45);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .playhead {
+    transition: top var(--dur-spine) var(--ease-out);
+  }
+}
+
+/* ================================================================ WAVEFORM
+   One bar language for audio (Capture) and trend sparklines (Numbers). */
+
+.waveform {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 56px;
+}
+.waveform .bar {
+  flex: 1;
+  min-width: 2px;
+  background: var(--ink-subtle);
+  border-radius: 1px;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.waveform .bar.voiced {
+  background: var(--ink-muted);
+}
+.waveform .bar.live {
+  background: var(--signal);
+}
+
+.sparkline {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1.5px;
+  height: 28px;
+}
+.sparkline .bar {
+  width: 4px;
+  background: var(--line);
+  border-radius: 1px;
+}
+.sparkline .bar.live {
+  background: var(--signal);
+}
+
+/* ================================================================ PAPER BAND
+   Warm reading surface for long-form: insight bodies, briefs, testimony. */
+
+.paper {
+  background: var(--paper);
+  color: var(--paper-body);
+  border: 1px solid var(--paper-line);
+  border-radius: var(--r-paper);
+  padding: 20px 24px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  max-width: 720px;
+}
+.paper h1,
+.paper h2,
+.paper h3 {
+  font-family: var(--serif);
+  color: var(--paper-ink);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.paper p {
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0 0 12px;
+  color: var(--paper-body);
+}
+.paper .lbl,
+.paper .dlbl {
+  color: var(--paper-muted);
+}
+.paper a {
+  color: var(--paper-ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* eyebrow tag (mono, uppercase) — precedes H1/H2 */
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-subtle);
 }

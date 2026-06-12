@@ -21,6 +21,7 @@ import {
   Skeleton,
   StatePill,
   Tooltip,
+  Waveform,
   useToast,
 } from "../components/ui";
 import { ageOf, formatDate, formatDateTime, titleCase } from "../format";
@@ -55,6 +56,35 @@ function attendeeNames(ev: CalendarEvent): string[] {
   return (ev.attendees ?? [])
     .map((a) => (a?.name || a?.email || "").trim())
     .filter(Boolean);
+}
+
+/**
+ * Derive a stable ~64-bar amplitude shape (values 0..1) from a file's name and
+ * size. This is a deterministic visual preview only, NOT a real audio decode:
+ * the same file always yields the same shape so the bars do not flicker on
+ * re-render. A small mono caption keeps it honest about what it is.
+ */
+function pseudoWaveform(file: File, bars = 64): number[] {
+  // Seed from name length + size so the shape is stable per file.
+  let seed = (file.name.length * 2654435761 + file.size * 40503) >>> 0;
+  const next = () => {
+    // xorshift32 — cheap, deterministic, no deps.
+    seed ^= seed << 13;
+    seed ^= seed >>> 17;
+    seed ^= seed << 5;
+    seed >>>= 0;
+    return seed / 0xffffffff;
+  };
+  const out: number[] = [];
+  for (let i = 0; i < bars; i++) {
+    // Combine a slow envelope (speech rises and falls) with per-bar jitter,
+    // and drop some bars near silence so voiced/silent classes both show.
+    const envelope = 0.5 - 0.45 * Math.cos((i / (bars - 1)) * Math.PI * 2);
+    const jitter = next();
+    const v = envelope * 0.55 + jitter * 0.45;
+    out.push(Math.max(0, Math.min(1, v)));
+  }
+  return out;
 }
 
 /** What the multipart upload tab is feeding the meeting. */
@@ -203,6 +233,12 @@ export function Capture() {
       }
     },
     [clients],
+  );
+
+  // Stable visual-preview waveform for the selected audio file (not a real decode).
+  const audioWave = useMemo(
+    () => (audioFile ? pseudoWaveform(audioFile) : null),
+    [audioFile],
   );
 
   const conversationProvided =
@@ -745,6 +781,24 @@ export function Capture() {
                   onChange={(e) => setAudioFile(e.target.files?.[0] ?? null)}
                 />
                 {audioFile && <p className="helper">Selected: {audioFile.name}</p>}
+                {audioFile && audioWave && (
+                  <div
+                    style={{
+                      border: "1px solid var(--signal-line, #5A3F12)",
+                      background: "var(--p2, #16181B)",
+                      borderRadius: "var(--r, 2px)",
+                      padding: "10px 12px",
+                    }}
+                  >
+                    <Waveform amplitudes={audioWave} liveIndex={audioWave.length - 1} />
+                    <p
+                      className="tiny subtle mono"
+                      style={{ margin: "8px 0 0", letterSpacing: "0.08em" }}
+                    >
+                      VISUAL PREVIEW · SHAPE DERIVED FROM FILE, NOT AUDIO ANALYSIS
+                    </p>
+                  </div>
+                )}
                 <p className="helper">
                   {sttOk
                     ? "After the meeting is added, turn the audio into text, then extract insights."

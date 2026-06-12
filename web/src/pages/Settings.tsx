@@ -16,6 +16,7 @@ import {
   Tooltip,
   useToast,
 } from "../components/ui";
+import { useAuth } from "../auth";
 
 // Admin. Job: users, calendar feed, releases, digest, search.
 // Data: listUsers/createUser/rotateCode/revokeUser, calendarStatus/setCalendar/deleteCalendar,
@@ -31,6 +32,7 @@ export function Settings() {
     <>
       <SectionHead title="Settings" job="Users, calendar feed, releases, digest, and search." />
       <div className="page-body stack" style={{ display: "flex", flexDirection: "column", gap: 28, maxWidth: 860 }}>
+        <AccessSection />
         <UsersSection />
         <CalendarSection />
         <ReleasesSection />
@@ -66,6 +68,101 @@ function Panel({
       </div>
       {children}
     </section>
+  );
+}
+
+// ================================================================ Access (open by default)
+
+function AccessSection() {
+  const toast = useToast();
+  const { refresh } = useAuth();
+  const [state, setState] = useState<{ require_login: boolean; can_require: boolean } | null>(null);
+  const [error, setError] = useState<unknown>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      setState(await api.getAccess());
+    } catch (e) {
+      setError(e);
+    }
+  }, []);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function toggle(next: boolean) {
+    setBusy(true);
+    try {
+      await api.setAccess(next);
+      toast.push(
+        next
+          ? "Login is now required. You will need an account and code to get back in."
+          : "Access is now open. Anyone who can reach the app can use it.",
+        "success",
+      );
+      await load();
+      await refresh();
+    } catch (e) {
+      toast.push(e instanceof Error ? e.message : "Could not change access.", "critical");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Panel
+      title="Access"
+      desc="Followthrough is open by default: anyone who can reach it can use it, no login. Turn login on once you have added at least one teammate with a code below."
+    >
+      {error ? (
+        <ErrorAlert error={error} onRetry={load} />
+      ) : !state ? (
+        <Skeleton rows={2} />
+      ) : (
+        <div className="stack-sm" style={{ maxWidth: 560 }}>
+          <Alert
+            severity={state.require_login ? "info" : "warning"}
+            title={state.require_login ? "Login required" : "Open access"}
+          >
+            <p style={{ margin: 0 }}>
+              {state.require_login
+                ? "Only people with an account and a login code can get in."
+                : "Anyone who can reach this app has full access. Fine for local or trusted use; turn login on before exposing it publicly."}
+            </p>
+          </Alert>
+          {state.require_login ? (
+            <Btn
+              variant="ghost"
+              disabled={busy}
+              onClick={() => toggle(false)}
+              tooltip="Drop the login wall. Anyone with the link can use the app again."
+            >
+              {busy ? "Working" : "Make it open again"}
+            </Btn>
+          ) : (
+            <Btn
+              variant="primary"
+              disabled={busy || !state.can_require}
+              onClick={() => toggle(true)}
+              tooltip={
+                state.can_require
+                  ? "Require a login. You will be signed out and asked for a code."
+                  : "Add a teammate with a login code below first, or you would lock everyone out."
+              }
+            >
+              {busy ? "Working" : "Require login"}
+            </Btn>
+          )}
+          {!state.require_login && !state.can_require && (
+            <p className="tiny subtle" style={{ margin: 0 }}>
+              Add a teammate with a login code below first, then you can require login.
+            </p>
+          )}
+        </div>
+      )}
+    </Panel>
   );
 }
 
@@ -553,7 +650,7 @@ function ReleasesSection() {
   return (
     <Panel
       title="Releases"
-      desc="Pull the latest releases from GitHub. New ones get matched against client asks on the Proof page."
+      desc="Pull the latest releases from GitHub. New ones get matched against client asks on the Shipped? page."
     >
       <div className="card">
         <div className="row-between">

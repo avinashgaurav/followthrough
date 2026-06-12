@@ -25,9 +25,11 @@ import {
   ErrorAlert,
   Field,
   Modal,
+  PaperBand,
   SectionHead,
   Skeleton,
   StatePill,
+  TestimonyQuote,
   Tooltip,
   useToast,
 } from "../components/ui";
@@ -100,9 +102,12 @@ function stepIndex(state: string | undefined): number {
 export function InsightDetailView({
   insightId,
   embedded = false,
+  onChanged: onParentChanged,
 }: {
   insightId: string;
   embedded?: boolean;
+  /** Notified after any successful mutation, so an embedding parent (Review) can refresh its queue. */
+  onChanged?: () => void;
 }) {
   const toast = useToast();
   const navigate = useNavigate();
@@ -151,11 +156,12 @@ export function InsightDetailView({
     try {
       const d = await api.getInsight(insightId);
       setData(d);
+      onParentChanged?.();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Could not refresh.";
       toast.push(msg, "warning");
     }
-  }, [insightId, toast]);
+  }, [insightId, toast, onParentChanged]);
 
   if (loading) {
     return (
@@ -507,14 +513,15 @@ function DetailBody({
           ) : (
             <div className="stack-sm" style={{ maxWidth: 680 }}>
               {mentions.map((m, i) => (
-                <div className="quote" key={m.id ?? i}>
-                  {m.quote || "(no quote text)"}
-                  <span className="by">
-                    {[m.speaker || "Unknown speaker", m.client_name, m.meeting_seq != null ? `meeting ${m.meeting_seq}` : null, m.meeting_date ? formatDate(m.meeting_date) : null]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </span>
-                </div>
+                <TestimonyQuote
+                  key={m.id ?? i}
+                  quote={m.quote || "(no quote text)"}
+                  speaker={m.speaker || "Unknown speaker"}
+                  role={[m.client_name, m.meeting_seq != null ? `meeting ${m.meeting_seq}` : null]
+                    .filter(Boolean)
+                    .join(" · ") || null}
+                  timecode={m.meeting_date ? formatDate(m.meeting_date) : null}
+                />
               ))}
             </div>
           )}
@@ -544,19 +551,30 @@ function DetailBody({
             </div>
           )}
 
-          <textarea
-            className="ctrl"
-            style={{ maxWidth: 680, minHeight: 130 }}
-            value={body}
-            disabled={wordingLocked || savingBody}
-            onFocus={() => setEditing(true)}
-            onBlur={() => setEditing(false)}
-            onChange={(e) => {
-              setBody(e.target.value);
-              setBodyDirty(e.target.value !== serverBody);
-            }}
-            placeholder="Write the polished summary the rest of the team and the client will see."
-          />
+          {wordingLocked ? (
+            // Locked wording is read-only: render it on the warm paper reading surface.
+            <PaperBand className="insight-body-read">
+              {body ? (
+                body.split(/\n{2,}/).map((para, i) => <p key={i}>{para}</p>)
+              ) : (
+                <p className="paper-muted">No wording was written.</p>
+              )}
+            </PaperBand>
+          ) : (
+            <textarea
+              className="ctrl"
+              style={{ maxWidth: 680, minHeight: 130 }}
+              value={body}
+              disabled={savingBody}
+              onFocus={() => setEditing(true)}
+              onBlur={() => setEditing(false)}
+              onChange={(e) => {
+                setBody(e.target.value);
+                setBodyDirty(e.target.value !== serverBody);
+              }}
+              placeholder="Write the polished summary the rest of the team and the client will see."
+            />
+          )}
           <div className="row" style={{ marginTop: 8, maxWidth: 680 }}>
             <Btn
               variant="primary"

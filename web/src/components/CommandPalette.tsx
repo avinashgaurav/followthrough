@@ -103,7 +103,7 @@ export function CommandPalette() {
       { id: "nav-review", label: "Go to Review", path: "/" },
       { id: "nav-insights", label: "Go to Insights", path: "/insights" },
       { id: "nav-clients", label: "Go to Clients", path: "/clients" },
-      { id: "nav-proof", label: "Go to Proof", path: "/proof" },
+      { id: "nav-proof", label: "Go to Shipped?", path: "/proof" },
       { id: "nav-numbers", label: "Go to Numbers", path: "/numbers", admin: true },
       { id: "nav-settings", label: "Go to Settings", path: "/settings", admin: true },
     ];
