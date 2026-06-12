@@ -28,7 +28,7 @@ import { startWatchFolder } from "./watchfolder/service.ts";
 
 getDb();
 
-route("GET", "/api/health", "public", () => json({ ok: true, service: "insights-engine", time: nowIso() }));
+route("GET", "/api/health", "public", () => json({ ok: true, service: "followthrough", time: nowIso() }));
 
 const WEB_DIST = join(import.meta.dir, "..", "web", "dist");
 
@@ -70,5 +70,5 @@ if (import.meta.main) {
       return serveStatic(url.pathname);
     },
   });
-  console.log(`insights-engine listening on :${env.PORT}`);
+  console.log(`followthrough listening on :${env.PORT}`);
 }

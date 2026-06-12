@@ -135,8 +135,8 @@ export function ticketFooter(insightId: string, names: string[]): string {
   return [
     "---",
     `Requested by ${names.length} client(s): ${names.join(", ")}`,
-    `<!-- insights-engine:${insightHandle(insightId)} -->`,
-    `Insights Engine ref: ${insightId}`,
+    `<!-- followthrough:${insightHandle(insightId)} -->`,
+    `Followthrough ref: ${insightId}`,
   ].join("\n");
 }
 

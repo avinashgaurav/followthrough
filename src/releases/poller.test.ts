@@ -31,7 +31,7 @@ describe("fetchReleases", () => {
       const list = await fetchReleases(stubFetch([fixtureGitHubRelease("v1.17.4", 17)], captured));
       expect(list).toHaveLength(1);
       expect(captured.url).toBe(`https://api.github.com/repos/${env.RELEASE_REPO}/releases?per_page=30`);
-      expect(captured.headers?.["user-agent"]).toBe("insights-engine-release-poller");
+      expect(captured.headers?.["user-agent"]).toBe("followthrough-release-poller");
       expect(captured.headers?.authorization).toBeUndefined();
     } finally {
       env.GITHUB_READ_TOKEN = saved;

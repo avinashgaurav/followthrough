@@ -1,9 +1,9 @@
-# Restoring Insights Engine from backup
+# Restoring Followthrough from backup
 
-Backups are produced by `scripts/backup.sh` (run it manually or nightly via cron / launchd). The backup root defaults to `~/Backups/insights-engine`:
+Backups are produced by `scripts/backup.sh` (run it manually or nightly via cron / launchd). The backup root defaults to `~/Backups/followthrough`:
 
 ```
-~/Backups/insights-engine/
+~/Backups/followthrough/
   db/insights-YYYYMMDD-HHMM.sqlite   point-in-time SQLite snapshots (30-day retention)
   blobs/                             accumulating mirror of data/blobs (never pruned)
 ```
@@ -14,7 +14,7 @@ Backups are produced by `scripts/backup.sh` (run it manually or nightly via cron
 2. Pick a snapshot, newest first:
 
    ```sh
-   ls -t ~/Backups/insights-engine/db/
+   ls -t ~/Backups/followthrough/db/
    ```
 
 3. Remove stale WAL sidecar files so SQLite does not replay an old write-ahead log over the restored snapshot:
@@ -28,13 +28,13 @@ Backups are produced by `scripts/backup.sh` (run it manually or nightly via cron
 4. Copy the snapshot into place:
 
    ```sh
-   cp ~/Backups/insights-engine/db/insights-YYYYMMDD-HHMM.sqlite data/insights.sqlite
+   cp ~/Backups/followthrough/db/insights-YYYYMMDD-HHMM.sqlite data/insights.sqlite
    ```
 
 5. If the backup was taken with the `cp` fallback (no `sqlite3` CLI on the machine), there may be matching `-wal`/`-shm` files next to the snapshot. Copy them alongside so the snapshot set stays complete:
 
    ```sh
-   cp ~/Backups/insights-engine/db/insights-YYYYMMDD-HHMM.sqlite-wal data/insights.sqlite-wal  # only if it exists
+   cp ~/Backups/followthrough/db/insights-YYYYMMDD-HHMM.sqlite-wal data/insights.sqlite-wal  # only if it exists
    ```
 
    Snapshots taken with `sqlite3 .backup` (the normal path) are single self-contained files; skip this step.
@@ -42,7 +42,7 @@ Backups are produced by `scripts/backup.sh` (run it manually or nightly via cron
 ## Restore the blobs
 
 ```sh
-rsync -a ~/Backups/insights-engine/blobs/ data/blobs/
+rsync -a ~/Backups/followthrough/blobs/ data/blobs/
 ```
 
 Note: plain `rsync -a`, no `--delete`. The blob store is content-addressed (one directory per asset id), so restoring on top of existing blobs is safe and idempotent.

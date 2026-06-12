@@ -1,4 +1,4 @@
--- Insights Engine schema (SQLite, WAL). See SPEC.md sections 4, 9, 11.
+-- Followthrough schema (SQLite, WAL). See SPEC.md sections 4, 9, 11.
 -- Conventions: TEXT ULID primary keys; ISO-8601 UTC TEXT timestamps; JSON as TEXT.
 -- The events table is the source of truth for lifecycle facts; status columns are caches.
 
@@ -220,7 +220,7 @@ CREATE TABLE IF NOT EXISTS tickets (
   insight_id      TEXT NOT NULL REFERENCES insights(id),
   repo            TEXT,               -- owner/name; validated against config allowlist on direct-create
   draft_title     TEXT NOT NULL,
-  draft_body_md   TEXT NOT NULL,      -- embeds <!-- insights-engine:INS-id --> marker
+  draft_body_md   TEXT NOT NULL,      -- embeds <!-- followthrough:INS-id --> marker
   state           TEXT NOT NULL DEFAULT 'draft' CHECK (state IN ('draft','raised','stale','closed')),
   create_mode     TEXT CHECK (create_mode IN ('manual_paste','direct_api')),
   external_url    TEXT,               -- human paste-back, or API response

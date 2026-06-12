@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Insights Engine local STT setup: whisper.cpp + ffmpeg + ggml-large-v3-turbo model.
+# Followthrough local STT setup: whisper.cpp + ffmpeg + ggml-large-v3-turbo model.
 # Idempotent: safe to re-run. Never uses sudo. Audio stays on this machine.
 set -euo pipefail
 

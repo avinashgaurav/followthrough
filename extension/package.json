@@ -1,9 +1,9 @@
 {
-  "name": "insights-engine-extension",
+  "name": "followthrough-extension",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Chrome MV3 extension that records the current tab's audio and uploads it to Insights Engine",
+  "description": "Chrome MV3 extension that records the current tab's audio and uploads it to Followthrough",
   "scripts": {
     "build": "bun run build.ts",
     "typecheck": "bun x tsc -p tsconfig.json"
