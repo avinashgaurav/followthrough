@@ -1,10 +1,10 @@
-# Insights Engine Recorder (Chrome extension)
+# Followthrough Recorder (Chrome extension)
 
-A minimal Chrome MV3 extension that records the audio of the current tab and uploads it to Insights Engine as a client meeting. The tab stays audible while recording (the captured stream is routed back to the speakers through an AudioContext gain node).
+A minimal Chrome MV3 extension that records the audio of the current tab and uploads it to Followthrough as a client meeting. The tab stays audible while recording (the captured stream is routed back to the speakers through an AudioContext gain node).
 
 ## Assumptions
 
-- The Insights Engine server is running at **http://localhost:4500** (`bun run dev` at the repo root). The base URL lives in a single constant in `src/config.ts`; when the app deploys, change `BASE_URL` there AND the `host_permissions` entry in `manifest.json`, then rebuild.
+- The Followthrough server is running at **http://localhost:4500** (`bun run dev` at the repo root). The base URL lives in a single constant in `src/config.ts`; when the app deploys, change `BASE_URL` there AND the `host_permissions` entry in `manifest.json`, then rebuild.
 - You have a login (email + login code) issued by the admin in the web app.
 - At least one client exists in the web app (the popup's client dropdown is loaded from `GET /api/clients`).
 

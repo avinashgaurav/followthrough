@@ -1,5 +1,5 @@
 /**
- * MV3 service worker for the Insights Engine Recorder.
+ * MV3 service worker for the Followthrough Recorder.
  *
  * Responsibilities:
  * - Resolve a tabCapture streamId for the active tab (only the SW may call
@@ -38,7 +38,7 @@ async function ensureOffscreen(): Promise<void> {
     url: OFFSCREEN_URL,
     reasons: ["AUDIO_PLAYBACK"],
     justification:
-      "Keeps the recorded tab audible by routing its captured audio to the speakers while recording it for upload to Insights Engine.",
+      "Keeps the recorded tab audible by routing its captured audio to the speakers while recording it for upload to Followthrough.",
   });
 }
 

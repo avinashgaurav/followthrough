@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# Insights Engine backup (SPEC.md section 9).
+# Followthrough backup (SPEC.md section 9).
 # Idempotent: safe to run repeatedly, safe to cron nightly.
 #
-#   BACKUP_DIR  destination root      (default ~/Backups/insights-engine)
+#   BACKUP_DIR  destination root      (default ~/Backups/followthrough)
 #   DATA_DIR    source data dir       (default <repo>/data)
 #   RETENTION_DAYS  db backup age cap (default 30)
 #
@@ -21,7 +21,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 
 DATA_DIR="${DATA_DIR:-$REPO_ROOT/data}"
-BACKUP_DIR="${BACKUP_DIR:-$HOME/Backups/insights-engine}"
+BACKUP_DIR="${BACKUP_DIR:-$HOME/Backups/followthrough}"
 RETENTION_DAYS="${RETENTION_DAYS:-30}"
 
 DB_FILE="$DATA_DIR/insights.sqlite"

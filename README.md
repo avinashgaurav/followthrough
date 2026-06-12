@@ -23,7 +23,7 @@ You feed it a meeting — transcript or audio. It extracts the real asks, compla
 > **The AI drafts; people decide.** Nothing reaches a client without a human confirming it. Every extracted insight must cite a verbatim quote from the transcript, or it doesn't exist.
 
 > [!NOTE]
-> This is a personal project. The sample meetings under `evals/golden/` are **fully synthetic** — every company, person, and product name is fictional.
+> The bundled sample meetings under `evals/golden/` are **fully synthetic** — every company, person, and product name is fictional.
 
 ---
 
@@ -88,7 +88,7 @@ bun run build:web        # if absent: cd web && bun install && bun run build
 bun run start            # http://localhost:4500
 ```
 
-Open http://localhost:4500 — **it's open by default**, no login required. When you're ready to lock it down, go to **Settings → Access**, add a teammate (you get a one-time login code), then turn **Require login** on. Login is email + code, restricted to a configurable email domain (see `src/config.ts`). You can also seed a first admin from the CLI with `bun run seed`.
+The app serves on `http://localhost:4500` by default (set `PORT` to change it). **It's open by default** — no login required. When you're ready to lock it down, go to **Settings → Access**, add a teammate (you get a one-time login code), then turn **Require login** on. Login is email + code, restricted to a configurable email domain (see `src/config.ts`). You can also seed a first admin from the CLI with `bun run seed`.
 
 <details>
 <summary><b>Optional setup</b> (local transcription, backups, env vars)</summary>

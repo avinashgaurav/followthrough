@@ -135,10 +135,10 @@ describe("ticket drafting", () => {
 
     expect(ticket.state).toBe("draft");
     expect(ticket.draft_title).toBe("Add SAML SSO");
-    expect(ticket.draft_body_md).toContain(`<!-- insights-engine:${insightHandle(insightId)} -->`);
+    expect(ticket.draft_body_md).toContain(`<!-- followthrough:${insightHandle(insightId)} -->`);
     expect(ticket.draft_body_md).toContain("---");
     expect(ticket.draft_body_md).toContain("Requested by 2 client(s): Acme Corp, Globex");
-    expect(ticket.draft_body_md).toContain(`Insights Engine ref: ${insightId}`);
+    expect(ticket.draft_body_md).toContain(`Followthrough ref: ${insightId}`);
     expect(ticketEvents(db, ticket.id, "ticket.drafted")).toHaveLength(1);
     expect(getTicket(db, ticket.id).id).toBe(ticket.id);
     expect(listTicketsForInsight(db, insightId).map((t) => t.id)).toContain(ticket.id);
@@ -333,7 +333,7 @@ describe("create-direct (org safety)", () => {
     expect((init.headers as Record<string, string>).authorization).toBe("Bearer ghp_test_token");
     const sent = JSON.parse(String(init.body)) as { title: string; body: string };
     expect(sent.title).toBe("Add SSO");
-    expect(sent.body).toContain(`<!-- insights-engine:${insightHandle(insightId)} -->`);
+    expect(sent.body).toContain(`<!-- followthrough:${insightHandle(insightId)} -->`);
 
     expect(ticket.repo).toBe(ALLOWED_REPO);
     expect(ticket.external_url).toBe(issueUrl);

@@ -1,5 +1,5 @@
 /**
- * Single source of truth for the Insights Engine server location.
+ * Single source of truth for the Followthrough server location.
  *
  * When the app deploys, change BASE_URL here AND the matching
  * host_permissions entry in manifest.json, then rebuild. Both must

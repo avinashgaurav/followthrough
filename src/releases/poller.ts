@@ -35,7 +35,7 @@ export async function fetchReleases(fetchImpl: FetchLike = fetch): Promise<GitHu
   const url = `https://api.github.com/repos/${env.RELEASE_REPO}/releases?per_page=30`;
   const headers: Record<string, string> = {
     accept: "application/vnd.github+json",
-    "user-agent": "insights-engine-release-poller",
+    "user-agent": "followthrough-release-poller",
     "x-github-api-version": "2022-11-28",
   };
   if (env.GITHUB_READ_TOKEN) headers.authorization = `Bearer ${env.GITHUB_READ_TOKEN}`;

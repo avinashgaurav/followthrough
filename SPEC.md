@@ -1,8 +1,8 @@
-# Insights Engine: Product + Technical Spec (v1 / MVP)
+# Followthrough: Product + Technical Spec (v1 / MVP)
 
 Everything in this document is v1 scope by explicit decision of the founder ("do all in v1, I want this to be the MVP"). There is no v2 column. The build order section at the end sequences the work so the end-to-end loop works early, but all sections ship in the MVP.
 
-Insights Engine is an internal meeting-intelligence-to-action tool for XYZ (xyz.com). It turns recorded client meetings into tracked, evidenced, closed-loop commitments: insight extracted, human-finalized, routed to a track, shipped with proof, client told, every timestamp measured.
+Followthrough is a meeting-intelligence-to-action tool. It turns recorded client meetings into tracked, evidenced, closed-loop commitments: insight extracted, human-finalized, routed to a track, shipped with proof, client told, every timestamp measured.
 
 ---
 
@@ -85,7 +85,7 @@ LLM policy: Anthropic API direct (no multi-vendor routing for client transcripts
 
 - Draft-first, human-triggered, per-ticket choice (direct-create in a chosen repo, or copy + paste-back URL). No automatic creation, ever.
 - Config-level writable-repo allowlist enforced in code; XYZ org excluded until the admin flips it. The GitHub token for release reading is read-only scope.
-- Every draft embeds `<!-- insights-engine:INS-<id> -->` plus a visible footer link. Stable internal IDs survive the eventual repo/org migration.
+- Every draft embeds `<!-- followthrough:INS-<id> -->` plus a visible footer link. Stable internal IDs survive the eventual repo/org migration.
 - Stale state for "draft generated but never confirmed created".
 
 ## 8. Follow-up emails
@@ -139,7 +139,7 @@ Event taxonomy (~15 namespaced types: `meeting.uploaded`, `extraction.completed/
 
 ## 14. Chrome extension capture
 
-- Reuses the ClientLens MV3 capture chain (tabCapture -> offscreen document -> AudioWorklet) **plus a new MediaRecorder branch** that persists webm/opus and uploads to Insights Engine with the user's session.
+- Reuses the ClientLens MV3 capture chain (tabCapture -> offscreen document -> AudioWorklet) **plus a new MediaRecorder branch** that persists webm/opus and uploads to Followthrough with the user's session.
 - Built last in the build order; the upload API accepts files from any tool from day one, so the extension is an additional source, not a dependency.
 
 ## 15. Stack (one runtime, one source of truth)

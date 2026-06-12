@@ -181,7 +181,7 @@ function renderLogin(error?: string): void {
   stopTimers();
   root.innerHTML = `
     <form id="login-form" class="view">
-      <p class="hint">Log in with your Insights Engine email and login code.</p>
+      <p class="hint">Log in with your Followthrough email and login code.</p>
       <label for="email">Email</label>
       <input id="email" type="email" autocomplete="email" required value="${esc(lastEmail)}" placeholder="you@xyz.com" />
       <label for="code">Login code</label>
@@ -243,7 +243,7 @@ function renderIdle(): void {
     root.innerHTML = `
       <div class="view">
         <p class="hint">No clients yet. Create one in the web app first.</p>
-        <a class="link" href="${esc(BASE_URL)}" target="_blank" rel="noreferrer">Open Insights Engine</a>
+        <a class="link" href="${esc(BASE_URL)}" target="_blank" rel="noreferrer">Open Followthrough</a>
         <button id="logout" class="btn btn-ghost">Log out</button>
       </div>`;
     wireLogout();
@@ -371,7 +371,7 @@ function renderUploading(): void {
     <div class="view">
       <div class="status-panel">
         <span class="status-label">Uploading</span>
-        <p class="meta">Sending the recording to Insights Engine...</p>
+        <p class="meta">Sending the recording to Followthrough...</p>
       </div>
     </div>`;
 }
@@ -387,7 +387,7 @@ function renderDone(): void {
         <p class="meta">Meeting <span class="mono">${esc(state.meetingId ?? "unknown")}</span></p>
         ${dupNote}
       </div>
-      <a class="btn btn-accent center" href="${esc(MEETINGS_PAGE_URL)}" target="_blank" rel="noreferrer">Open Insights Engine</a>
+      <a class="btn btn-accent center" href="${esc(MEETINGS_PAGE_URL)}" target="_blank" rel="noreferrer">Open Followthrough</a>
       <button id="again" class="btn btn-ghost">Record another</button>
     </div>`;
 

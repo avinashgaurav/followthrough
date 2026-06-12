@@ -1,7 +1,7 @@
 # Followthrough — "The Transcript Spine" design system
 
 Proposed revamp direction. Synthesized from the live + source design audit
-(`design-audit-insights-engine.md`), the current token system (`web/src/styles.css`),
+(`the design audit`), the current token system (`web/src/styles.css`),
 and four reference systems: **Runway** (cinematic dark chrome), **Claude** +
 **ElevenLabs** (warm editorial reading + amber lineage), **Sentry** (data-dense dark).
 

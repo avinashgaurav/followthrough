@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "insights-engine",
+      "name": "followthrough",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.104.1",
         "zod": "^4",

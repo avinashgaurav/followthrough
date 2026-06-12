@@ -3,7 +3,7 @@
  * MediaRecorder. It consumes the tabCapture streamId handed over by the
  * service worker, records the tab audio as webm/opus, routes the captured
  * stream through an AudioContext gain node so the tab stays audible, and
- * uploads the finished blob straight to the Insights Engine server.
+ * uploads the finished blob straight to the Followthrough server.
  *
  * Uploading from here (instead of relaying to the SW) avoids shipping the
  * blob through chrome.runtime messages, which JSON-serialize payloads.
