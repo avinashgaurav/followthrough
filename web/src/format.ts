@@ -46,10 +46,14 @@ export function fmtNum(v: unknown): string {
   return String(v ?? "");
 }
 
-/** snake_case and camelCase -> spaced words, generic fallback. */
+/** snake_case and camelCase -> Title Case spaced words, generic fallback. */
 export function titleCase(s: string | undefined | null): string {
   if (!s) return "";
-  return s.replaceAll("_", " ").replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase();
+  return s
+    .replaceAll("_", " ")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 // ---------------------------------------------------------------- track + item-type labels
@@ -83,11 +87,13 @@ export function itemTypeLabel(t: string | undefined | null): string {
 
 // ---------------------------------------------------------------- state labels + tooltips
 
+// One dialect for the whole app (see design-reference/SPINE.md §7):
+// Found -> Routed -> Locked -> Ticket raised -> Shipped -> Client told -> Closed
 const STATE_LABELS: Record<string, string> = {
-  extracted: "Extracted",
-  triaged: "Triaged",
-  finalized: "Finalized",
-  ticketed: "Ticketed",
+  extracted: "Found",
+  triaged: "Routed",
+  finalized: "Locked",
+  ticketed: "Ticket raised",
   shipped: "Shipped",
   client_notified: "Client told",
   closed: "Closed",
@@ -102,10 +108,10 @@ export function stateLabel(state: string | undefined | null): string {
 
 /** Plain-words explanation of each state, shown as a tooltip on every state pill. */
 export const stateTooltip: Record<string, string> = {
-  extracted: "The AI pulled this out of a meeting. Nobody has checked it yet.",
-  triaged: "Someone decided what it is and who owns it. The wording is not locked yet.",
-  finalized: "The wording is locked. It can now become a ticket or be marked shipped.",
-  ticketed: "A ticket has been drafted or raised for engineering to build it.",
+  extracted: "Found by the AI in a meeting. Nobody has checked it yet.",
+  triaged: "Routed: someone decided what it is and who owns it. Wording is not locked yet.",
+  finalized: "Locked: the wording is final. It can now become a ticket or be marked shipped.",
+  ticketed: "A ticket has been raised for engineering to build it.",
   shipped: "Engineering shipped it. We still need to confirm it and tell the client.",
   client_notified: "We told the client it shipped. The loop is closed.",
   closed: "Done and put to rest. No further action needed.",

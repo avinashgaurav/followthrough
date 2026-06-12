@@ -788,3 +788,112 @@ export function AutoTable({ rows }: { rows: Array<Record<string, unknown>> }) {
     </div>
   );
 }
+
+// ================================================================ Spine (the time-axis)
+// The product's truth is an append-only event log, so every surface is organized
+// around a vertical time-spine. See design-reference/SPINE.md.
+
+export function Spine({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={"spine" + (className ? " " + className : "")}>{children}</div>;
+}
+
+/** One stop on the spine. state: done (amber tick) | live (glowing playhead) | future (faint tick). */
+export function SpineItem({
+  timecode,
+  state = "future",
+  children,
+}: {
+  timecode?: string;
+  state?: "done" | "live" | "future";
+  children: ReactNode;
+}) {
+  const cls = state === "live" ? "spine-row live" : `spine-row ${state}`;
+  return (
+    <div className={cls}>
+      {timecode && <span className="spine-tc num">{timecode}</span>}
+      <span className="spine-tick" aria-hidden="true" />
+      {children}
+    </div>
+  );
+}
+
+// ================================================================ Waveform-as-data
+// One bar language for audio (Capture) and trend sparklines (Numbers).
+
+/** amplitudes are 0..1; liveIndex (optional) highlights the current/most-recent bar in amber. */
+export function Waveform({
+  amplitudes,
+  liveIndex,
+}: {
+  amplitudes: number[];
+  liveIndex?: number;
+}) {
+  return (
+    <div className="waveform" aria-hidden="true">
+      {amplitudes.map((a, i) => {
+        const h = Math.max(6, Math.min(100, a * 100));
+        const cls = i === liveIndex ? "bar live" : a > 0.18 ? "bar voiced" : "bar";
+        return <span key={i} className={cls} style={{ height: `${h}%` }} />;
+      })}
+    </div>
+  );
+}
+
+/** Compact vertical-bar trend. Last bucket renders amber (the live present) by default. */
+export function Sparkline({
+  values,
+  highlightLast = true,
+  title,
+}: {
+  values: number[];
+  highlightLast?: boolean;
+  title?: string;
+}) {
+  const max = Math.max(1, ...values);
+  return (
+    <span className="sparkline" role="img" aria-label={title}>
+      {values.map((v, i) => {
+        const h = Math.max(8, (v / max) * 100);
+        const live = highlightLast && i === values.length - 1;
+        return <span key={i} className={live ? "bar live" : "bar"} style={{ height: `${h}%` }} />;
+      })}
+    </span>
+  );
+}
+
+// ================================================================ Testimony quote (move C)
+// The citation gate is the emotional core: verbatim quote on warm paper, editorial
+// serif, with timecode + speaker attribution.
+
+export function TestimonyQuote({
+  quote,
+  speaker,
+  role,
+  timecode,
+}: {
+  quote: string;
+  speaker?: string | null;
+  role?: string | null;
+  timecode?: string | null;
+}) {
+  const who = [speaker, role].filter(Boolean).join(", ");
+  return (
+    <blockquote className="quote">
+      {quote}
+      {(who || timecode) && (
+        <span className="by">
+          {who && `— ${who}`}
+          {who && timecode ? " · " : ""}
+          {timecode}
+        </span>
+      )}
+    </blockquote>
+  );
+}
+
+// ================================================================ Paper reading band (move D)
+// Warm paper surface for long-form reading inset into the dark chrome.
+
+export function PaperBand({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={"paper" + (className ? " " + className : "")}>{children}</div>;
+}

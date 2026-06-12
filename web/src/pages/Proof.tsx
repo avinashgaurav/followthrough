@@ -6,8 +6,12 @@ import {
   ConfirmModal,
   EmptyState,
   ErrorAlert,
+  PaperBand,
   SectionHead,
   Skeleton,
+  Spine,
+  SpineItem,
+  TestimonyQuote,
   Tooltip,
   useToast,
 } from "../components/ui";
@@ -300,10 +304,12 @@ function MatchCard({
         </Tooltip>
       </div>
 
-      <div className="grid-2" style={{ marginTop: 14, alignItems: "start" }}>
-        {/* The ask */}
-        <div>
-          <div className="lbl" style={{ marginTop: 0 }}>
+      {/* Lifecycle as a time-spine: what the client said -> what shipped -> telling them.
+          The release is the proven 'Shipped' tick (done, amber); 'Client told' is the live
+          next step that confirming this match unlocks. */}
+      <Spine className="proof-spine">
+        <SpineItem state="done">
+          <div className="lbl" style={{ margin: "0 0 4px" }}>
             What the client asked for
           </div>
           <div style={{ fontSize: 13.5, lineHeight: 1.45 }}>{m.insight_title || "Untitled ask"}</div>
@@ -312,24 +318,32 @@ function MatchCard({
               {handle}
             </div>
           )}
-        </div>
+        </SpineItem>
 
-        {/* The release */}
-        <div>
-          <div className="lbl" style={{ marginTop: 0 }}>
-            What engineering shipped
+        <SpineItem
+          state="done"
+          timecode={m.release_published_at ? formatDate(m.release_published_at) : undefined}
+        >
+          <div className="lbl" style={{ margin: "0 0 4px" }}>
+            Shipped
           </div>
           <div className="row" style={{ gap: 8, marginBottom: 6 }}>
             <span className="pill feat">{releaseTag}</span>
-            {m.release_published_at && (
-              <span className="subtle" style={{ fontSize: 11 }}>
-                {formatDate(m.release_published_at)}
-              </span>
-            )}
           </div>
-          <div style={{ fontSize: 13, lineHeight: 1.45 }}>{m.entry_title || m.entry_text || "Release entry"}</div>
-        </div>
-      </div>
+          <div style={{ fontSize: 13, lineHeight: 1.45 }}>
+            {m.entry_title || m.entry_text || "Release entry"}
+          </div>
+        </SpineItem>
+
+        <SpineItem state="live">
+          <div className="lbl" style={{ margin: "0 0 4px" }}>
+            Client told
+          </div>
+          <div className="muted" style={{ fontSize: 12.5, lineHeight: 1.45 }}>
+            Confirm this match to mark the ask shipped. The client can then be told.
+          </div>
+        </SpineItem>
+      </Spine>
 
       {m.rationale && (
         <div className="aibox">
@@ -340,13 +354,13 @@ function MatchCard({
       {quotes.length > 0 && (
         <>
           <div className="lbl">Proof from the release note</div>
-          <div className="stack-sm">
-            {quotes.map((q, i) => (
-              <div key={i} className="quote">
-                {q}
-              </div>
-            ))}
-          </div>
+          <PaperBand className="proof-evidence">
+            <div className="stack-sm">
+              {quotes.map((q, i) => (
+                <TestimonyQuote key={i} quote={q} speaker={releaseTag} timecode={m.release_published_at ? formatDate(m.release_published_at) : null} />
+              ))}
+            </div>
+          </PaperBand>
         </>
       )}
 

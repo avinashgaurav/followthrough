@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, type MetricsOverview } from "../api";
 import { fmtNum, metricTooltipFor, relativeAge, titleCase, trackLabel } from "../format";
-import { Alert, Btn, EmptyState, ErrorAlert, Help, SectionHead, Skeleton, Tooltip } from "../components/ui";
+import { Alert, Btn, EmptyState, ErrorAlert, Help, SectionHead, Skeleton, Sparkline, Tooltip } from "../components/ui";
 
 // Admin. Job: how fast asks move from meeting to shipped to told.
 // Data: api.metricsOverview(). Rendered as dense tables + CSS bars, no chart libraries.
@@ -311,6 +311,11 @@ function Funnel({ rows }: { rows: FunnelRow[] }) {
   const max = Math.max(...rows.map((r) => r.count), 1);
   return (
     <Section title="Funnel" tip={metricTooltipFor("funnel")}>
+      {rows.length > 1 && (
+        <div style={{ marginBottom: 14 }}>
+          <Sparkline values={rows.map((r) => r.count)} title="Count by funnel stage, in pipeline order" />
+        </div>
+      )}
       {rows.map((r, i) => (
         <Bar key={i} label={titleCase(r.label)} value={r.count} max={max} sub={fmtNum(r.count)} />
       ))}
@@ -363,6 +368,15 @@ function WipAging({ wip }: { wip: Record<string, unknown> }) {
           </div>
         ))}
       </div>
+      {buckets.length > 1 && (
+        <div style={{ marginBottom: 14 }}>
+          <Sparkline
+            values={buckets.map((b) => num(pick(b, "count", "n", "items")) ?? 0)}
+            highlightLast={false}
+            title="Open items per age bucket, oldest at right"
+          />
+        </div>
+      )}
       {buckets.length > 0 && (
         <div className="table-wrap">
           <table className="table">
@@ -427,6 +441,15 @@ function ThemeDemand({ rows }: { rows: Record<string, unknown>[] }) {
   const max = Math.max(...norm.map((r) => r.clients), 1);
   return (
     <Section title="What clients ask for most" tip={metricTooltipFor("themeDemand")}>
+      {norm.length > 1 && (
+        <div style={{ marginBottom: 14 }}>
+          <Sparkline
+            values={norm.map((r) => r.clients)}
+            highlightLast={false}
+            title="Distinct clients asking, by theme"
+          />
+        </div>
+      )}
       {norm.map((r, i) => (
         <Bar
           key={i}
@@ -459,7 +482,7 @@ function PerPerson({ rows }: { rows: Record<string, unknown>[] }) {
                 </Tooltip>
               </th>
               <th className="num">
-                <Tooltip title="Finalized" content="How many they locked the wording on.">
+                <Tooltip title="Locked" content="How many they locked the wording on.">
                   <span>Locked</span>
                 </Tooltip>
               </th>
@@ -604,8 +627,27 @@ function CaptureVolume({ rows }: { rows: Record<string, unknown>[] }) {
     asks: num(pick(r, "asks", "insights", "insight_count", "mentions")),
   }));
   const max = Math.max(...norm.map((r) => r.meetings), 1);
+  const askSeries = norm.map((r) => r.asks).filter((v): v is number => v !== null);
   return (
     <Section title="Capture volume by week" tip={metricTooltipFor("captureVolume")}>
+      {norm.length > 1 && (
+        <div className="row" style={{ gap: 24, alignItems: "flex-end", marginBottom: 16 }}>
+          <div>
+            <Sparkline values={norm.map((r) => r.meetings)} title="Meetings per week, latest at right" />
+            <div className="lbl" style={{ margin: "6px 0 0", fontSize: 9.5 }}>
+              Meetings / week
+            </div>
+          </div>
+          {askSeries.length === norm.length && askSeries.length > 1 && (
+            <div>
+              <Sparkline values={askSeries} title="Asks per week, latest at right" />
+              <div className="lbl" style={{ margin: "6px 0 0", fontSize: 9.5 }}>
+                Asks / week
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       {norm.map((r, i) => (
         <Bar
           key={i}

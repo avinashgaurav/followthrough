@@ -7,7 +7,7 @@ import { Alert, Btn, Field } from "../components/ui";
 export function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { setUser, refresh } = useAuth();
+  const { setUser, refresh, requireLogin } = useAuth();
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -56,10 +56,15 @@ export function Login() {
     <div className="login-wrap">
       <div className="login-card corner">
         <div className="brand" style={{ padding: "0 0 18px" }}>
-          <span className="sq" />
-          <b style={{ fontSize: 14 }}>Insights Engine</b>
+          <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+            <rect x="15" y="4" width="2" height="24" fill="var(--line)" />
+            <circle cx="16" cy="16" r="4" fill="var(--signal)" />
+          </svg>
+          <b style={{ fontSize: 14 }}>Followthrough</b>
         </div>
-        <h1 style={{ fontSize: 18, marginBottom: 4 }}>Sign in</h1>
+        <h1 style={{ fontFamily: "var(--serif)", fontSize: 24, fontWeight: 500, marginBottom: 4 }}>
+          Sign in
+        </h1>
         <p className="muted small" style={{ margin: "0 0 22px" }}>
           Use the login code your admin issued.
         </p>
@@ -98,6 +103,25 @@ export function Login() {
             </Btn>
           </div>
         </form>
+        {!requireLogin && (
+          <p className="small muted" style={{ margin: "18px 0 0" }}>
+            This app is open right now.{" "}
+            <button
+              type="button"
+              onClick={() => navigate("/")}
+              style={{
+                background: "none",
+                border: "none",
+                color: "var(--accent)",
+                cursor: "pointer",
+                padding: 0,
+                font: "inherit",
+              }}
+            >
+              Continue without signing in &rarr;
+            </button>
+          </p>
+        )}
       </div>
     </div>
   );

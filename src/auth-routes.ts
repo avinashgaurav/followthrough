@@ -11,9 +11,22 @@ import {
   hashCode,
   revokeCode,
   isAllowedEmail,
+  isGuestUser,
+  GUEST_USER_ID,
   ALLOWED_EMAIL_DOMAIN,
 } from "./auth.ts";
+import { authRequired, setAuthRequired } from "./settings.ts";
 import { appendEvent } from "./events.ts";
+
+/** Is there a real (non-guest) account that can actually log in? Gates require_login. */
+function hasLoginCapableUser(db: ReturnType<typeof getDb>): boolean {
+  const row = db
+    .query(
+      "SELECT COUNT(*) AS n FROM users WHERE code_hash IS NOT NULL AND disabled_at IS NULL AND id != ?",
+    )
+    .get(GUEST_USER_ID) as { n: number };
+  return row.n > 0;
+}
 
 const LoginSchema = z.object({ email: z.string().email(), code: z.string().min(4) });
 
@@ -41,7 +54,40 @@ route("POST", "/api/auth/logout", "user", (req) => {
   return json({ ok: true }, 200, { "set-cookie": "ie_session=; HttpOnly; Path=/; Max-Age=0" });
 });
 
-route("GET", "/api/me", "user", (_req, user) => json({ user }));
+route("GET", "/api/me", "user", (_req, user) =>
+  json({ user, require_login: authRequired(getDb()), is_guest: isGuestUser(user) }),
+);
+
+// Access mode: read + toggle whether login is required (admin only).
+route("GET", "/api/settings/access", "admin", () => {
+  const db = getDb();
+  return json({ require_login: authRequired(db), can_require: hasLoginCapableUser(db) });
+});
+
+const AccessSchema = z.object({ require_login: z.boolean() });
+
+route("POST", "/api/settings/access", "admin", async (req, admin) => {
+  const db = getDb();
+  const body = AccessSchema.safeParse(await req.json().catch(() => null));
+  if (!body.success) return json({ error: "require_login (boolean) required" }, 400);
+  // Anti-lockout: do not let anyone turn login ON until a real account with a
+  // login code exists, or everyone (including this guest) would be locked out.
+  if (body.data.require_login && !hasLoginCapableUser(db)) {
+    return json(
+      { error: "Add a teammate with a login code first, or you would lock everyone out." },
+      400,
+    );
+  }
+  const actor = isGuestUser(admin) ? null : admin!.id;
+  setAuthRequired(db, body.data.require_login, actor);
+  appendEvent(db, {
+    actorUserId: actor,
+    entityType: "user",
+    entityId: admin!.id,
+    eventType: body.data.require_login ? "access.login_required" : "access.opened",
+  });
+  return json({ require_login: body.data.require_login });
+});
 
 const CreateUserSchema = z.object({
   email: z.string().email(),
@@ -75,9 +121,9 @@ route("POST", "/api/users", "admin", async (req, admin) => {
 route("GET", "/api/users", "admin", () => {
   const users = getDb()
     .query(
-      "SELECT id, email, name, role, created_at, disabled_at, (code_hash IS NOT NULL) AS has_code FROM users",
+      "SELECT id, email, name, role, created_at, disabled_at, (code_hash IS NOT NULL) AS has_code FROM users WHERE id != ?",
     )
-    .all();
+    .all(GUEST_USER_ID);
   return json({ users });
 });
 

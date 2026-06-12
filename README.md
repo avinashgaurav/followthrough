@@ -40,20 +40,17 @@ Each arrow is a tracked, timestamped state transition. The funnel, the turnaroun
 
 ## Screenshots
 
-> [!NOTE]
-> Screenshots are being refreshed alongside the upcoming UI update — coming soon.
+The "Transcript Spine" UI: cinematic dark chrome, a single signal-amber accent, editorial serif headers, and a single plain-English vocabulary.
 
-<!--
-  TODO: drop final UI screenshots into docs/screenshots/ and uncomment.
-
-| Review (triage) | Clients (timeline + promise ledger) |
+| Review (triage workspace) | Capture (get a meeting in) |
 |:---:|:---:|
-| ![Review screen](docs/screenshots/review.png) | ![Clients screen](docs/screenshots/clients.png) |
+| ![Review screen](docs/screenshots/review.png) | ![Capture screen](docs/screenshots/capture.png) |
 
-| Proof (changelog match) | Numbers (closed-loop metrics) |
+| Settings (open by default; login is optional) | Sign in (only when login is required) |
 |:---:|:---:|
-| ![Proof screen](docs/screenshots/proof.png) | ![Numbers screen](docs/screenshots/numbers.png) |
--->
+| ![Settings access](docs/screenshots/settings.png) | ![Login screen](docs/screenshots/login.png) |
+
+> The bundled sample data is empty out of the box, so these show the chrome and the new access model. The spine / testimony / waveform fully populate once meetings are ingested.
 
 ---
 
@@ -84,15 +81,14 @@ echo 'ANTHROPIC_API_KEY=sk-ant-...'    >> .env   # preferred (direct Anthropic)
 # or
 echo 'OPENROUTER_API_KEY=sk-or-...'    >> .env   # fallback, pinned to Claude, retention denied
 
-# Build the web UI and create your admin login
+# Build the web UI
 bun run build:web        # if absent: cd web && bun install && bun run build
-bun run seed             # prints a one-time login code for the seeded admin email
 
 # Start the server (serves the API and the built UI on one port)
 bun run start            # http://localhost:4500
 ```
 
-Open http://localhost:4500, sign in with the seeded admin email and the code `seed` printed. Account creation is locked to a single configurable email domain (see `src/config.ts`).
+Open http://localhost:4500 — **it's open by default**, no login required. When you're ready to lock it down, go to **Settings → Access**, add a teammate (you get a one-time login code), then turn **Require login** on. Login is email + code, restricted to a configurable email domain (see `src/config.ts`). You can also seed a first admin from the CLI with `bun run seed`.
 
 <details>
 <summary><b>Optional setup</b> (local transcription, backups, env vars)</summary>

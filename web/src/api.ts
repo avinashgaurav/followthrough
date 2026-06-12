@@ -416,7 +416,12 @@ export const api = {
   login: (email: string, code: string) =>
     post<{ user?: User; [k: string]: unknown }>("/api/auth/login", { email, code }),
   logout: () => post<unknown>("/api/auth/logout"),
-  me: () => get<{ user: User }>("/api/me"),
+  me: () => get<{ user: User; require_login?: boolean; is_guest?: boolean }>("/api/me"),
+
+  // ---------------- access mode (admin): open by default, login optional
+  getAccess: () => get<{ require_login: boolean; can_require: boolean }>("/api/settings/access"),
+  setAccess: (require_login: boolean) =>
+    post<{ require_login: boolean }>("/api/settings/access", { require_login }),
 
   // ---------------- users (admin)
   listUsers: async (): Promise<User[]> => asArray<User>(await get<unknown>("/api/users")),

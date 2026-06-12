@@ -1,5 +1,6 @@
 import { getDb } from "./db.ts";
-import { userForSession, readSessionCookie, type AuthedUser } from "./auth.ts";
+import { userForSession, readSessionCookie, guestUser, type AuthedUser } from "./auth.ts";
+import { authRequired } from "./settings.ts";
 
 export type Handler = (
   req: Request,
@@ -46,7 +47,11 @@ export function dispatch(req: Request): Promise<Response> | Response | null {
     if (!m) continue;
     const params: Record<string, string> = {};
     r.paramNames.forEach((name, i) => (params[name] = decodeURIComponent(m[i + 1]!)));
-    const user = userForSession(getDb(), readSessionCookie(req));
+    const db = getDb();
+    let user = userForSession(db, readSessionCookie(req));
+    // Open by default: with login not required, fall back to a guest admin so the
+    // whole app works with no sign-in. A real session always takes precedence.
+    if (!user && !authRequired(db)) user = guestUser(db);
     if (r.auth !== "public") {
       if (!user) return json({ error: "unauthorized" }, 401);
       if (r.auth === "admin" && user.role !== "admin") return json({ error: "admin only" }, 403);

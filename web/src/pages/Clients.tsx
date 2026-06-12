@@ -104,14 +104,6 @@ export function Clients() {
               <thead>
                 <tr>
                   <th>Client</th>
-                  <th>Domain</th>
-                  <th className="num">
-                    Meetings{" "}
-                    <Help
-                      title="Meetings"
-                      content="How many meetings we have logged with this client."
-                    />
-                  </th>
                   <th className="num">
                     Open asks{" "}
                     <Help
@@ -119,6 +111,14 @@ export function Clients() {
                       content="Things this client asked for that are not yet shipped and confirmed back to them."
                     />
                   </th>
+                  <th className="num">
+                    Meetings{" "}
+                    <Help
+                      title="Meetings"
+                      content="How many meetings we have logged with this client."
+                    />
+                  </th>
+                  <th>Domain</th>
                 </tr>
               </thead>
               <tbody>
@@ -140,22 +140,22 @@ export function Clients() {
                       }}
                     >
                       <td>
-                        <span style={{ fontWeight: 500 }}>{c.name || "Untitled client"}</span>
+                        <span style={{ fontWeight: 600 }}>{c.name || "Untitled client"}</span>
                       </td>
-                      <td className="muted">{c.domain || "Not set"}</td>
-                      <td className="num">{meetings(c)}</td>
                       <td className="num">
                         {asks > 0 ? (
                           <Tooltip
                             title="Open asks"
                             content="Asks we still owe this client. Open the client to see them."
                           >
-                            <span style={{ color: "var(--accent-soft)" }}>{asks}</span>
+                            <span style={{ color: "var(--accent-soft)", fontWeight: 600 }}>{asks}</span>
                           </Tooltip>
                         ) : (
                           <span className="subtle">0</span>
                         )}
                       </td>
+                      <td className="num muted">{meetings(c)}</td>
+                      <td className="muted">{c.domain || "Not set"}</td>
                     </tr>
                   );
                 })}

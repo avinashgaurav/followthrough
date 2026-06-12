@@ -4,7 +4,7 @@ import { api } from "../api";
 import { useAuth } from "../auth";
 import { CommandPalette } from "./CommandPalette";
 import { SHORTCUTS, useShortcuts } from "./shortcuts";
-import { Modal } from "./ui";
+import { Modal, Tooltip } from "./ui";
 
 interface NavEntry {
   to: string;
@@ -18,7 +18,7 @@ const PIPELINE: NavEntry[] = [
   { to: "/", label: "Review", end: true },
   { to: "/insights", label: "Insights" },
   { to: "/clients", label: "Clients" },
-  { to: "/proof", label: "Proof" },
+  { to: "/proof", label: "Shipped?" },
 ];
 
 const ADMIN: NavEntry[] = [
@@ -100,8 +100,9 @@ function Kbd({ k }: { k: string }) {
 }
 
 export function Shell() {
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const isAdmin = user?.role === "admin";
@@ -122,8 +123,11 @@ export function Shell() {
     <div className="app">
       <aside className={sidebarOpen ? "side open" : "side"}>
         <div className="brand">
-          <span className="sq" />
-          <b>Insights Engine</b>
+          <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+            <rect x="15" y="4" width="2" height="24" fill="var(--line)" />
+            <circle cx="16" cy="16" r="4" fill="var(--signal)" />
+          </svg>
+          <b>Followthrough</b>
         </div>
         <div className="navlbl">Pipeline</div>
         {PIPELINE.map((e) => (
@@ -162,12 +166,25 @@ export function Shell() {
             aria-label="Open command palette"
           >
             <span aria-hidden="true">&#8981;</span>
-            <span>Search insights, clients, transcripts</span>
+            <span>Search asks, clients, meetings</span>
             <span className="kbd">Cmd K</span>
           </button>
           <div className="right">
-            <span className="small">{user?.name || user?.email}</span>
-            <UserMenu />
+            {isGuest ? (
+              <>
+                <Tooltip content="No login required. Turn login on in Settings to add accounts.">
+                  <span className="lbl">Open access</span>
+                </Tooltip>
+                <button className="btn ghost sm" onClick={() => navigate("/login")}>
+                  Sign in
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="small">{user?.name || user?.email}</span>
+                <UserMenu />
+              </>
+            )}
           </div>
         </div>
         <div className="page-scroll">
