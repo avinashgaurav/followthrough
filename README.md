@@ -42,15 +42,19 @@ Each arrow is a tracked, timestamped state transition. The funnel, the turnaroun
 
 The "Transcript Spine" UI: cinematic dark chrome, a single signal-amber accent, editorial serif headers, and a single plain-English vocabulary.
 
-| Review (triage workspace) | Capture (get a meeting in) |
+| Home (what needs you now) | Review (triage workspace) |
 |:---:|:---:|
-| ![Review screen](docs/screenshots/review.png) | ![Capture screen](docs/screenshots/capture.png) |
+| ![Home dashboard](docs/screenshots/home.png) | ![Review screen](docs/screenshots/review.png) |
+
+| Ask (cited Q&A over your meetings) | Capture (get a meeting in) |
+|:---:|:---:|
+| ![Ask screen](docs/screenshots/ask.png) | ![Capture screen](docs/screenshots/capture.png) |
 
 | Settings (open by default; login is optional) | Sign in (only when login is required) |
 |:---:|:---:|
 | ![Settings access](docs/screenshots/settings.png) | ![Login screen](docs/screenshots/login.png) |
 
-> The bundled sample data is empty out of the box, so these show the chrome and the new access model. The spine / testimony / waveform fully populate once meetings are ingested.
+> Screenshots use synthetic demo data (fictional clients Acme / Globex / Initech). The bundled sample data is empty out of the box.
 
 ---
 
