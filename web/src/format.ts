@@ -46,14 +46,11 @@ export function fmtNum(v: unknown): string {
   return String(v ?? "");
 }
 
-/** snake_case and camelCase -> Title Case spaced words, generic fallback. */
+/** snake_case and camelCase -> spaced words with a leading capital, generic fallback. */
 export function titleCase(s: string | undefined | null): string {
   if (!s) return "";
-  return s
-    .replaceAll("_", " ")
-    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-    .toLowerCase()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  const spaced = s.replaceAll("_", " ").replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
 // ---------------------------------------------------------------- track + item-type labels
@@ -85,10 +82,30 @@ export function itemTypeLabel(t: string | undefined | null): string {
   return ITEM_TYPE_LABELS[t] ?? titleCase(t);
 }
 
+/** Display title for an insight: internal extraction prefixes stay out of the UI. */
+export function insightTitle(t: string | undefined | null): string {
+  if (!t) return "";
+  return t.replace(/^\s*SUBTEXT:\s*/i, "");
+}
+
+/** Meeting lifecycle in its own words (a meeting is not "Found" - its insights are). */
+const MEETING_STATUS_LABELS: Record<string, string> = {
+  uploaded: "Recording in",
+  transcribing: "Transcribing",
+  transcribed: "Transcript ready",
+  transcription_failed: "Transcription failed",
+  extracted: "Insights pulled",
+};
+
+export function meetingStatusLabel(status: string | undefined | null): string {
+  if (!status) return "";
+  return MEETING_STATUS_LABELS[status] ?? titleCase(status);
+}
+
 // ---------------------------------------------------------------- state labels + tooltips
 
-// One dialect for the whole app (see design-reference/SPINE.md §7):
-// Found -> Routed -> Locked -> Ticket raised -> Shipped -> Client told -> Closed
+// ONE plain-English pipeline vocabulary, used everywhere a state appears:
+// pills, Review buckets, Insights filters, Numbers funnel and columns.
 const STATE_LABELS: Record<string, string> = {
   extracted: "Found",
   triaged: "Routed",
@@ -109,9 +126,9 @@ export function stateLabel(state: string | undefined | null): string {
 /** Plain-words explanation of each state, shown as a tooltip on every state pill. */
 export const stateTooltip: Record<string, string> = {
   extracted: "Found by the AI in a meeting. Nobody has checked it yet.",
-  triaged: "Routed: someone decided what it is and who owns it. Wording is not locked yet.",
+  triaged: "Routed: someone decided what it is and which team owns it. Wording not locked yet.",
   finalized: "Locked: the wording is final. It can now become a ticket or be marked shipped.",
-  ticketed: "A ticket has been raised for engineering to build it.",
+  ticketed: "A ticket has been drafted or raised for engineering to build it.",
   shipped: "Engineering shipped it. We still need to confirm it and tell the client.",
   client_notified: "We told the client it shipped. The loop is closed.",
   closed: "Done and put to rest. No further action needed.",
@@ -124,30 +141,53 @@ export function stateTooltipFor(state: string | undefined | null): string {
   return stateTooltip[state] ?? "";
 }
 
+// ---------------------------------------------------------------- the one legal next move
+
+/**
+ * The single legal next move for an insight at a given pipeline state, in plain
+ * words. This is the "only legal moves" rule in one place: every detail surface
+ * names the same next step so the operator never hunts for what to do. Terminal
+ * states (closed / rejected / merged) and shipped-after-told return null - there
+ * is nothing left to push.
+ */
+const NEXT_STEP: Record<string, { verb: string; hint: string }> = {
+  extracted: { verb: "Route it", hint: "Decide which team owns this and who, then route it." },
+  triaged: { verb: "Lock the wording", hint: "Polish the summary, then finalize so it can become a ticket." },
+  finalized: { verb: "Draft a ticket", hint: "Turn this into a GitHub issue for engineering." },
+  ticketed: { verb: "Raise it with engineering", hint: "A ticket is drafted. Raise it on the full record, then wait for it to ship." },
+  shipped: { verb: "Confirm it shipped", hint: "Confirm the match really shipped, then tell the client." },
+  client_notified: { verb: "Close the loop", hint: "The client has been told. Close it once there is nothing left to do." },
+};
+
+export function nextStep(state: string | undefined | null): { verb: string; hint: string } | null {
+  if (!state) return null;
+  return NEXT_STEP[state] ?? null;
+}
+
 // ---------------------------------------------------------------- Numbers metric definitions
 
 /** Plain-words definition for every metric shown on the Numbers page. */
 export const metricTooltip: Record<string, string> = {
-  extracted_to_finalized: "Average time from the AI finding an ask to someone locking its wording.",
+  extracted_to_finalized: "Average time from the AI finding an insight to someone locking its wording.",
   finalized_to_ticketed: "Time from locked wording to a ticket being raised for engineering.",
   ticketed_to_shipped: "Time engineering took to build it after the ticket was raised.",
   finalized_to_shipped: "Time from locked wording all the way to shipped.",
   shipped_to_notified: "Time from shipping to telling the client it is live.",
   end_to_end: "Total turnaround time: from meeting to the client being told.",
-  funnel: "How many asks reach each stage. Drop-off shows where things stall.",
+  funnel: "How many insights reach each stage. Drop-off shows where things stall.",
   wipAndAging: "How much work is in flight and how old the oldest items are.",
   oldestOpenItem: "How long the longest-waiting open item has been sitting. If this grows, something is stuck.",
   stuckItems: "Items that have not moved for a while and need a nudge.",
   perPerson: "What each teammate owns and how fast they move it.",
-  perClientClosedLoop: "Per client: how many asks we shipped and actually told them about.",
+  perClientClosedLoop: "Per client: how many insights we shipped and actually told the client about.",
   themeDemand: "Which topics clients ask for most often across all meetings.",
   aiQuality: "How often the AI's first guess was kept versus corrected.",
-  captureVolume: "How many meetings and asks we took in over time.",
+  captureVolume: "How many meetings and insights we took in over time.",
   avg: "Average across all items measured.",
   median: "The middle value. Half were faster, half slower.",
   p90: "90 percent finished within this time. Catches the slow tail.",
   n: "How many items this number is based on.",
-  turnaround: "How long an ask takes to move between two stages.",
+  turnaround: "How long an insight takes to move between two stages.",
 };
 
 export function metricTooltipFor(key: string | undefined | null): string {

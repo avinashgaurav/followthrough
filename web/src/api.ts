@@ -58,6 +58,10 @@ function put<T>(path: string, body: unknown): Promise<T> {
   });
 }
 
+function del<T>(path: string): Promise<T> {
+  return request<T>(path, { method: "DELETE" });
+}
+
 function postForm<T>(path: string, form: FormData): Promise<T> {
   return request<T>(path, { method: "POST", body: form });
 }
@@ -86,7 +90,6 @@ export const ITEM_TYPES = [
   "key_insight",
   "action_item_ours",
   "commitment_theirs",
-  "status_update",
 ] as const;
 export type ItemType = (typeof ITEM_TYPES)[number];
 
@@ -100,7 +103,7 @@ export const EVIDENCE_KINDS = [
   "manual_attestation",
 ] as const;
 
-/** Hardcoded direct-create allowlist. The XYZ org is write-blocked server-side. */
+/** Hardcoded direct-create allowlist. The xyz org is write-blocked server-side. */
 export const REPO_ALLOWLIST = ["avinashgaurav/followthrough"] as const;
 
 export function insightHandle(id: string): string {
@@ -114,7 +117,8 @@ export interface User {
   email: string;
   name?: string | null;
   role: "admin" | "member";
-  revoked_at?: string | null;
+  disabled_at?: string | null;
+  has_code?: boolean | number;
   created_at?: string;
   [k: string]: unknown;
 }
@@ -166,6 +170,9 @@ export interface Insight {
   body_current?: string;
   state?: InsightState | string;
   ai_confidence?: string | null;
+  side?: "client" | "ours" | "unknown" | null;
+  sentiment?: "positive" | "neutral" | "negative" | "mixed" | null;
+  intent?: string | null;
   assignee_user_id?: string | null;
   assignee_name?: string | null;
   priority?: number;
@@ -308,6 +315,23 @@ export interface SearchResponse {
   transcripts: SearchTranscriptHit[];
 }
 
+export interface AskSource {
+  n: number;
+  kind: "insight" | "transcript";
+  handle?: string;
+  insight_id?: string;
+  meeting_id?: string;
+  client_name: string;
+  title: string;
+  excerpt: string;
+}
+
+export interface AskResponse {
+  answer: string;
+  sources: AskSource[];
+  usage?: { model: string; tokensIn: number; tokensOut: number; costUsd: number };
+}
+
 export interface CalendarEvent {
   uid?: string;
   title?: string;
@@ -417,6 +441,8 @@ export const api = {
     post<{ user?: User; [k: string]: unknown }>("/api/auth/login", { email, code }),
   logout: () => post<unknown>("/api/auth/logout"),
   me: () => get<{ user: User; require_login?: boolean; is_guest?: boolean }>("/api/me"),
+  // Public probe used on app load; returns { user: null } (200) when signed out.
+  session: () => get<{ user: User | null }>("/api/auth/session"),
 
   // ---------------- access mode (admin): open by default, login optional
   getAccess: () => get<{ require_login: boolean; can_require: boolean }>("/api/settings/access"),
@@ -435,6 +461,10 @@ export const api = {
 
   // ---------------- clients
   listClients: async (): Promise<Client[]> => asArray<Client>(await get<unknown>("/api/clients")),
+  createShareLink: (clientId: string) =>
+    post<{ url: string }>(`/api/clients/${encodeURIComponent(clientId)}/share-link`),
+  revokeShareLink: (clientId: string) =>
+    del<{ ok: boolean }>(`/api/clients/${encodeURIComponent(clientId)}/share-link`),
   createClient: (body: { name: string; domain?: string }) =>
     post<{ id?: string; client?: Client; [k: string]: unknown }>("/api/clients", body),
   getClient: (id: string) => get<Record<string, unknown>>(`/api/clients/${encodeURIComponent(id)}`),
@@ -516,6 +546,17 @@ export const api = {
       timeline: (timeline as InsightDetail["timeline"]) ?? [],
     };
   },
+  /** Brief-first review: triage or reject many insights at once. */
+  bulkInsights: (body: {
+    ids: string[];
+    action: "triage" | "reject";
+    track?: string;
+    assignee_user_id?: string;
+    reason?: string;
+  }) => post<{ ok: number; failed: number; results: Array<{ id: string; ok: boolean; error?: string }> }>(
+    "/api/insights/bulk",
+    body,
+  ),
   triage: (id: string, body: { track: string; assignee_user_id?: string; tags?: string[] }) =>
     post<unknown>(`/api/insights/${encodeURIComponent(id)}/triage`, body),
   /** Throws ApiError(409) with data {current_version} on a stale save. */
@@ -564,6 +605,8 @@ export const api = {
 
   // ---------------- queue / search / metrics
   queue: () => get<QueueResponse>("/api/queue"),
+  ask: (question: string, client_id?: string) =>
+    post<AskResponse>("/api/ask", { question, ...(client_id ? { client_id } : {}) }),
   search: async (
     q: string,
     filters: { client_id?: string; track?: string; state?: string } = {},
@@ -578,6 +621,12 @@ export const api = {
 
   // ---------------- releases / matches
   listReleases: async (): Promise<Release[]> => asArray<Release>(await get<unknown>("/api/releases")),
+  /** Manual changelog intake (paste or uploaded .md) - parses, stores, matches. */
+  addManualRelease: (body: { tag_name: string; name?: string; body_md: string }) =>
+    post<{ release_id: string; entry_count: number; matches_proposed: number; match_error?: string }>(
+      "/api/releases/manual",
+      body,
+    ),
   /** Raw releases envelope; includes repo + whether a GitHub read token is configured. */
   releasesStatus: () =>
     get<{ releases?: Release[]; repo?: string; github_token_configured?: boolean }>("/api/releases"),
@@ -587,7 +636,7 @@ export const api = {
   confirmMatch: (id: string) => post<unknown>(`/api/matches/${encodeURIComponent(id)}/confirm`),
   rejectMatch: (id: string) => post<unknown>(`/api/matches/${encodeURIComponent(id)}/reject`),
 
-  // ---------------- exports / digest / admin extras
+  // ---------------- exports / admin extras
   exportCsv: (client_id?: string) =>
     post<{ id?: string; export_id?: string; [k: string]: unknown }>(
       "/api/exports/csv",
@@ -595,6 +644,8 @@ export const api = {
     ),
   listExports: async (): Promise<ExportRecord[]> => asArray<ExportRecord>(await get<unknown>("/api/exports")),
   exportDownloadUrl: (id: string) => `/api/exports/${encodeURIComponent(id)}/download`,
+
+  // ---------------- digest (admin): preview the weekly chat digest
   digestPreview: async (): Promise<string> => asMarkdown(await get<unknown>("/api/digest/preview")),
 
   // ---------------- watchfolder (read-only status)

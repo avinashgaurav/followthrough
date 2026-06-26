@@ -1,22 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { api, ApiError, type MatchProposal, type Release } from "../api";
-import { formatDate } from "../format";
+import { api, ApiError, type MatchProposal, type Release , insightHandle } from "../api";
+import { formatDate, insightTitle, stateLabel } from "../format";
 import {
+  Alert,
   Btn,
   ConfirmModal,
   EmptyState,
   ErrorAlert,
-  PaperBand,
+  Field,
   SectionHead,
   Skeleton,
-  Spine,
-  SpineItem,
-  TestimonyQuote,
   Tooltip,
   useToast,
 } from "../components/ui";
 
-// Job: confirm what engineering shipped against client asks.
+// Job: confirm what engineering shipped against client insights.
 // Data: api.listMatches('proposed'), api.confirmMatch(id) / api.rejectMatch(id, reason),
 //       api.listReleases().
 
@@ -32,18 +30,18 @@ function confidenceMeaning(n: number): { label: string; tip: string } {
   }
   if (n >= 80) {
     return {
-      label: "Strong match",
-      tip: "The AI is fairly sure this release delivered the ask. Worth a quick look before you confirm.",
+      label: "Strong proof",
+      tip: "The AI is fairly sure this release delivered the insight. Worth a quick look before you confirm.",
     };
   }
   if (n >= 50) {
     return {
-      label: "Possible match",
+      label: "Possible proof",
       tip: "The AI sees a likely link but is not sure. Read the release note before deciding.",
     };
   }
   return {
-    label: "Weak match",
+    label: "Weak proof",
     tip: "The AI is unsure these line up. Read carefully and reject if it does not fit.",
   };
 }
@@ -116,7 +114,7 @@ export function Proof() {
     setBusyId(m.id);
     try {
       await api.confirmMatch(m.id);
-      toast.push("Marked shipped", "success");
+      toast.push("Marked shipped.", "success");
       setMatches((prev) => (prev ? prev.filter((x) => x.id !== m.id) : prev));
       // a confirmed match becomes a release-backed proof; refresh releases if already loaded
       if (releasesLoaded) void loadReleases();
@@ -133,7 +131,7 @@ export function Proof() {
     setBusyId(m.id);
     try {
       await api.rejectMatch(m.id);
-      toast.push("Match rejected", "info");
+      toast.push("Proof rejected.", "info");
       setMatches((prev) => (prev ? prev.filter((x) => x.id !== m.id) : prev));
       setRejectFor(null);
     } catch (e) {
@@ -148,15 +146,15 @@ export function Proof() {
   return (
     <>
       <SectionHead
-        title="Proof"
-        job="Confirm what engineering shipped against client asks."
+        title="Confirm shipped"
+        job="When a release looks like it delivered an insight, confirm it or reject it."
         actions={
           tab === "matches" ? (
             <Btn
               size="sm"
               variant="ghost"
               onClick={() => void loadMatches()}
-              tooltip="Re-check for new matches the AI has proposed since you opened this page."
+              tooltip="Re-check for new proof the AI has proposed since you opened this page."
             >
               Refresh
             </Btn>
@@ -173,29 +171,29 @@ export function Proof() {
         }
       />
       <div className="page-body">
-        <p className="muted small" style={{ margin: "0 0 16px", maxWidth: 680, lineHeight: 1.6 }}>
-          When a release looks like it delivered something a client asked for, the AI proposes a match
-          here. Confirm it to mark the ask shipped, or reject it if the release does not actually cover
-          what they wanted.
-        </p>
-
-        <div className="row" style={{ gap: 6, marginBottom: 18 }}>
-          <Btn
-            size="sm"
-            variant={tab === "matches" ? "primary" : "default"}
-            onClick={() => setTab("matches")}
-            tooltip="Proposed matches waiting for your yes or no."
-          >
-            Matches to confirm{matchCount > 0 ? ` (${matchCount})` : ""}
-          </Btn>
-          <Btn
-            size="sm"
-            variant={tab === "releases" ? "primary" : "default"}
-            onClick={() => setTab("releases")}
-            tooltip="Every release we pulled from GitHub, newest first."
-          >
-            Releases
-          </Btn>
+        <div className="seg mb-18" role="tablist" aria-label="Confirm shipped views">
+          <Tooltip content="Proposed proof waiting for your yes or no.">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "matches"}
+              className={`seg-btn${tab === "matches" ? " on" : ""}`}
+              onClick={() => setTab("matches")}
+            >
+              Waiting for you{matchCount > 0 ? ` (${matchCount})` : ""}
+            </button>
+          </Tooltip>
+          <Tooltip content="Every release we pulled from GitHub or you added by hand, newest first.">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "releases"}
+              className={`seg-btn${tab === "releases" ? " on" : ""}`}
+              onClick={() => setTab("releases")}
+            >
+              Releases
+            </button>
+          </Tooltip>
         </div>
 
         {tab === "matches" ? (
@@ -213,15 +211,19 @@ export function Proof() {
             error={releasesError}
             tokenConfigured={tokenConfigured}
             onRetry={() => void loadReleases()}
+            onManualSaved={() => {
+              void loadReleases();
+              void loadMatches();
+            }}
           />
         )}
       </div>
 
       <ConfirmModal
         open={!!rejectFor}
-        title="Reject this match"
-        body="This release does not deliver the ask. The ask stays open and the AI can propose a different release later."
-        confirmLabel="Reject match"
+        title="Reject this proof"
+        body="This release does not deliver the insight. The insight stays open and the AI can propose a different release later."
+        confirmLabel="Reject proof"
         busy={busyId === rejectFor?.id}
         onConfirm={() => void doReject()}
         onClose={() => setRejectFor(null)}
@@ -254,8 +256,8 @@ function MatchesTab({
   if (matches.length === 0) {
     return (
       <EmptyState
-        title="No matches waiting"
-        body="Nothing to confirm right now. When a new release lines up with a client ask, it will appear here."
+        title="Nothing to confirm right now"
+        body="When a new release lines up with a client insight, it will appear here."
       />
     );
   }
@@ -288,14 +290,14 @@ function MatchCard({
   const conf = typeof m.confidence === "number" ? m.confidence : 0;
   const meaning = confidenceMeaning(conf);
   const quotes = quotesOf(m);
-  const handle = m.insight_handle || (m.insight_id ? `INS-${String(m.insight_id).slice(-6).toUpperCase()}` : "");
+  const handle = m.insight_handle || (m.insight_id ? insightHandle(String(m.insight_id)) : "");
   const releaseTag = m.release_tag || "release";
 
   return (
     <div className="card corner">
       <div className="row-between" style={{ alignItems: "flex-start" }}>
         <span className="lbl" style={{ margin: 0 }}>
-          Proposed match
+          Proposed proof
         </span>
         <Tooltip title={`Confidence ${conf}`} content={meaning.tip}>
           <span className={confidenceClass(conf)}>
@@ -304,46 +306,36 @@ function MatchCard({
         </Tooltip>
       </div>
 
-      {/* Lifecycle as a time-spine: what the client said -> what shipped -> telling them.
-          The release is the proven 'Shipped' tick (done, amber); 'Client told' is the live
-          next step that confirming this match unlocks. */}
-      <Spine className="proof-spine">
-        <SpineItem state="done">
-          <div className="lbl" style={{ margin: "0 0 4px" }}>
+      <div className="grid-2" style={{ marginTop: 14, alignItems: "start" }}>
+        {/* The insight */}
+        <div>
+          <div className="lbl mt-0">
             What the client asked for
           </div>
-          <div style={{ fontSize: 13.5, lineHeight: 1.45 }}>{m.insight_title || "Untitled ask"}</div>
+          <div style={{ fontSize: 13.5, lineHeight: 1.45 }}>{insightTitle(m.insight_title) || "Untitled insight"}</div>
           {handle && (
             <div className="mono subtle" style={{ fontSize: 11, marginTop: 6 }}>
               {handle}
             </div>
           )}
-        </SpineItem>
+        </div>
 
-        <SpineItem
-          state="done"
-          timecode={m.release_published_at ? formatDate(m.release_published_at) : undefined}
-        >
-          <div className="lbl" style={{ margin: "0 0 4px" }}>
-            Shipped
+        {/* The release */}
+        <div>
+          <div className="lbl mt-0">
+            What engineering shipped
           </div>
           <div className="row" style={{ gap: 8, marginBottom: 6 }}>
             <span className="pill feat">{releaseTag}</span>
+            {m.release_published_at && (
+              <span className="subtle" style={{ fontSize: 11 }}>
+                {formatDate(m.release_published_at)}
+              </span>
+            )}
           </div>
-          <div style={{ fontSize: 13, lineHeight: 1.45 }}>
-            {m.entry_title || m.entry_text || "Release entry"}
-          </div>
-        </SpineItem>
-
-        <SpineItem state="live">
-          <div className="lbl" style={{ margin: "0 0 4px" }}>
-            Client told
-          </div>
-          <div className="muted" style={{ fontSize: 12.5, lineHeight: 1.45 }}>
-            Confirm this match to mark the ask shipped. The client can then be told.
-          </div>
-        </SpineItem>
-      </Spine>
+          <div style={{ fontSize: 13, lineHeight: 1.45 }}>{m.entry_title || m.entry_text || "Release entry"}</div>
+        </div>
+      </div>
 
       {m.rationale && (
         <div className="aibox">
@@ -354,22 +346,22 @@ function MatchCard({
       {quotes.length > 0 && (
         <>
           <div className="lbl">Proof from the release note</div>
-          <PaperBand className="proof-evidence">
-            <div className="stack-sm">
-              {quotes.map((q, i) => (
-                <TestimonyQuote key={i} quote={q} speaker={releaseTag} timecode={m.release_published_at ? formatDate(m.release_published_at) : null} />
-              ))}
-            </div>
-          </PaperBand>
+          <div className="stack-sm">
+            {quotes.map((q, i) => (
+              <div key={i} className="quote">
+                {q}
+              </div>
+            ))}
+          </div>
         </>
       )}
 
-      <div className="actions" style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid var(--line-soft)", display: "flex", gap: 8, alignItems: "center" }}>
+      <div className="actions" style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid var(--line-soft)", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         <Btn
           variant="primary"
           onClick={onConfirm}
           disabled={busy}
-          tooltip="Marks the ask shipped and records that this release delivered it. The client can then be told."
+          tooltip="Marks the insight shipped and records that this release delivered it. The client can then be told."
           tooltipTitle="Confirm shipped"
         >
           {busy ? "Working" : "Confirm shipped"}
@@ -378,11 +370,14 @@ function MatchCard({
           variant="danger"
           onClick={onRejectOpen}
           disabled={busy}
-          tooltip="This release does not cover the ask. The ask stays open for a future match."
+          tooltip="This release does not cover the insight. The insight stays open for future proof."
           tooltipTitle="Reject"
         >
           Reject
         </Btn>
+        <span className="muted small" style={{ marginLeft: "var(--sp-1)" }}>
+          Confirming moves the insight to {stateLabel("shipped")} right away. Rejecting keeps it open.
+        </span>
       </div>
     </div>
   );
@@ -393,73 +388,246 @@ function ReleasesTab({
   error,
   tokenConfigured,
   onRetry,
+  onManualSaved,
 }: {
   releases: Release[] | null;
   error: unknown;
   tokenConfigured: boolean;
   onRetry: () => void;
+  onManualSaved: () => void;
 }) {
   const rows = useMemo(() => releases ?? [], [releases]);
 
-  if (error && rows.length === 0) {
-    return <ErrorAlert error={error} onRetry={onRetry} />;
-  }
-  if (releases === null) {
+  if (releases === null && !error) {
     return <Skeleton rows={6} />;
   }
+
+  if (error && rows.length === 0) {
+    return (
+      <div className="stack">
+        <ErrorAlert error={error} onRetry={onRetry} />
+        <ManualChangelogForm onSaved={onManualSaved} />
+      </div>
+    );
+  }
+
   if (rows.length === 0) {
     if (!tokenConfigured) {
+      // No GitHub token: the manual form IS the primary action here.
       return (
-        <EmptyState
-          title="GitHub is not connected yet"
-          body="The release repo is private, so pulling needs a read-only GitHub token. Add GITHUB_READ_TOKEN to the server's .env and restart; releases then pull automatically every hour."
-        />
+        <div className="manual-empty-wide">
+          <style>{`.manual-empty-wide .empty { max-width: 720px; }`}</style>
+          <EmptyState
+            title="GitHub is not connected yet"
+            body="The release repo is private, so pulling needs a read-only GitHub token. Add GITHUB_READ_TOKEN to the server's .env and restart; releases then pull automatically every hour. Until then, add changelogs by hand below."
+            action={
+              <div style={{ textAlign: "left" }}>
+                <ManualChangelogForm onSaved={onManualSaved} />
+              </div>
+            }
+          />
+        </div>
       );
     }
     return (
-      <EmptyState
-        title="No releases yet"
-        body="Releases pull automatically every hour. An admin can also pull right now from the Settings page."
-      />
+      <div className="stack">
+        <EmptyState
+          title="No releases yet"
+          body="Releases pull automatically every hour. An admin can also pull right now from the Settings page."
+        />
+        <ManualChangelogForm onSaved={onManualSaved} />
+      </div>
     );
   }
+
   return (
-    <div className="card" style={{ padding: 0 }}>
-      <div className="table-wrap">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Release</th>
-              <th>Published</th>
-              <th className="num">
-                <Tooltip title="Entries" content="How many separate changelog lines this release contained.">
-                  <span>Entries</span>
-                </Tooltip>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => {
-              const tag = r.tag || r.tag_name || r.name || "release";
-              const count = typeof r.entry_count === "number" ? r.entry_count : null;
-              return (
-                <tr key={r.id ?? tag ?? i}>
-                  <td>
-                    <span className="pill feat">{tag}</span>
-                    {r.name && r.name !== tag && (
-                      <span className="muted" style={{ marginLeft: 8 }}>
-                        {r.name}
-                      </span>
-                    )}
-                  </td>
-                  <td className="muted">{r.published_at ? formatDate(r.published_at) : "Unknown"}</td>
-                  <td className="num">{count ?? "-"}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+    <div className="stack">
+      <div className="card p-0">
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Release</th>
+                <th>Published</th>
+                <th className="num">
+                  <Tooltip title="Entries" content="How many separate changelog lines this release contained.">
+                    <span>Entries</span>
+                  </Tooltip>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => {
+                const tag = r.tag || r.tag_name || r.name || "release";
+                const count = typeof r.entry_count === "number" ? r.entry_count : null;
+                return (
+                  <tr key={r.id ?? tag ?? i}>
+                    <td>
+                      <span className="pill feat">{tag}</span>
+                      {r.name && r.name !== tag && (
+                        <span className="muted" style={{ marginLeft: 8 }}>
+                          {r.name}
+                        </span>
+                      )}
+                    </td>
+                    <td className="muted">{r.published_at ? formatDate(r.published_at) : "Unknown"}</td>
+                    <td className="num">{count ?? "-"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
+      <ManualChangelogForm onSaved={onManualSaved} />
     </div>
+  );
+}
+
+// ================================================================ Manual changelog intake
+
+/**
+ * Paste-or-upload changelog intake. Works without a GitHub token; that is its
+ * whole point. Saves the changelog, then asks the server to match its entries
+ * against open insights.
+ */
+function ManualChangelogForm({ onSaved }: { onSaved: () => void }) {
+  const toast = useToast();
+  const [tag, setTag] = useState("");
+  const [name, setName] = useState("");
+  const [bodyMd, setBodyMd] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    // allow choosing the same file again after an edit
+    e.target.value = "";
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setBodyMd(typeof reader.result === "string" ? reader.result : "");
+      toast.push(`Loaded ${f.name} into the notes box.`, "info");
+    };
+    reader.onerror = () => {
+      toast.push("Could not read that file. Paste the notes into the box instead.", "warning");
+    };
+    reader.readAsText(f);
+  }
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setFormError(null);
+    const tagTrimmed = tag.trim();
+    if (!tagTrimmed) {
+      setFormError("Enter the version or tag, for example v1.21.0.");
+      return;
+    }
+    if (!bodyMd.trim()) {
+      setFormError("Paste the changelog notes or choose a .md or .txt file.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const r = await api.addManualRelease({
+        tag_name: tagTrimmed,
+        name: name.trim() || undefined,
+        body_md: bodyMd,
+      });
+      const entries = typeof r?.entry_count === "number" ? r.entry_count : 0;
+      const proposed = typeof r?.matches_proposed === "number" ? r.matches_proposed : 0;
+      toast.push(`${entries} changelog entries saved. ${proposed} proposed matches to confirm.`, "success");
+      if (r?.match_error) {
+        toast.push("Matching failed, but the changelog saved. No proposed matches were created this time.", "info");
+      }
+      setTag("");
+      setName("");
+      setBodyMd("");
+      onSaved();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        // duplicate tag: show the server's message
+        setFormError(err.message);
+      } else {
+        setFormError(err instanceof ApiError ? err.message : "Could not save the changelog. Try again.");
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form className="card stack" onSubmit={(e) => void save(e)}>
+      <div>
+        <h3 className="dlbl" style={{ margin: 0 }}>
+          Add a changelog manually
+        </h3>
+        <p className="muted small" style={{ margin: "6px 0 0", lineHeight: 1.5 }}>
+          Paste release notes or load a .md or .txt file. We split the notes into entries and propose
+          matches against open insights for you to confirm above.
+        </p>
+      </div>
+
+      {formError && (
+        <Alert severity="warning" title="Could not save" onDismiss={() => setFormError(null)}>
+          {formError}
+        </Alert>
+      )}
+
+      <div className="grid-2">
+        <Field label="Version or tag" htmlFor="mc-tag" hint="Required. The release tag, e.g. v1.21.0.">
+          <input
+            id="mc-tag"
+            className="ctrl mono"
+            value={tag}
+            onChange={(e) => setTag(e.target.value)}
+            placeholder="v1.21.0"
+          />
+        </Field>
+        <Field label="Name" htmlFor="mc-name" hint="Optional. A human name for the release.">
+          <input
+            id="mc-name"
+            className="ctrl"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="June platform release"
+          />
+        </Field>
+      </div>
+
+      <Field
+        label="Release notes"
+        htmlFor="mc-notes"
+        hint="Paste the changelog here, or load a file below and it fills this box."
+      >
+        <textarea
+          id="mc-notes"
+          className="ctrl mono"
+          rows={8}
+          value={bodyMd}
+          onChange={(e) => setBodyMd(e.target.value)}
+          placeholder={"## Added\n- Faster exports for large accounts\n\n## Fixed\n- Login loop on expired sessions"}
+        />
+      </Field>
+
+      <Field label="Or load a file" htmlFor="mc-file" hint="Accepts .md or .txt. The file is read in your browser and fills the notes box; nothing uploads until you save.">
+        <input id="mc-file" className="ctrl" type="file" accept=".md,.txt,text/markdown,text/plain" onChange={onFile} />
+      </Field>
+
+      <div className="form-actions" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        <Btn
+          variant="primary"
+          type="submit"
+          disabled={saving}
+          tooltip="Saves the changelog, splits it into entries, and proposes matches against open insights in the Waiting for you tab."
+          tooltipTitle="Save and match"
+        >
+          {saving ? "Saving" : "Save and match against open insights"}
+        </Btn>
+        <span className="muted small">
+          Use this when GitHub is not connected. Pasting the same version twice is rejected.
+        </span>
+      </div>
+    </form>
   );
 }

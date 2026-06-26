@@ -5,7 +5,7 @@ import { ulid } from "../ids.ts";
 /**
  * Release body parser (SPEC.md section 6).
  *
- * Real XYZ/XYZ release notes follow a stable shape with drift:
+ * Real xyz/xyz release notes follow a stable shape with drift:
  * H2 sections (Features / Fixes / Enhancements / Technical details), one H3
  * per customer-facing entry, <details> blocks for technical entries, a
  * uniformly indented variant (v1.18.0), a single-entry patch (v1.17.4), and

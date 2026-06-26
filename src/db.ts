@@ -15,7 +15,25 @@ export function getDb(): Database {
   db.exec("PRAGMA journal_mode = WAL;");
   db.exec("PRAGMA foreign_keys = ON;");
   db.exec(readFileSync(SCHEMA_PATH, "utf8"));
+  applyMigrations(db);
   return db;
+}
+
+/** Idempotent column additions for databases created before the column
+ *  existed (schema.sql only CREATEs IF NOT EXISTS, it cannot ALTER). */
+function applyMigrations(d: Database): void {
+  const addColumn = (table: string, ddl: string) => {
+    try {
+      d.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl};`);
+    } catch {
+      // duplicate column - already migrated
+    }
+  };
+  addColumn("clients", "share_token TEXT");
+  // v4 extraction: per-insight attribution + read.
+  addColumn("insights", "side TEXT");
+  addColumn("insights", "sentiment TEXT");
+  addColumn("insights", "intent TEXT");
 }
 
 /** Test-only: fresh in-memory database with the full schema applied. */
@@ -24,6 +42,7 @@ export function openTestDb(): Database {
   mem.exec("PRAGMA foreign_keys = ON;");
   const schema = readFileSync(SCHEMA_PATH, "utf8");
   mem.exec(schema.replace("PRAGMA journal_mode = WAL;", ""));
+  applyMigrations(mem);
   return mem;
 }
 

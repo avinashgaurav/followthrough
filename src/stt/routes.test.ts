@@ -91,6 +91,7 @@ describe("POST /api/meetings/:id/transcribe (transcribeMeeting)", () => {
       runner: stubRunner(),
       which: whichAll,
       model: fakeModel,
+      useDeepgram: false,
     });
 
     expect(res.status).toBe(200);
@@ -122,6 +123,7 @@ describe("POST /api/meetings/:id/transcribe (transcribeMeeting)", () => {
       runner: stubRunner(),
       which: whichFfmpegOnly, // ffmpeg present, whisper binary absent
       model: fakeModel,
+      useDeepgram: false,
     });
 
     expect(res.status).toBe(500);
@@ -142,6 +144,7 @@ describe("POST /api/meetings/:id/transcribe (transcribeMeeting)", () => {
       runner: stubRunner(),
       which: whichAll,
       model: fakeModel,
+      useDeepgram: false,
     });
     expect(res.status).toBe(200);
     expect(meetingStatus(meetingId)).toBe("transcribed");
@@ -157,6 +160,7 @@ describe("POST /api/meetings/:id/transcribe (transcribeMeeting)", () => {
       runner: stubRunner(),
       which: whichAll,
       model: fakeModel,
+      useDeepgram: false,
     });
 
     expect(res.status).toBe(409);
@@ -171,6 +175,7 @@ describe("POST /api/meetings/:id/transcribe (transcribeMeeting)", () => {
       runner: stubRunner(),
       which: whichAll,
       model: fakeModel,
+      useDeepgram: false,
     });
     expect(res.status).toBe(409);
     expect(((await res.json()) as { error: string }).error).toContain("already in progress");

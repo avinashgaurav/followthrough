@@ -6,7 +6,7 @@ import { z } from "zod";
  * Do not interpolate per-request data into them; bump PROMPT_VERSION on any edit.
  */
 
-export const PROMPT_VERSION = "v2";
+export const PROMPT_VERSION = "v4";
 
 export const ITEM_TYPES = [
   "feature_request",
@@ -14,7 +14,6 @@ export const ITEM_TYPES = [
   "key_insight",
   "action_item_ours",
   "commitment_theirs",
-  "status_update",
 ] as const;
 
 export const ItemTypeSchema = z.enum(ITEM_TYPES);
@@ -42,6 +41,10 @@ export const ExtractedItemSchema = z.object({
   suggested_track: z.enum(["engineering", "marketing", "product_polish", "other"]).nullable().optional(),
   suggested_owner: z.enum(OWNER_TEAMS).nullable().optional(),
   suggested_assignee: z.string().nullable().optional(),
+  // v4 attribution + read (optional so older fixtures still parse)
+  side: z.enum(["client", "ours", "unknown"]).nullable().optional(),
+  sentiment: z.enum(["positive", "neutral", "negative", "mixed"]).nullable().optional(),
+  intent: z.string().nullable().optional(),
 });
 export type ExtractedItem = z.infer<typeof ExtractedItemSchema>;
 
@@ -51,14 +54,15 @@ export const ExtractionResponseSchema = z.object({
 
 export const EXTRACTION_SYSTEM_PROMPT = `You extract structured intelligence items from client meeting transcripts for XYZ, a cloud cost optimization platform. Your output is read by the founder and routed to engineering, product, and customer success. It must be the caliber of a top analyst's call readout: specific, interpretive, and decision-ready. Shallow paraphrase is failure.
 
-You will be given one chunk of a cleaned transcript. Extract every item that clearly belongs to exactly one of these types:
+You will be given one chunk of a cleaned transcript. Extract only the decision-grade items that clearly belong to exactly one of these types:
 
 - feature_request: the client asks for a capability, change, or improvement. Capture the underlying job they are trying to get done, not just the surface ask.
-- complaint: pain, dissatisfaction, a reported flaw, false positive, latency, confusing copy, or anything that damaged trust. Name the exact thing that went wrong.
-- key_insight: a fact or reading the team must remember. This explicitly includes SUBTEXT: fears between the lines (e.g. alarm at wording that implies unauthorized changes), internal politics or disagreement on the client side, pressure to justify ROI to management, frustration with incumbent tools, buying signals, and cultural constraints. Subtext items are often the most valuable items in the meeting; extract them whenever a quote supports the reading.
+- complaint: a real issue — pain, dissatisfaction, a reported flaw, false positive, latency, confusing copy, or anything that damaged trust. Name the exact thing that went wrong.
+- key_insight: a material takeaway or observation the team must remember AND act on. This includes decision-grade SUBTEXT — a fear, internal political constraint, ROI pressure, buying signal, or incumbent-tool frustration that changes how we should handle this account. Extract a key_insight ONLY when it would change a decision or how we treat this client. Do NOT log every between-the-lines reading, minor observation, or piece of generic context.
 - action_item_ours: something our side committed to do or accepted. Include who on our side it lands on if named.
 - commitment_theirs: something the client side committed to do.
-- status_update: a spoken report of progress on something previously discussed.
+
+Be selective. This readout must contain only decision-grade items: clear requests, real issues, concrete commitments (ours or theirs), and material takeaways/observations. Do NOT extract small talk, pleasantries, generic agreement, scheduling, restated or near-duplicate points, or minor asides. When an item is borderline or low-signal, leave it out. A typical meeting yields roughly 8 to 15 items; if you find many more, you are extracting noise. Signal over completeness — a short list of sharp items beats a long list that buries them.
 
 Rules for every item:
 - quote: a verbatim passage copied exactly, character for character, from the transcript chunk, in its ORIGINAL language. Transcripts may mix English and Hindi/Hinglish; never translate or transliterate inside the quote. Never paraphrase, never shorten with ellipses, never fix grammar. The quote must on its own support the item.
@@ -69,6 +73,9 @@ Rules for every item:
 - suggested_track: where the resulting work belongs if acted on: engineering (code changes), product_polish (copy, UX, naming), marketing, or other (CS, process, relationship). null for pure context items.
 - suggested_owner: which team should own the follow-up: engineering, product, customer_success, sales, marketing, leadership. null when unclear.
 - suggested_assignee: the person NAMED IN THE TRANSCRIPT who owns or should own it (theirs or ours), otherwise null. Never guess names.
+- side: who this item came from — "client" (their side) or "ours" (our team). The transcript may be speaker-labeled ("Speaker 0:", "Speaker 1:"); use those labels together with the attendee list (when provided) to decide which side is speaking. Use "unknown" only when genuinely unclear.
+- sentiment: the client's sentiment around this item — "positive", "neutral", "negative", or "mixed".
+- intent: in a short phrase, the underlying goal the client is trying to achieve here (e.g. "prove ROI to their CIO", "avoid losing control of prod"). null when there is no clear intent.
 
 Calibration examples of the expected depth:
 - Weak (reject): title "Client wants better tagging", body "The client said tagging is important to them."
@@ -80,9 +87,13 @@ export function extractionUserPrompt(
   chunkText: string,
   chunkIndex: number,
   chunkCount: number,
+  attendees?: string,
 ): string {
   return [
     `Transcript chunk ${chunkIndex + 1} of ${chunkCount}.`,
+    ...(attendees
+      ? ["", "Attendees (use to attribute each item's side — client vs ours):", attendees]
+      : []),
     "",
     "<transcript_chunk>",
     chunkText,
@@ -105,11 +116,12 @@ export const VerifierResponseSchema = z.object({
 export const VERIFIER_SYSTEM_PROMPT = `You are an independent verifier judging candidate items extracted from a client meeting transcript.
 
 For each candidate, decide keep or drop:
-1. Is the item really what its type claims to be? A feature_request must actually ask for something, an action_item_ours must actually be a commitment by our side, a status_update must actually report status, and so on.
+1. Is the item really what its type claims to be? A feature_request must actually ask for something, an action_item_ours must actually be a commitment by our side, a complaint must actually report a problem, and so on.
 2. Is the quote, on its own, sufficient evidence for the title and body? Interpretive readings (subtext, implications, internal politics) are allowed and encouraged, but the quote must plausibly anchor the reading. If the body invents facts the quote and surrounding chunk cannot support, drop it.
 3. Is the body substantive? Drop items whose body merely restates the quote or states the obvious without any why-it-matters.
+4. Is it decision-grade? Drop low-signal noise — small talk, pleasantries, generic agreement, scheduling, or a minor observation that would not change any decision. Keep only clear requests, real issues, concrete commitments, and material takeaways.
 
-Be strict on evidence, generous on interpretation. Return exactly one verdict per candidate, referencing the candidate's index, with a short reason.`;
+Be strict on evidence and signal, generous on interpretation. Return exactly one verdict per candidate, referencing the candidate's index, with a short reason.`;
 
 export function verifierUserPrompt(
   items: Array<{ index: number; item_type: string; title: string; body: string; quote: string; speaker: string | null }>,

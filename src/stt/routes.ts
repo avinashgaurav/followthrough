@@ -6,6 +6,7 @@ import { appendEvent } from "../events.ts";
 import { ulid } from "../ids.ts";
 import { env } from "../config.ts";
 import { sttAvailable, transcribeAudio, type TranscribeOpts } from "./whisper.ts";
+import { deepgramConfigured, transcribeViaDeepgram } from "./deepgram.ts";
 import { cleanTranscript } from "../extract/segment.ts";
 import { syncTranscriptFts } from "../insights/search.ts";
 
@@ -24,6 +25,22 @@ interface MeetingRow {
   audio_asset_id: string | null;
 }
 
+/** Boosted Deepgram keyterms for every active user's name (full + first name),
+ *  so transcription spells team members correctly. */
+function userNameKeyterms(db: Database): string[] {
+  const rows = db
+    .query("SELECT name FROM users WHERE disabled_at IS NULL AND name IS NOT NULL AND TRIM(name) != ''")
+    .all() as Array<{ name: string }>;
+  const terms = new Set<string>();
+  for (const { name } of rows) {
+    const full = name.trim();
+    terms.add(`${full}:2`);
+    const first = full.split(/\s+/)[0];
+    if (first && first !== full) terms.add(`${first}:2`);
+  }
+  return [...terms];
+}
+
 interface AssetRow {
   storage_backend: string;
   storage_ref: string;
@@ -37,7 +54,7 @@ export async function transcribeMeeting(
   db: Database,
   meetingId: string,
   actor: { id: string },
-  opts: TranscribeOpts = {},
+  opts: TranscribeOpts & { useDeepgram?: boolean } = {},
 ): Promise<Response> {
   const meeting = db
     .query("SELECT id, status, audio_asset_id FROM meetings WHERE id = ? AND deleted_at IS NULL")
@@ -70,13 +87,23 @@ export async function transcribeMeeting(
   db.query("UPDATE meetings SET status = 'transcribing' WHERE id = ?").run(meetingId);
 
   try {
-    const text = await transcribeAudio(audioPath, opts);
+    // Prefer cloud STT when a Deepgram key is set (the deployed path); otherwise
+    // transcribe locally with whisper.cpp. opts.useDeepgram lets tests pin the path.
+    const useDeepgram = opts.useDeepgram ?? deepgramConfigured();
+    // Auto-boost every active user's name (full + first) so the transcript spells
+    // people right (e.g. "Maria" not "Marina") without hand-maintaining them.
+    const keyterms = useDeepgram ? userNameKeyterms(db) : [];
+    const text = useDeepgram
+      ? await transcribeViaDeepgram(audioPath, { keyterms })
+      : await transcribeAudio(audioPath, opts);
+    // Deepgram diarizes (speaker-labeled), so it's good-quality; local whisper does not.
+    const qualityFlag = useDeepgram ? "ok" : QUALITY_FLAG;
     const transcriptId = ulid();
     db.transaction(() => {
       db.query(
         `INSERT INTO transcripts (id, meeting_id, content, raw_content, quality_flag, source, created_at)
          VALUES (?, ?, ?, ?, ?, 'stt', ?)`,
-      ).run(transcriptId, meetingId, cleanTranscript(text), text, QUALITY_FLAG, nowIso());
+      ).run(transcriptId, meetingId, cleanTranscript(text), text, qualityFlag, nowIso());
       syncTranscriptFts(db, transcriptId);
       db.query("UPDATE meetings SET status = 'transcribed' WHERE id = ?").run(meetingId);
       appendEvent(db, {
@@ -84,7 +111,7 @@ export async function transcribeMeeting(
         entityType: "meeting",
         entityId: meetingId,
         eventType: "meeting.transcript_added",
-        payload: { via: "whisper", transcript_id: transcriptId, quality_flag: QUALITY_FLAG },
+        payload: { via: useDeepgram ? "deepgram" : "whisper", transcript_id: transcriptId, quality_flag: qualityFlag },
       });
     })();
     return json({
@@ -92,7 +119,7 @@ export async function transcribeMeeting(
       meeting_id: meetingId,
       transcript_id: transcriptId,
       status: "transcribed",
-      quality_flag: QUALITY_FLAG,
+      quality_flag: qualityFlag,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -110,9 +137,12 @@ export async function transcribeMeeting(
   }
 }
 
-/** Shape: { ok: boolean, missing: string[] }. Used by the upload UI preflight. */
+/** Shape: { ok: boolean, missing: string[], provider }. Used by the upload UI preflight.
+ *  Deepgram (when configured) satisfies STT on its own; otherwise we report local
+ *  whisper availability. */
 export function sttStatus(): Response {
-  return json(sttAvailable());
+  if (deepgramConfigured()) return json({ ok: true, missing: [], provider: "deepgram" });
+  return json({ ...sttAvailable(), provider: "whisper" });
 }
 
 route("POST", "/api/meetings/:id/transcribe", "user", (_req, user, params) =>

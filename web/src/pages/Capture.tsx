@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   api,
   ApiError,
@@ -21,10 +21,9 @@ import {
   Skeleton,
   StatePill,
   Tooltip,
-  Waveform,
   useToast,
 } from "../components/ui";
-import { ageOf, formatDate, formatDateTime, titleCase } from "../format";
+import { ageOf, formatDate, formatDateTime, titleCase, meetingStatusLabel } from "../format";
 
 // ============================================================ helpers (local to this page)
 
@@ -58,35 +57,6 @@ function attendeeNames(ev: CalendarEvent): string[] {
     .filter(Boolean);
 }
 
-/**
- * Derive a stable ~64-bar amplitude shape (values 0..1) from a file's name and
- * size. This is a deterministic visual preview only, NOT a real audio decode:
- * the same file always yields the same shape so the bars do not flicker on
- * re-render. A small mono caption keeps it honest about what it is.
- */
-function pseudoWaveform(file: File, bars = 64): number[] {
-  // Seed from name length + size so the shape is stable per file.
-  let seed = (file.name.length * 2654435761 + file.size * 40503) >>> 0;
-  const next = () => {
-    // xorshift32 — cheap, deterministic, no deps.
-    seed ^= seed << 13;
-    seed ^= seed >>> 17;
-    seed ^= seed << 5;
-    seed >>>= 0;
-    return seed / 0xffffffff;
-  };
-  const out: number[] = [];
-  for (let i = 0; i < bars; i++) {
-    // Combine a slow envelope (speech rises and falls) with per-bar jitter,
-    // and drop some bars near silence so voiced/silent classes both show.
-    const envelope = 0.5 - 0.45 * Math.cos((i / (bars - 1)) * Math.PI * 2);
-    const jitter = next();
-    const v = envelope * 0.55 + jitter * 0.45;
-    out.push(Math.max(0, Math.min(1, v)));
-  }
-  return out;
-}
-
 /** What the multipart upload tab is feeding the meeting. */
 type InputMode = "paste" | "transcript_file" | "audio_file";
 type Path = "calendar" | "manual";
@@ -96,6 +66,14 @@ type Path = "calendar" | "manual";
 export function Capture() {
   const navigate = useNavigate();
   const toast = useToast();
+  const [searchParams] = useSearchParams();
+
+  // Back-compat: old deep links used /capture?meeting=<id> to highlight a row here.
+  // Meetings now have their own page, so send those links straight there.
+  useEffect(() => {
+    const id = searchParams.get("meeting");
+    if (id) navigate(`/meetings/${encodeURIComponent(id)}`, { replace: true });
+  }, [searchParams, navigate]);
 
   // ---- which intake path
   const [path, setPath] = useState<Path>("manual");
@@ -235,12 +213,6 @@ export function Capture() {
     [clients],
   );
 
-  // Stable visual-preview waveform for the selected audio file (not a real decode).
-  const audioWave = useMemo(
-    () => (audioFile ? pseudoWaveform(audioFile) : null),
-    [audioFile],
-  );
-
   const conversationProvided =
     (inputMode === "paste" && transcriptText.trim().length > 0) ||
     (inputMode === "transcript_file" && !!transcriptFile) ||
@@ -344,8 +316,8 @@ export function Capture() {
       setExtractSummary({ created, dropped, analysisMd });
       toast.push(
         created !== undefined
-          ? `Found ${created} ${created === 1 ? "ask" : "asks"} in this meeting.`
-          : "Insights extracted.",
+          ? `${created} ${created === 1 ? "insight" : "insights"} found in this meeting.`
+          : "Insights found. Check them in Review.",
         "success",
       );
     } catch (err) {
@@ -420,7 +392,7 @@ export function Capture() {
                 <Btn
                   size="sm"
                   variant="primary"
-                  onClick={() => navigate("/")}
+                  onClick={() => navigate("/review")}
                   tooltip="Open Review to work on this meeting's insights."
                 >
                   Go to Review
@@ -437,12 +409,12 @@ export function Capture() {
           )}
 
           <div className="card corner">
-            <div className="lbl" style={{ marginBottom: 8 }}>
+            <div className="lbl mb-8">
               Next step
             </div>
 
             {hadAudioOnly && sttOk && (
-              <div className="stack-sm" style={{ marginBottom: 16 }}>
+              <div className="stack-sm mb-16">
                 <p className="small muted" style={{ margin: 0 }}>
                   You uploaded audio. Turn it into text first, then read it for insights.
                 </p>
@@ -465,22 +437,26 @@ export function Capture() {
                 variant="primary"
                 onClick={onExtract}
                 disabled={extracting}
-                tooltip="Read the conversation and pull out asks, complaints, and insights. They land in Review for you to check."
+                tooltip="Read the conversation and pull out the insights: feature requests, complaints, key points. They land in Review for you to check."
                 tooltipTitle="Extract insights now"
               >
                 {extracting ? "Reading the meeting" : "Extract insights now"}
               </Btn>
               <Btn
                 variant="ghost"
-                onClick={() => navigate("/")}
+                onClick={() => navigate("/review")}
                 tooltip="Open Review to see and polish insights from this meeting."
               >
                 Go to Review
               </Btn>
             </div>
+            <p className="helper" style={{ margin: "8px 0 0" }}>
+              Each run reads the whole transcript and adds what it finds as new
+              insights in Review. Nothing reaches the client automatically.
+            </p>
 
             {extracting && (
-              <div style={{ marginTop: 16 }}>
+              <div className="mt-16">
                 <p className="small muted" style={{ margin: "0 0 8px" }}>
                   Reading the conversation. This can take a moment.
                 </p>
@@ -489,8 +465,8 @@ export function Capture() {
             )}
 
             {extractSummary && (
-              <div style={{ marginTop: 16 }}>
-                <div className="row" style={{ marginBottom: 10 }}>
+              <div className="mt-16">
+                <div className="row mb-10">
                   {extractSummary.created !== undefined && (
                     <span className="small">
                       <b>{extractSummary.created}</b>{" "}
@@ -506,7 +482,7 @@ export function Capture() {
                   <Btn
                     size="sm"
                     variant="primary"
-                    onClick={() => navigate("/")}
+                    onClick={() => navigate("/review")}
                     tooltip="Open Review to route and finalize these insights."
                   >
                     Review them
@@ -542,7 +518,7 @@ export function Capture() {
           <div className="lbl" style={{ marginBottom: 7 }}>
             How do you want to add it
           </div>
-          <div className="row" role="tablist" aria-label="Intake path">
+          <div className="seg" role="tablist" aria-label="Intake path">
             <Tooltip
               content={
                 calReady
@@ -555,7 +531,7 @@ export function Capture() {
                 type="button"
                 role="tab"
                 aria-selected={path === "calendar"}
-                className={`btn ${path === "calendar" ? "primary" : "ghost"}`}
+                className={`seg-btn${path === "calendar" ? " on" : ""}`}
                 disabled={!calReady}
                 onClick={() => setPath("calendar")}
               >
@@ -570,7 +546,7 @@ export function Capture() {
                 type="button"
                 role="tab"
                 aria-selected={path === "manual"}
-                className={`btn ${path === "manual" ? "primary" : "ghost"}`}
+                className={`seg-btn${path === "manual" ? " on" : ""}`}
                 onClick={() => setPath("manual")}
               >
                 Manual
@@ -578,7 +554,7 @@ export function Capture() {
             </Tooltip>
           </div>
           {calConfigured === false && (
-            <p className="helper" style={{ marginTop: 8 }}>
+            <p className="helper mt-8">
               No calendar feed connected yet.{" "}
               <Link to="/settings" style={{ color: "var(--accent-soft)", textDecoration: "underline" }}>
                 Connect one in Settings
@@ -718,7 +694,7 @@ export function Capture() {
           {/* conversation input tabs */}
           <div className="field">
             <span className="lbl">The conversation</span>
-            <div className="row" role="tablist" aria-label="Conversation input" style={{ marginBottom: 8 }}>
+            <div className="seg mb-8" role="tablist" aria-label="Conversation input">
               <ConvTab
                 active={inputMode === "paste"}
                 onClick={() => setInputMode("paste")}
@@ -739,7 +715,7 @@ export function Capture() {
                 tip={
                   sttOk
                     ? "Upload an audio recording. You can turn it into text after the meeting is added."
-                    : "Upload an audio recording. Speech to text is not set up, so you will add the text yourself later."
+                    : "Upload an audio recording. Speech to text is not set up, so paste the text later from the meeting's page."
                 }
               >
                 Upload audio file
@@ -781,35 +757,18 @@ export function Capture() {
                   onChange={(e) => setAudioFile(e.target.files?.[0] ?? null)}
                 />
                 {audioFile && <p className="helper">Selected: {audioFile.name}</p>}
-                {audioFile && audioWave && (
-                  <div
-                    style={{
-                      border: "1px solid var(--signal-line, #5A3F12)",
-                      background: "var(--p2, #16181B)",
-                      borderRadius: "var(--r, 2px)",
-                      padding: "10px 12px",
-                    }}
-                  >
-                    <Waveform amplitudes={audioWave} liveIndex={audioWave.length - 1} />
-                    <p
-                      className="tiny subtle mono"
-                      style={{ margin: "8px 0 0", letterSpacing: "0.08em" }}
-                    >
-                      VISUAL PREVIEW · SHAPE DERIVED FROM FILE, NOT AUDIO ANALYSIS
-                    </p>
-                  </div>
-                )}
                 <p className="helper">
                   {sttOk
                     ? "After the meeting is added, turn the audio into text, then extract insights."
-                    : "Speech to text is not set up. Add the text in Review once the meeting is in."}
+                    : "Speech to text is not set up, so the audio cannot be turned into text here. Paste the conversation in the Paste transcript tab instead, or paste it later from the meeting's page (open it under Recent meetings below)."}
                 </p>
               </div>
             )}
 
             {!conversationProvided && (
-              <p className="helper" style={{ marginTop: 6 }}>
-                You can add the conversation now or later. Either way the meeting gets created.
+              <p className="helper mt-6">
+                You can add the conversation now or later (open the meeting's page
+                from Recent meetings below). Either way the meeting gets created.
               </p>
             )}
           </div>
@@ -863,7 +822,7 @@ export function Capture() {
 
         {/* recent meetings */}
         <div>
-          <div className="row-between" style={{ marginBottom: 8 }}>
+          <div className="row-between mb-8">
             <span className="lbl">Recent meetings</span>
             <Btn
               size="sm"
@@ -874,7 +833,12 @@ export function Capture() {
               Refresh
             </Btn>
           </div>
-          <RecentMeetings recent={recent} error={recentError} onRetry={() => void loadRecent()} />
+          <RecentMeetings
+            recent={recent}
+            error={recentError}
+            onRetry={() => void loadRecent()}
+            onOpen={(id) => navigate(`/meetings/${encodeURIComponent(id)}`)}
+          />
         </div>
       </div>
     </>
@@ -900,7 +864,7 @@ function ConvTab({
         type="button"
         role="tab"
         aria-selected={active}
-        className={`btn sm ${active ? "primary" : "ghost"}`}
+        className={`seg-btn${active ? " on" : ""}`}
         onClick={onClick}
       >
         {children}
@@ -961,7 +925,7 @@ function CalendarEventList({
   if (events === null) {
     return (
       <div className="card">
-        <div className="lbl" style={{ marginBottom: 10 }}>
+        <div className="lbl mb-10">
           From your calendar
         </div>
         <Skeleton rows={4} />
@@ -1032,13 +996,13 @@ function RecentMeetings({
   recent,
   error,
   onRetry,
+  onOpen,
 }: {
   recent: Meeting[] | null;
   error: unknown;
   onRetry: () => void;
+  onOpen: (id: string) => void;
 }) {
-  const navigate = useNavigate();
-
   const sorted = useMemo(() => {
     if (!recent) return null;
     return [...recent].sort((a, b) => {
@@ -1072,7 +1036,7 @@ function RecentMeetings({
   }
 
   return (
-    <div className="table-wrap card" style={{ padding: 0 }}>
+    <div className="table-wrap card p-0">
       <table className="table">
         <thead>
           <tr>
@@ -1093,8 +1057,16 @@ function RecentMeetings({
               <tr
                 key={m.id}
                 className="clickable"
-                onClick={() => navigate("/")}
-                title="Open Review to work on this meeting's insights."
+                onClick={() => onOpen(m.id)}
+                tabIndex={0}
+                role="link"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onOpen(m.id);
+                  }
+                }}
+                title="Open this meeting's page: transcript, extraction, and its insights."
               >
                 <td>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
@@ -1108,7 +1080,7 @@ function RecentMeetings({
                 <td>{m.meeting_date ? formatDate(m.meeting_date) : "-"}</td>
                 <td className="muted">{m.created_at ? ageOf(m.created_at) : "-"}</td>
                 <td>
-                  {m.status ? <StatePill state={m.status} /> : <span className="muted">-</span>}
+                  {m.status ? <StatePill state={m.status} label={meetingStatusLabel(m.status)} /> : <span className="muted">-</span>}
                 </td>
               </tr>
             );
@@ -1118,3 +1090,4 @@ function RecentMeetings({
     </div>
   );
 }
+

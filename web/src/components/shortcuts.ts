@@ -11,8 +11,9 @@ export interface ShortcutDef {
 
 /** g-then-<key> destinations, in nav order. */
 export const GO_TARGETS: Record<string, string> = {
+  h: "/",
   c: "/capture",
-  r: "/",
+  r: "/review",
   i: "/insights",
   l: "/clients",
   p: "/proof",
@@ -25,16 +26,18 @@ export const SHORTCUTS: ShortcutDef[] = [
   { keys: ["Cmd/Ctrl", "K"], description: "Open the command palette" },
   { keys: ["?"], description: "Show this shortcuts list" },
   { keys: ["Esc"], description: "Close any open panel" },
+  { keys: ["g", "h"], description: "Go to Home" },
   { keys: ["g", "c"], description: "Go to Capture" },
   { keys: ["g", "r"], description: "Go to Review" },
-  { keys: ["g", "i"], description: "Go to Insights" },
+  { keys: ["g", "i"], description: "Go to Library" },
   { keys: ["g", "l"], description: "Go to Clients" },
-  { keys: ["g", "p"], description: "Go to Proof" },
-  { keys: ["g", "n"], description: "Go to Numbers" },
+  { keys: ["g", "p"], description: "Go to Confirm shipped" },
+  { keys: ["g", "n"], description: "Go to Speed" },
   { keys: ["g", "s"], description: "Go to Settings" },
-  { keys: ["j"], description: "In a list: move selection down" },
-  { keys: ["k"], description: "In a list: move selection up" },
-  { keys: ["Enter"], description: "In a list: open the selected item" },
+  { keys: ["j"], description: "Review / Library / Clients: select the next row" },
+  { keys: ["k"], description: "Review / Library / Clients: select the previous row" },
+  { keys: ["Enter"], description: "Review: edit the summary · lists: open the selected row" },
+  { keys: ["r"], description: "Review queue: reject the selected insight" },
 ];
 
 function isTypingTarget(el: EventTarget | null): boolean {
@@ -77,6 +80,9 @@ export function useShortcuts(opts: { onHelp: () => void; enabled?: boolean }): v
       }
       if (now - lastG.current < 800 && GO_TARGETS[e.key]) {
         lastG.current = 0;
+        // Consume the key so page-level single-key shortcuts (e.g. Review's 'r'
+        // = reject) don't also fire on the second key of a g-prefix chord.
+        e.preventDefault();
         navigate(GO_TARGETS[e.key]!);
       }
     }

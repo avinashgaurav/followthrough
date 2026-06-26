@@ -6,7 +6,7 @@ import { getDb, nowIso } from "../db.ts";
 import { ulid, insightHandle } from "../ids.ts";
 import { appendEvent, transitionInsight, TransitionError, type Role } from "../events.ts";
 import { getLLM, type LLM } from "../llm/provider.ts";
-import { fetchReleases, upsertReleases, type FetchLike } from "./poller.ts";
+import { addManualRelease, fetchReleases, upsertReleases, type FetchLike } from "./poller.ts";
 import { matchRelease } from "./matcher.ts";
 
 /**
@@ -69,7 +69,7 @@ export async function runPollPipeline(
   };
 }
 
-/** Hourly poll of XYZ/XYZ releases. Errors are logged, never fatal. */
+/** Hourly poll of xyz/xyz releases. Errors are logged, never fatal. */
 export function startReleasePoller(): ReturnType<typeof setInterval> {
   const tick = () => {
     runPollPipeline(getDb(), getLLM()).catch((err) => console.warn("release poller:", err));
@@ -220,6 +220,38 @@ function fail(err: unknown): Response {
   }
   throw err;
 }
+
+const ManualReleaseSchema = z.object({
+  tag_name: z.string().min(1).max(100),
+  name: z.string().max(200).optional(),
+  body_md: z.string().min(1).max(200_000),
+  published_at: z.string().optional(),
+});
+
+// Manual changelog intake: paste or upload release notes when GitHub is not
+// connected. Parses, stores, and immediately matches against open insights.
+route("POST", "/api/releases/manual", "admin", async (req, user) => {
+  const body = ManualReleaseSchema.safeParse(await req.json().catch(() => null));
+  if (!body.success) return json({ error: "tag_name and body_md are required", issues: body.error.issues }, 400);
+  const db = getDb();
+  let rel: { id: string; entry_count: number };
+  try {
+    rel = addManualRelease(db, body.data, user!.id);
+  } catch (e) {
+    return json({ error: e instanceof Error ? e.message : "Could not save the changelog" }, 409);
+  }
+  try {
+    const run = await matchRelease(db, getLLM(), rel.id);
+    return json({ release_id: rel.id, entry_count: rel.entry_count, matches_proposed: run.proposed }, 201);
+  } catch (e) {
+    // The changelog is saved even when matching fails; the admin can re-poll later.
+    return json(
+      { release_id: rel.id, entry_count: rel.entry_count, matches_proposed: 0,
+        match_error: e instanceof Error ? e.message : "matching failed" },
+      201,
+    );
+  }
+});
 
 route("POST", "/api/releases/poll", "admin", async () => {
   try {

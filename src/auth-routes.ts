@@ -34,7 +34,12 @@ route("POST", "/api/auth/login", "public", async (req) => {
   const db = getDb();
   const body = LoginSchema.safeParse(await req.json().catch(() => null));
   if (!body.success) return json({ error: "email and code required" }, 400);
-  const ip = req.headers.get("x-forwarded-for");
+  // Behind Cloudflare/most proxies, x-forwarded-for is client-controlled; prefer
+  // the proxy-validated header and fall back to the first XFF hop.
+  const ip =
+    req.headers.get("cf-connecting-ip") ||
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    null;
   const result = await login(db, body.data.email, body.data.code, ip, req.headers.get("user-agent"));
   if (!result.ok) {
     const status = result.reason === "locked_out" ? 429 : 401;
@@ -44,7 +49,11 @@ route("POST", "/api/auth/login", "public", async (req) => {
     );
   }
   return json({ userId: result.userId, role: result.role }, 200, {
-    "set-cookie": sessionCookie(result.sessionId, req.url.startsWith("https")),
+    "set-cookie": sessionCookie(
+      result.sessionId,
+      // The tunnel/proxy terminates TLS; the local request is plain http.
+      req.url.startsWith("https") || req.headers.get("x-forwarded-proto") === "https",
+    ),
   });
 });
 
@@ -130,8 +139,9 @@ route("GET", "/api/users", "admin", () => {
 route("POST", "/api/users/:id/rotate-code", "admin", async (_req, admin, params) => {
   const db = getDb();
   const code = generateLoginCode();
+  // Issuing a fresh code also re-enables a previously-revoked account.
   const res = db
-    .query("UPDATE users SET code_hash = ?, code_rotated_at = ? WHERE id = ?")
+    .query("UPDATE users SET code_hash = ?, code_rotated_at = ?, disabled_at = NULL WHERE id = ?")
     .run(await hashCode(code), nowIso(), params.id!);
   if (res.changes === 0) return json({ error: "user not found" }, 404);
   appendEvent(db, { actorUserId: admin!.id, entityType: "user", entityId: params.id!, eventType: "user.code_rotated" });

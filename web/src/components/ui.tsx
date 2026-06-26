@@ -146,12 +146,16 @@ const stateClass: Record<string, string> = {
   merged: "muted",
 };
 
-export function StatePill({ state }: { state: string | undefined | null }) {
+export function StatePill({ state, label }: { state: string | undefined | null; label?: string }) {
   if (!state) return null;
   const cls = stateClass[state] ?? "muted";
+  const text = label ?? stateLabel(state);
+  const tip = stateTooltipFor(state);
+  const pill = <span className={`st ${cls}`}>{text}</span>;
+  if (!tip && label) return pill;
   return (
-    <Tooltip title={stateLabel(state)} content={stateTooltipFor(state)}>
-      <span className={`st ${cls}`}>{stateLabel(state)}</span>
+    <Tooltip title={text} content={tip}>
+      {pill}
     </Tooltip>
   );
 }

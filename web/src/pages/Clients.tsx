@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api, ApiError } from "../api";
+import { api, ApiError, asArray } from "../api";
 import type { Client } from "../api";
+import { useListSelection } from "../components/shortcuts";
 import {
   Btn,
   EmptyState,
@@ -15,11 +16,13 @@ import {
   useToast,
 } from "../components/ui";
 
-// Job: what each client asked for and what we owe them.
-// Data: api.listClients() -> table; api.createClient() -> new row.
+// Job: answer "what do we owe each client?" at a glance.
+// Data: api.listClients() -> table; api.metricsOverview() -> loop-closed pct
+// (admin only; the column hides itself when that call is not allowed);
+// api.createClient() -> new row.
 
-/** Reads the open-asks count under either field name the backend might send. */
-function openAsks(c: Client): number {
+/** Reads the open-insights count under either field name the backend might send. */
+function openInsightCount(c: Client): number {
   const v = c.open_insight_count ?? (c as Record<string, unknown>).open_insights_count;
   return typeof v === "number" ? v : 0;
 }
@@ -38,12 +41,18 @@ export function Clients() {
   const [error, setError] = useState<unknown>(null);
   const [showNew, setShowNew] = useState(false);
 
+  // client_id -> loop-closed percent. null = metrics not available for this
+  // user (the column simply does not render). We never fake a number.
+  const [loopPct, setLoopPct] = useState<Map<string, number> | null>(null);
+
   const load = useCallback(async () => {
     setError(null);
     try {
       const rows = await api.listClients();
-      // Sort by open asks first (most owed work up top), then name.
-      rows.sort((a, b) => openAsks(b) - openAsks(a) || (a.name ?? "").localeCompare(b.name ?? ""));
+      // Sort by open insights first (most owed work up top), then name.
+      rows.sort(
+        (a, b) => openInsightCount(b) - openInsightCount(a) || (a.name ?? "").localeCompare(b.name ?? ""),
+      );
       setClients(rows);
     } catch (e) {
       setError(e);
@@ -54,6 +63,28 @@ export function Clients() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      try {
+        const overview = await api.metricsOverview();
+        const rows = asArray<{ client_id?: string; closed_loop_pct?: number | null }>(
+          (overview as Record<string, unknown>).per_client_closed_loop,
+        );
+        const map = new Map<string, number>();
+        for (const r of rows) {
+          if (r.client_id && typeof r.closed_loop_pct === "number") map.set(r.client_id, r.closed_loop_pct);
+        }
+        if (alive) setLoopPct(map);
+      } catch {
+        // Metrics are admin-only. Not an error here: just leave the column out.
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   function onCreated(created: Client) {
     setShowNew(false);
     toast.push(`Added ${created.name || "client"}.`, "success");
@@ -61,17 +92,35 @@ export function Clients() {
     if (created.id) navigate(`/clients/${created.id}`);
   }
 
+  // Keyboard inbox, same idiom as Review and Library: j/k highlight a client
+  // row, Enter opens it. The highlighted row scrolls into view as it moves.
+  const rowList = clients ?? [];
+  const rowRefs = useRef<Array<HTMLTableRowElement | null>>([]);
+  const { index: selIndex, setIndex: setSelIndex } = useListSelection(
+    rowList.length,
+    (i) => {
+      const c = rowList[i];
+      if (c?.id) navigate(`/clients/${c.id}`);
+    },
+    rowList.length > 0,
+  );
+  useEffect(() => {
+    rowRefs.current[selIndex]?.scrollIntoView({ block: "nearest" });
+  }, [selIndex]);
+
+  const showLoop = loopPct !== null;
+
   return (
     <>
       <SectionHead
         title="Clients"
-        job="What each client asked for and what we owe them."
+        job="What we still owe each client. Biggest debts at the top."
         actions={
           <Btn
             variant="primary"
             onClick={() => setShowNew(true)}
             tooltipTitle="New client"
-            tooltip="Add a client so you can log meetings and track their asks. Opens a short form."
+            tooltip="Add a client so you can log meetings and track their insights. Opens a short form."
           >
             New client
           </Btn>
@@ -86,13 +135,13 @@ export function Clients() {
         ) : clients.length === 0 ? (
           <EmptyState
             title="No clients yet."
-            body="Add your first client, then log a meeting to start pulling out their asks."
+            body="Add your first client, then log a meeting to start pulling out their insights."
             action={
               <Btn
                 variant="primary"
                 onClick={() => setShowNew(true)}
                 tooltipTitle="New client"
-                tooltip="Add a client to start tracking their meetings and asks."
+                tooltip="Add a client to start tracking their meetings and insights."
               >
                 New client
               </Btn>
@@ -105,30 +154,40 @@ export function Clients() {
                 <tr>
                   <th>Client</th>
                   <th className="num">
-                    Open asks{" "}
+                    Open insights{" "}
                     <Help
-                      title="Open asks"
-                      content="Things this client asked for that are not yet shipped and confirmed back to them."
+                      title="Open insights"
+                      content="Insights from this client that are not yet shipped and confirmed back to them. This is what we still owe them."
                     />
                   </th>
-                  <th className="num">
-                    Meetings{" "}
-                    <Help
-                      title="Meetings"
-                      content="How many meetings we have logged with this client."
-                    />
-                  </th>
-                  <th>Domain</th>
+                  {showLoop && (
+                    <th className="num">
+                      Loop closed{" "}
+                      <Help
+                        title="Loop closed"
+                        content="Of the insights we locked for this client, the share where the client was told it shipped. 100% means nothing locked is still waiting on a confirmation."
+                      />
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
-                {clients.map((c) => {
-                  const asks = openAsks(c);
+                {clients.map((c, idx) => {
+                  const open = openInsightCount(c);
+                  const meet = meetings(c);
+                  const pct = c.id ? loopPct?.get(c.id) : undefined;
                   return (
                     <tr
                       key={c.id}
-                      className="clickable"
-                      onClick={() => navigate(`/clients/${c.id}`)}
+                      ref={(el) => {
+                        rowRefs.current[idx] = el;
+                      }}
+                      className={`clickable${idx === selIndex ? " row-sel" : ""}`}
+                      aria-selected={idx === selIndex}
+                      onClick={() => {
+                        setSelIndex(idx);
+                        navigate(`/clients/${c.id}`);
+                      }}
                       tabIndex={0}
                       role="link"
                       aria-label={`Open ${c.name || "client"}`}
@@ -140,22 +199,50 @@ export function Clients() {
                       }}
                     >
                       <td>
-                        <span style={{ fontWeight: 600 }}>{c.name || "Untitled client"}</span>
+                        <span style={{ fontWeight: 500 }}>{c.name || "Untitled client"}</span>
+                        <div className="muted small">
+                          {c.domain ? `${c.domain} · ` : ""}
+                          {meet} {meet === 1 ? "meeting" : "meetings"}
+                        </div>
                       </td>
                       <td className="num">
-                        {asks > 0 ? (
+                        {open > 0 ? (
                           <Tooltip
-                            title="Open asks"
-                            content="Asks we still owe this client. Open the client to see them."
+                            title="Open insights"
+                            content={`We still owe this client ${open} ${open === 1 ? "insight" : "insights"}. Open the client to see what and what to do next.`}
                           >
-                            <span style={{ color: "var(--accent-soft)", fontWeight: 600 }}>{asks}</span>
+                            <span
+                              className="hot"
+                              style={{ color: "var(--accent-soft)", fontSize: 17, fontWeight: 600 }}
+                            >
+                              {open}
+                            </span>
                           </Tooltip>
                         ) : (
-                          <span className="subtle">0</span>
+                          <Tooltip title="Nothing owed" content="Every insight from this client has been closed out.">
+                            <span className="subtle">0</span>
+                          </Tooltip>
                         )}
                       </td>
-                      <td className="num muted">{meetings(c)}</td>
-                      <td className="muted">{c.domain || "Not set"}</td>
+                      {showLoop && (
+                        <td className="num">
+                          {typeof pct === "number" ? (
+                            <Tooltip
+                              title="Loop closed"
+                              content="Of the insights we locked for this client, the share where the client was told it shipped."
+                            >
+                              <span>{Math.round(pct)}%</span>
+                            </Tooltip>
+                          ) : (
+                            <Tooltip
+                              title="No number yet"
+                              content="Nothing has been locked for this client yet, so there is no loop to measure."
+                            >
+                              <span className="subtle">-</span>
+                            </Tooltip>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   );
                 })}

@@ -8,6 +8,12 @@ const EnvSchema = z.object({
   ANTHROPIC_API_KEY: z.string().optional(),
   OPENROUTER_API_KEY: z.string().optional(),
   DEEPGRAM_API_KEY: z.string().optional(),
+  // Comma-separated domain terms to boost in Deepgram transcription accuracy
+  // (e.g. "Karpenter,Kubernetes,Acme"). Empty → no boosting.
+  DEEPGRAM_KEYTERMS: z.string().optional(),
+  // Shared team password: any allowed-domain email + this value signs in
+  // (auto-provisioned as a member). Unset → only per-user login codes work.
+  ACCESS_PASSWORD: z.string().optional(),
   GITHUB_READ_TOKEN: z.string().optional(), // releases polling, read-only scope
   GITHUB_WRITE_TOKEN: z.string().optional(), // direct ticket creation, allowlisted repos only
   RELEASE_REPO: z.string().default("XYZ/XYZ"),

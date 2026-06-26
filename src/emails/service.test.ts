@@ -46,7 +46,7 @@ function seed(state = "shipped"): Seeded {
   );
   db.query("INSERT INTO clients (id, name, is_internal, created_at) VALUES (?, 'Acme', 0, ?)").run(clientA, t);
   db.query("INSERT INTO clients (id, name, is_internal, created_at) VALUES (?, 'Globex', 0, ?)").run(clientB, t);
-  db.query("INSERT INTO clients (id, name, is_internal, created_at) VALUES (?, 'XYZ Internal', 1, ?)").run(clientI, t);
+  db.query("INSERT INTO clients (id, name, is_internal, created_at) VALUES (?, 'Acme Internal', 1, ?)").run(clientI, t);
   db.query(
     "INSERT INTO client_contacts (id, client_id, name, email, created_at) VALUES (?, ?, 'Priya N', 'priya@acme.com', ?)",
   ).run(contactA, clientA, t);

@@ -15,7 +15,7 @@ import {
 } from "./parser.ts";
 
 /**
- * Golden-file tests (SPEC.md section 6) pinned on real XYZ/XYZ release
+ * Golden-file tests (SPEC.md section 6) pinned on real xyz/xyz release
  * bodies: v1.20.0 (details blocks + gating), v1.19.2 (fix-heavy), the
  * uniformly indented v1.18.0, single-entry v1.17.4, baseline v1.0.0, and the
  * 21-entry v1.16.0.
@@ -215,7 +215,7 @@ describe("persistEntries", () => {
     const releaseId = ulid();
     db.query(
       `INSERT INTO releases (id, repo, github_release_id, tag_name, body_md, published_at, fetched_at)
-       VALUES (?, 'XYZ/XYZ', 1, 'v1.18.0', ?, ?, ?)`,
+       VALUES (?, 'xyz/xyz', 1, 'v1.18.0', ?, ?, ?)`,
     ).run(releaseId, fixture("v1.18.0").body, nowIso(), nowIso());
 
     const parsed = parse("v1.18.0");
