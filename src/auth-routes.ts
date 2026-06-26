@@ -137,6 +137,8 @@ route("GET", "/api/users", "admin", () => {
 });
 
 route("POST", "/api/users/:id/rotate-code", "admin", async (_req, admin, params) => {
+  // The open-access guest is not a real account; never issue it a code.
+  if (params.id === GUEST_USER_ID) return json({ error: "Cannot rotate the open-access guest." }, 400);
   const db = getDb();
   const code = generateLoginCode();
   // Issuing a fresh code also re-enables a previously-revoked account.
@@ -149,6 +151,9 @@ route("POST", "/api/users/:id/rotate-code", "admin", async (_req, admin, params)
 });
 
 route("POST", "/api/users/:id/revoke", "admin", (_req, admin, params) => {
+  // Disabling the open-access guest would transiently 401 every signed-out user
+  // (the session/user lookups filter disabled_at). The guest is system-managed.
+  if (params.id === GUEST_USER_ID) return json({ error: "Cannot revoke the open-access guest." }, 400);
   const db = getDb();
   revokeCode(db, params.id!);
   appendEvent(db, { actorUserId: admin!.id, entityType: "user", entityId: params.id!, eventType: "user.code_revoked" });

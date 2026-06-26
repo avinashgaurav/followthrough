@@ -25,9 +25,13 @@ function questionMatch(q: string): string | null {
  * Ask-your-memory (roadmap P1 #7). A plain-English question is answered strictly
  * from the team's own insights + transcripts: FTS retrieves the most relevant
  * passages, the LLM answers using ONLY those, and every source is returned so the
- * UI can link back to the exact insight/meeting. No vector DB; reuses the same
- * restricted-meeting allow-list the search path enforces, so non-admins never see
- * transcript text from meetings they cannot access.
+ * UI can link back to the exact insight/meeting. No vector DB.
+ *
+ * Access scope: insights are team-internal (no per-insight restriction in this
+ * product), so all insights are searchable by any signed-in user. TRANSCRIPT
+ * text is access-controlled — the transcript query below applies the same
+ * restricted-meeting allow-list the search path enforces, so non-admins never
+ * see transcript text from meetings they cannot access.
  */
 
 export interface AskSource {

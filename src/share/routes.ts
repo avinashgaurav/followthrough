@@ -102,6 +102,11 @@ route("GET", "/share/:token", "public", (_req, _user, params) => {
       inFlight.map((r) => r.title),
     ),
     {
-    headers: { "Content-Type": "text/html; charset=utf-8", "X-Robots-Tag": "noindex" },
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "X-Robots-Tag": "noindex",
+      // The token is the access credential; never let a revoked link survive in a cache.
+      "Cache-Control": "no-store",
+    },
   });
 });

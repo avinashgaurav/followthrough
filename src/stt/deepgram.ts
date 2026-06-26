@@ -30,6 +30,8 @@ function deepgramUrl(extraTerms: string[] = []): string {
       seen.add(key);
       return true;
     })
+    // Deepgram's boost syntax needs a literal colon (term:boost); encode only the
+    // term. boost is regex-validated as numeric above, so it is URL-safe as-is.
     .map(({ term, boost }) => `&keywords=${encodeURIComponent(term)}${boost ? `:${boost}` : ""}`)
     .join("");
   return base + kw;

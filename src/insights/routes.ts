@@ -189,10 +189,18 @@ function askRateLimited(userId: string): boolean {
   return false;
 }
 
+// Drop idle users so the map can't grow unbounded over a long-lived process.
+function pruneAskHits(now: number): void {
+  for (const [uid, hits] of askHits) {
+    if (hits.every((t) => now - t >= ASK_WINDOW_MS)) askHits.delete(uid);
+  }
+}
+
 route("POST", "/api/ask", "user", async (req, user) => {
   const parsed = AskSchema.safeParse(await readBody(req));
   if (!parsed.success) return invalid(parsed.error.issues);
   const actor = actorOf(user);
+  pruneAskHits(Date.now());
   if (askRateLimited(actor.id)) {
     return json({ error: "Too many questions in a short window. Wait a bit and try again." }, 429);
   }

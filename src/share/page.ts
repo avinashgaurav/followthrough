@@ -88,12 +88,9 @@ export function formatHtml(clientName: string, shipped: ShippedItem[], inFlightT
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="color-scheme" content="dark" />
+<meta name="color-scheme" content="dark light" />
 <meta name="robots" content="noindex" />
 <title>What you asked for &middot; ${esc(clientName)}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:wght@400;500&display=swap" rel="stylesheet" />
 <style>
   :root {
     --canvas:#0a0b0d; --p1:#101214; --line:#24272c; --ink:#f6f7f8; --muted:#8a8f98;

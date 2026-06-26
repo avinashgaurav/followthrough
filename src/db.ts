@@ -25,8 +25,9 @@ function applyMigrations(d: Database): void {
   const addColumn = (table: string, ddl: string) => {
     try {
       d.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl};`);
-    } catch {
-      // duplicate column - already migrated
+    } catch (e: unknown) {
+      // "duplicate column" just means we already migrated; anything else is real.
+      if (!(e instanceof Error) || !e.message.toLowerCase().includes("duplicate column")) throw e;
     }
   };
   addColumn("clients", "share_token TEXT");
