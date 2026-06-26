@@ -143,6 +143,23 @@ describe("detail", () => {
     expect((stateChange.payload as Record<string, unknown>).track).toBe("engineering");
     expect(getInsightDetail(s.db, "MISSING")).toBeNull();
   });
+
+  test("collapses overlapping quotes from the same meeting (keeps the longest, drops contained dups)", () => {
+    const s = seed();
+    const id = makeInsight(s.db, { meetingId: s.meetingAcme1, clientId: s.acme });
+    addMention(s.db, id, s.meetingAcme1, s.acme, "my instance ka IP change nahi hona chahiye.");
+    addMention(s.db, id, s.meetingAcme1, s.acme, "But auto resolve karte hue, my instance ka IP change nahi hona chahiye.");
+    addMention(s.db, id, s.meetingAcme1, s.acme, "A completely separate point about tagging.");
+    // exact duplicate of the first, in a different meeting → kept (different context)
+    addMention(s.db, id, s.meetingAcme2, s.acme, "my instance ka IP change nahi hona chahiye.");
+
+    const d = getInsightDetail(s.db, id)!;
+    const quotes = (d.mentions as Array<Record<string, unknown>>).map((m) => m.quote as string);
+    expect(quotes).toHaveLength(3); // contained one in meeting 1 dropped; meeting-2 copy survives
+    expect(quotes).toContain("But auto resolve karte hue, my instance ka IP change nahi hona chahiye.");
+    expect(quotes).toContain("A completely separate point about tagging.");
+    expect(quotes.filter((q) => q === "my instance ka IP change nahi hona chahiye.")).toHaveLength(1);
+  });
 });
 
 describe("triage", () => {
@@ -455,7 +472,9 @@ describe("my queue", () => {
     const finalizeMine = mk({ state: "triaged", assignee: s.alice.id });
     mk({ state: "triaged", assignee: s.bob.id });
     const ticketMine = mk({ state: "finalized", track: "engineering", assignee: s.alice.id });
-    mk({ state: "finalized", track: "marketing", assignee: s.alice.id }); // wrong track
+    // Non-engineering finalized items also belong in to_ticket (ISSUE-001): they must
+    // stay visible after locking instead of vanishing from every bucket.
+    const ticketMarketing = mk({ state: "finalized", track: "marketing", assignee: s.alice.id });
     const ticketed = mk({ state: "finalized", track: "engineering", assignee: s.alice.id });
     s.db.query(
       "INSERT INTO tickets (id, insight_id, draft_title, draft_body_md, state, drafted_at, raised_at) VALUES (?, ?, 't', 'b', 'raised', ?, ?)",
@@ -487,7 +506,7 @@ describe("my queue", () => {
     const ids = (key: string) => (q[key] as Array<{ id: string }>).map((r) => r.id).sort();
     expect(ids("to_review")).toEqual([reviewUnassigned, reviewMine].sort());
     expect(ids("to_finalize")).toEqual([finalizeMine]);
-    expect(ids("to_ticket")).toEqual([ticketMine]);
+    expect(ids("to_ticket")).toEqual([ticketMine, ticketMarketing].sort());
     expect(ids("to_confirm")).toEqual([confirmMine]);
     expect(ids("to_email")).toEqual([emailMine]);
     expect(q.org_counts).toBeUndefined(); // members get no org-wide counts

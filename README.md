@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Bun](https://img.shields.io/badge/Bun-1.3+-fbf0df?logo=bun&logoColor=black)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-282%20passing-brightgreen.svg)](#development)
+[![Tests](https://img.shields.io/badge/tests-296%20passing-brightgreen.svg)](#development)
 [![LLM: Claude](https://img.shields.io/badge/LLM-Claude-d97757.svg)](https://www.anthropic.com/)
 
 *Meeting → extract → review → ticket → shipped → client told → closed. Every step timestamped.*
@@ -106,27 +106,32 @@ bun run backup
 | `PORT` | server port (default `4500`) |
 | `GITHUB_READ_TOKEN` | poll a releases repo for changelog matching |
 | `GITHUB_WRITE_TOKEN` | direct ticket creation in an allowlisted repo only |
-| `DIGEST_WEBHOOK_URL` | Slack / Google Chat webhook for the weekly digest |
+| `DIGEST_WEBHOOK_URL` | Slack / Google Chat webhook for the weekly digest + nudges |
 | `WATCH_DIR` | folder to auto-ingest dropped recordings |
 | `DEEPGRAM_API_KEY` | cloud STT alternative to local whisper |
+| `DEEPGRAM_KEYTERMS` | comma-separated terms to boost Deepgram accuracy (names, jargon) |
+| `ACCESS_PASSWORD` | optional shared team password: any allowed-domain email + this signs in as a member |
 
 </details>
 
 ---
 
-## How you use it — the seven tabs
+## How you use it — the tabs
 
 The sidebar *is* the pipeline, top to bottom. Press `?` for shortcuts, `Cmd/Ctrl-K` for the command palette.
 
 | Tab | What it's for |
 |---|---|
+| **Home** | The "what needs you right now" dashboard — the pipeline at a glance (found → routed → shipped → client told), recent meetings, and a jump straight into the queue. |
 | **Capture** | Get a meeting in — from your calendar or manually. Type-ahead the client, confirm consent, paste a transcript or upload audio, then extract. |
-| **Review** | The split-pane triage screen. Queue grouped by what needs you (*New from AI*, *Needs final wording*, *Ready for a ticket*, *Confirm it shipped?*, *Tell the client*). Polish, route, finalize. `j`/`k` to move, `Enter` to open. |
+| **Review** | The split-pane triage screen. Queue grouped by what needs you (*New from AI*, *Needs final wording*, *Ready for a ticket*, *Confirm it shipped?*, *Tell the client*). Polish, route, finalize. Brief-first: triage or reject many insights from one meeting in a single pass. `j`/`k` to move, `Enter` to open. |
+| **Ask** | Ask a plain-English question and get an answer pulled **only** from your own meetings and insights, every claim cited back to the exact insight or transcript so you can verify it. No data leaves the pipeline. |
 | **Insights** | Everything ever learned — filterable and searchable across transcripts and quotes. |
-| **Clients** | Per client: meeting timeline, every open ask, the promise ledger, a one-click pre-call brief, CSV export for your CRM. |
+| **Clients** | Per client: meeting timeline, every open ask, the promise ledger, a one-click pre-call brief, CSV export for your CRM, and a shareable client-facing "you asked, we shipped" page. |
+| **Meeting** | A single meeting's full readout — transcript, the brief, and every insight it produced, each attributed to a side (client vs us) with sentiment and intent. |
 | **Proof** | When a release ships, the system proposes which client asks it closes — with changelog evidence and a confidence score. Confirm to mark *shipped* and unlock the client email. |
 | **Numbers** *(admin)* | Turnaround times per stage, the funnel, what's stuck, demand by theme, per-person throughput, per-client closed-loop rate, AI quality. Every metric has a plain-words tooltip. |
-| **Settings** *(admin)* | Add teammates, connect the calendar feed, poll releases, preview the digest, rebuild search. |
+| **Settings** *(admin)* | Access mode (open vs login-required), teammates, calendar feed, release polling, digest preview, rebuild search, and system health. |
 
 ---
 
@@ -135,7 +140,7 @@ The sidebar *is* the pipeline, top to bottom. Press `?` for shortcuts, `Cmd/Ctrl
 One-shot summarization produces mush. The pipeline is multi-pass and verified (`src/extract/`):
 
 1. **Clean & chunk** the transcript — handles hour-long calls; mixed English/Hindi quotes preserved verbatim.
-2. **Typed extraction** — each item has a specific type (feature request, complaint, key insight, our action, their commitment, status update) and captures the subtext: fears, internal politics, ROI pressure, frustration with incumbents.
+2. **Typed extraction** — each item has a specific type (feature request, complaint, key insight, our action, their commitment) and captures the subtext: fears, internal politics, ROI pressure, frustration with incumbents. Each item is also attributed — **side** (client vs us, inferred from speaker labels + the attendee list), **sentiment**, and the client's underlying **intent**. The pass is deliberately selective: only decision-grade items, no small talk or restated points.
 3. **Citation gate** — every item must carry a verbatim quote *programmatically verified to exist in the transcript*. No quote, no insight. This structurally kills hallucinations.
 4. **Verifier pass** — an independent LLM judge drops items whose quote doesn't support the claim, or whose type is wrong.
 5. **Dedup / merge** — a repeat ask attaches as a new mention on the existing insight (the "requested by N clients" signal) instead of a duplicate.
@@ -160,16 +165,18 @@ One runtime, one source of truth.
 
 | Module | Responsibility |
 |---|---|
-| `auth`, `auth-routes` | email + login-code auth, sessions, rate-limited login, email-domain lock |
+| `auth`, `auth-routes` | email + login-code auth, optional shared-team password, sessions, rate-limited login, email-domain lock |
 | `ingest` | clients, contacts, meetings, uploads, transcripts, dedup |
 | `extract` | the multi-pass extraction pipeline + meeting brief |
-| `insights` | triage, finalize, merge, lifecycle, my-queue, full-text search |
+| `insights` | triage, bulk triage/reject, finalize, merge, lifecycle, my-queue, full-text search, ask-your-memory (Q&A) |
 | `tickets` | draft-first GitHub issues; org-safety write allowlist |
 | `evidence`, `emails` | completion evidence (all tracks) and client follow-up drafts |
-| `releases` | release poller + changelog matcher + confirm queue |
+| `releases` | release poller + manual changelog intake + matcher + confirm queue |
+| `share` | tokenized, public client-facing "you asked, we shipped" page |
 | `metrics`, `exports`, `digest` | admin dashboard, CSV export, weekly digest |
-| `calendar` | read-only iCal intake for capture prefill |
-| `stt` | local whisper.cpp transcription |
+| `notify` | fire-and-forget Slack / Google Chat nudges (extraction + daily summary) |
+| `calendar` | read-only iCal intake for capture prefill (with SSRF guard) |
+| `stt` | transcription — local whisper.cpp, or Deepgram cloud STT when a key is set |
 | `watchfolder`, `retention` | folder auto-ingest; consent/deletion purge |
 
 </details>
@@ -190,7 +197,7 @@ One runtime, one source of truth.
 ```bash
 bun run dev            # server with --watch
 cd web && bun run dev  # vite dev server, proxies /api to :4500
-bun test               # 282 tests
+bun test               # 296 tests
 bunx tsc --noEmit      # typecheck
 bun run evals          # extraction quality scoring (needs an LLM key)
 ```

@@ -96,6 +96,7 @@ export function searchAll(
   db: Database,
   q: string,
   filters: SearchFilters,
+  viewer?: { id: string; role: string },
 ): { insights: InsightSearchHit[]; transcripts: TranscriptSearchHit[] } {
   const match = ftsQueryFromUserInput(q);
   if (!match) return { insights: [], transcripts: [] };
@@ -132,6 +133,16 @@ export function searchAll(
     if (filters.client_id) {
       tConds.push("m.client_id = ?");
       tArgs.push(filters.client_id);
+    }
+    // Restricted meetings: same allow-list rule as media downloads, enforced
+    // here too so search snippets can never leak restricted transcript text.
+    if (viewer && viewer.role !== "admin") {
+      // Exact membership via json_each — an instr() substring check could match a
+      // user id that merely appears inside another value in the JSON.
+      tConds.push(
+        "(m.restricted = 0 OR m.restricted IS NULL OR EXISTS (SELECT 1 FROM json_each(COALESCE(m.allowed_users_json, '[]')) WHERE value = ?))",
+      );
+      tArgs.push(viewer.id);
     }
     transcripts = db
       .query(

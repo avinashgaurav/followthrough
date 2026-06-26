@@ -1,19 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { api, ITEM_TYPES, STATES, TRACKS } from "../api";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { api, ITEM_TYPES, STATES, TRACKS , insightHandle } from "../api";
 import type { Client, Insight, SearchResponse } from "../api";
+import { useListSelection } from "../components/shortcuts";
 import {
   Btn,
   Combobox,
   EmptyState,
   ErrorAlert,
   ItemTypePill,
+  Pill,
   SectionHead,
   Skeleton,
   StatePill,
   Tooltip,
 } from "../components/ui";
-import { ageOf, itemTypeLabel, relativeAge, stateLabel, trackLabel } from "../format";
+import { ageOf, itemTypeLabel, relativeAge, stateLabel, trackLabel, insightTitle } from "../format";
 
 // Job: everything we have learned, searchable.
 // Master table over GET /api/insights with a filter bar (state, track, client, item type)
@@ -91,6 +93,7 @@ function Segmented({
 
 export function Insights() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   // filter state
   const [stateFilter, setStateFilter] = useState("");
@@ -98,6 +101,10 @@ export function Insights() {
   const [itemTypeFilter, setItemTypeFilter] = useState("");
   const [client, setClient] = useState<Client | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
+
+  // Deep link (?client_id=<id>, e.g. from a meeting page): pre-fill the client
+  // filter once the client list arrives. Read once on mount.
+  const presetClientId = useRef<string | null>(searchParams.get("client_id"));
 
   // table sort
   const [sortKey, setSortKey] = useState<SortKey>("priority");
@@ -119,7 +126,14 @@ export function Insights() {
     api
       .listClients()
       .then((cs) => {
-        if (live) setClients(cs);
+        if (!live) return;
+        setClients(cs);
+        const wanted = presetClientId.current;
+        if (wanted) {
+          presetClientId.current = null;
+          const match = cs.find((c) => String(c.id) === wanted);
+          if (match) setClient(match);
+        }
       })
       .catch(() => {
         /* client filter is optional; ignore load failure */
@@ -215,6 +229,21 @@ export function Insights() {
     if (id) navigate(`/insights/${encodeURIComponent(id)}`);
   }
 
+  // Keyboard inbox (same idiom as Review): j/k move the highlighted row, Enter
+  // opens it. Disabled while searching (the result list is its own surface) and
+  // while typing in a field. The highlighted row scrolls into view as it moves.
+  const searchActive = !!searchQuery.trim();
+  const rowRefs = useRef<Array<HTMLTableRowElement | null>>([]);
+  const { index: selIndex, setIndex: setSelIndex } = useListSelection(
+    sorted.length,
+    (i) => openInsight(sorted[i]?.id),
+    !searchActive && sorted.length > 0,
+  );
+  useEffect(() => {
+    if (searchActive) return;
+    rowRefs.current[selIndex]?.scrollIntoView({ block: "nearest" });
+  }, [selIndex, searchActive]);
+
   const anyFilterActive =
     !!stateFilter || !!trackFilter || !!itemTypeFilter || !!client || !!searchQuery.trim();
 
@@ -231,8 +260,33 @@ export function Insights() {
 
   return (
     <>
+      {/* Page-scoped polish for the library table: roomier rows (about 48px each,
+          comfortable at 38+ rows), title as the dominant element, REF and meta
+          demoted. Tokens only; behavior untouched. */}
+      <style>{`
+        .lib-table .table th { padding: 9px 14px; }
+        .lib-table .table td {
+          padding: 14px;
+          font-size: 12px;
+          vertical-align: baseline;
+        }
+        .lib-table .table td.cell-title {
+          font-size: 13.5px;
+          line-height: 1.5;
+          color: var(--ink);
+          min-width: 260px;
+        }
+        .lib-table .table td.mono {
+          font-size: 10px;
+          letter-spacing: 0.04em;
+        }
+        /* j/k keyboard highlight: a left accent tick + faint fill, matching the
+           Review queue's selected-row signal (one vocabulary across surfaces). */
+        .lib-table .table tr.row-sel td { background: var(--p1); }
+        .lib-table .table tr.row-sel td:first-child { box-shadow: inset 2px 0 0 var(--accent); }
+      `}</style>
       <SectionHead
-        title="Insights"
+        title="Library"
         job="Everything we have learned, searchable."
         actions={
           anyFilterActive ? (
@@ -355,12 +409,29 @@ export function Insights() {
               }
             />
           ) : (
-            <div className="table-wrap">
+            <div className="table-wrap lib-table">
+              <div
+                className="lib-legend"
+                style={{ display: "flex", flexWrap: "wrap", gap: 18, alignItems: "center", padding: "10px 14px" }}
+              >
+                <span className="mono tiny subtle">Type colour</span>
+                <Tooltip content="Things we act on: feature requests and our own action items.">
+                  <span style={{ display: "inline-flex", gap: 7, alignItems: "center" }}>
+                    <Pill label="To build / do" kind="feat" />
+                  </span>
+                </Tooltip>
+                <Tooltip content="What we learned or heard: insights, complaints, their commitments, and status updates.">
+                  <span style={{ display: "inline-flex", gap: 7, alignItems: "center" }}>
+                    <Pill label="Context to know" kind="ins" />
+                  </span>
+                </Tooltip>
+              </div>
               <table className="table">
                 <thead>
                   <tr>
+                    <th>ID</th>
+                    <th>Title</th>
                     <th>Client</th>
-                    <th>Ask</th>
                     <th>Track</th>
                     <th>State</th>
                     <th>
@@ -384,18 +455,24 @@ export function Insights() {
                         </button>
                       </Tooltip>
                     </th>
-                    <th>Ref</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {sorted.map((i) => {
+                  {sorted.map((i, idx) => {
                     const id = i.id;
-                    const handle = i.handle || (id ? `INS-${id.slice(-6).toUpperCase()}` : "");
+                    const handle = i.handle || (id ? insightHandle(id) : "");
                     return (
                       <tr
                         key={id || handle}
-                        className="clickable"
-                        onClick={() => openInsight(id)}
+                        ref={(el) => {
+                          rowRefs.current[idx] = el;
+                        }}
+                        className={`clickable${idx === selIndex ? " row-sel" : ""}`}
+                        aria-selected={idx === selIndex}
+                        onClick={() => {
+                          setSelIndex(idx);
+                          openInsight(id);
+                        }}
                         tabIndex={0}
                         role="link"
                         onKeyDown={(e) => {
@@ -405,29 +482,22 @@ export function Insights() {
                           }
                         }}
                       >
-                        <td>
-                          <div style={{ fontWeight: 600 }}>{i.client_name || "Unknown client"}</div>
-                          {i.meeting_seq != null && (
-                            <div className="mono tiny subtle" style={{ marginTop: 2 }}>
-                              meeting {String(i.meeting_seq)}
-                            </div>
-                          )}
-                        </td>
-                        <td>
-                          <div className="row" style={{ gap: 8 }}>
-                            <span>{i.title || "Untitled insight"}</span>
+                        <td className="mono tiny subtle">{handle}</td>
+                        <td className="cell-title">
+                          <div className="row gap-8">
+                            <span>{insightTitle(i.title) || "Untitled insight"}</span>
                             {i.item_type && <ItemTypePill type={i.item_type} />}
                           </div>
                         </td>
+                        <td className="muted">{i.client_name || "-"}</td>
                         <td className="muted">{trackLabel(i.track)}</td>
                         <td>
                           <StatePill state={i.state} />
                         </td>
                         <td className="mono tiny muted">{ageLabelOf(i)}</td>
                         <td className="num">
-                          {typeof i.priority === "number" ? i.priority : "-"}
+                          {typeof i.priority === "number" && i.priority !== 0 ? i.priority : "-"}
                         </td>
-                        <td className="mono tiny subtle">{handle}</td>
                       </tr>
                     );
                   })}
@@ -437,9 +507,6 @@ export function Insights() {
           )}
         </div>
       </div>
-
-      {/* page-scoped styles for the filter bar + segmented control + sort headers */}
-      <style>{INSIGHTS_CSS}</style>
     </>
   );
 }
@@ -483,7 +550,7 @@ function SearchResults({
     <div className="stack">
       {insights.length > 0 && (
         <div>
-          <div className="lbl" style={{ marginBottom: 8 }}>
+          <div className="lbl mb-8">
             Matching insights ({insights.length})
           </div>
           <div className="search-list">
@@ -494,7 +561,7 @@ function SearchResults({
                 className="lcard"
                 onClick={() => onOpenInsight(hit.id)}
               >
-                <div className="t">{hit.title || "Untitled insight"}</div>
+                <div className="t">{insightTitle(hit.title) || "Untitled insight"}</div>
                 <div className="meta">
                   {hit.handle && <span className="mono tiny subtle">{hit.handle}</span>}
                   {hit.client_name && <span>{hit.client_name}</span>}
@@ -510,7 +577,7 @@ function SearchResults({
 
       {transcripts.length > 0 && (
         <div>
-          <div className="lbl" style={{ marginBottom: 8 }}>
+          <div className="lbl mb-8">
             Found in transcripts ({transcripts.length})
           </div>
           <div className="search-list">
@@ -521,7 +588,7 @@ function SearchResults({
                 className="lcard"
                 onClick={() =>
                   hit.meeting_id &&
-                  navigate(`/capture?meeting=${encodeURIComponent(hit.meeting_id)}`)
+                  navigate(`/meetings/${encodeURIComponent(hit.meeting_id)}`)
                 }
               >
                 <div className="t">{hit.title || hit.client_name || "Meeting transcript"}</div>
@@ -554,103 +621,3 @@ function highlight(snippet: string): { __html: string } {
     .replaceAll("&lt;/mark&gt;", "</mark>");
   return { __html: withMarks };
 }
-
-const INSIGHTS_CSS = `
-.filter-bar {
-  border: 1px solid var(--line);
-  border-radius: var(--r);
-  background: var(--p1);
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.filter-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.filter-row-controls {
-  align-items: flex-end;
-}
-.filter-lbl {
-  min-width: 46px;
-  flex: 0 0 auto;
-}
-.filter-field {
-  min-width: 180px;
-}
-.filter-field-grow {
-  flex: 1 1 220px;
-}
-.seg {
-  display: inline-flex;
-  border: 1px solid var(--line);
-  border-radius: var(--r);
-  overflow: hidden;
-  flex-wrap: wrap;
-}
-.seg-btn {
-  font-family: var(--font);
-  font-size: 11.5px;
-  padding: 5px 10px;
-  background: transparent;
-  color: var(--ink-muted);
-  border: none;
-  border-right: 1px solid var(--line);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
-}
-.seg-btn:last-child {
-  border-right: none;
-}
-.seg-btn:hover {
-  background: var(--p2);
-  color: var(--ink);
-}
-.seg-btn.on {
-  background: var(--accent);
-  color: var(--accent-ink);
-  font-weight: 600;
-}
-.th-sort {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--ink-subtle);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-}
-.th-sort:hover {
-  color: var(--accent-soft);
-}
-.search-list {
-  border: 1px solid var(--line);
-  border-radius: var(--r);
-  overflow: hidden;
-  background: var(--p1);
-}
-.search-list .lcard {
-  border-bottom: 1px solid var(--line-soft);
-}
-.search-list .lcard:last-child {
-  border-bottom: none;
-}
-.snippet {
-  margin-top: 6px;
-  font-size: 12px;
-  color: var(--ink-muted);
-  line-height: 1.55;
-}
-.snippet mark {
-  background: var(--signal-wash);
-  color: var(--accent-soft);
-  border-radius: 1px;
-  padding: 0 1px;
-}
-`;

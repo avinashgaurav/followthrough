@@ -2,9 +2,12 @@ import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-route
 import { AuthProvider, RequireAdmin, RequireAuth } from "./auth";
 import { Shell } from "./components/Shell";
 import { EmptyState, ToastProvider } from "./components/ui";
+import { Ask } from "./pages/Ask";
 import { Capture } from "./pages/Capture";
 import { ClientDetail } from "./pages/ClientDetail";
 import { Clients } from "./pages/Clients";
+import { Home } from "./pages/Home";
+import { Meeting } from "./pages/Meeting";
 import { InsightDetail } from "./pages/InsightDetail";
 import { Insights } from "./pages/Insights";
 import { Login } from "./pages/Login";
@@ -22,7 +25,7 @@ function NotFound() {
         body="That address doesn't match anything here."
         action={
           <button className="btn primary" onClick={() => navigate("/")}>
-            Back to Review
+            Back to Home
           </button>
         }
       />
@@ -44,9 +47,17 @@ export default function App() {
                 </RequireAuth>
               }
             >
-              <Route index element={<Review />} />
-              <Route path="/review" element={<Navigate to="/" replace />} />
+              <Route index element={<Home />} />
+              <Route path="/review" element={<Review />} />
               <Route path="/capture" element={<Capture />} />
+              <Route path="/meetings/:id" element={<Meeting />} />
+              {/* nav-label aliases so spoken/bookmarked names always land */}
+              <Route path="/library" element={<Navigate to="/insights" replace />} />
+              <Route path="/confirm-shipped" element={<Navigate to="/proof" replace />} />
+              <Route path="/shipped" element={<Navigate to="/proof" replace />} />
+              <Route path="/speed" element={<Navigate to="/numbers" replace />} />
+              <Route path="/home" element={<Navigate to="/" replace />} />
+              <Route path="/ask" element={<Ask />} />
               <Route path="/insights" element={<Insights />} />
               <Route path="/insights/:id" element={<InsightDetail />} />
               <Route path="/clients" element={<Clients />} />

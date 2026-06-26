@@ -68,6 +68,9 @@ interface MentionRow {
 interface EvidenceRefRow {
   kind: string;
   url: string | null;
+  release_tag?: string | null;
+  release_name?: string | null;
+  release_date?: string | null;
 }
 
 function buildPrompt(opts: {
@@ -85,7 +88,14 @@ function buildPrompt(opts: {
       : "- (no verbatim quotes on file for this client)";
   const proof =
     opts.evidence.length > 0
-      ? opts.evidence.map((e) => `- ${e.kind}: ${e.url ?? "(no url, text attestation)"}`).join("\n")
+      ? opts.evidence
+          .map((e) => {
+            const rel = e.release_tag
+              ? ` shipped in ${e.release_tag}${e.release_name ? ` (${e.release_name})` : ""}${e.release_date ? ` on ${e.release_date.slice(0, 10)}` : ""}`
+              : "";
+            return `- ${e.kind}${rel}: ${e.url ?? "(no url, text attestation)"}`;
+          })
+          .join("\n")
       : "- (no confirmed evidence rows; do not invent a link)";
   return [
     `Write a short follow-up email for client "${opts.clientName}"${opts.contactName ? `, addressed to ${opts.contactName}` : ""}.`,
@@ -100,7 +110,8 @@ function buildPrompt(opts: {
     "Confirmed completion evidence (the proof):",
     proof,
     "",
-    'The message: you asked for this, it is now live. Quote the client back to themselves and include the proof link.',
+    "The message: you asked for this, it is now live.",
+    "Shape: (1) open with their own words and the meeting date, (2) say exactly what shipped - name the release version and date when the evidence has one, (3) one sentence on what it does for them, (4) one-line invitation to see it or reply. Sign off as {sender} placeholder literally so the human can replace it.",
   ].join("\n");
 }
 
@@ -134,7 +145,12 @@ export async function generateDrafts(
 
   const evidence = db
     .query(
-      "SELECT kind, url FROM completion_evidence WHERE insight_id = ? AND status = 'confirmed' ORDER BY created_at",
+      `SELECT ce.kind, ce.url, r.tag_name AS release_tag, r.name AS release_name, r.published_at AS release_date
+       FROM completion_evidence ce
+       LEFT JOIN release_matches mt ON mt.id = ce.ref_match_id
+       LEFT JOIN release_entries re ON re.id = mt.release_entry_id
+       LEFT JOIN releases r ON r.id = re.release_id
+       WHERE ce.insight_id = ? AND ce.status = 'confirmed' ORDER BY ce.created_at`,
     )
     .all(opts.insightId) as EvidenceRefRow[];
 

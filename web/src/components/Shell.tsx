@@ -4,7 +4,7 @@ import { api } from "../api";
 import { useAuth } from "../auth";
 import { CommandPalette } from "./CommandPalette";
 import { SHORTCUTS, useShortcuts } from "./shortcuts";
-import { Modal, Tooltip } from "./ui";
+import { Modal } from "./ui";
 
 interface NavEntry {
   to: string;
@@ -13,16 +13,19 @@ interface NavEntry {
   end?: boolean;
 }
 
+const HOME: NavEntry = { to: "/", label: "Home", end: true };
+
 const PIPELINE: NavEntry[] = [
   { to: "/capture", label: "Capture" },
-  { to: "/", label: "Review", end: true },
-  { to: "/insights", label: "Insights" },
+  { to: "/review", label: "Review" },
+  { to: "/insights", label: "Library" },
+  { to: "/ask", label: "Ask" },
   { to: "/clients", label: "Clients" },
-  { to: "/proof", label: "Shipped?" },
+  { to: "/proof", label: "Confirm shipped" },
 ];
 
 const ADMIN: NavEntry[] = [
-  { to: "/numbers", label: "Numbers", admin: true },
+  { to: "/numbers", label: "Speed", admin: true },
   { to: "/settings", label: "Settings", admin: true },
 ];
 
@@ -100,9 +103,8 @@ function Kbd({ k }: { k: string }) {
 }
 
 export function Shell() {
-  const { user, isGuest } = useAuth();
+  const { user } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const isAdmin = user?.role === "admin";
@@ -123,12 +125,10 @@ export function Shell() {
     <div className="app">
       <aside className={sidebarOpen ? "side open" : "side"}>
         <div className="brand">
-          <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
-            <rect x="15" y="4" width="2" height="24" fill="var(--line)" />
-            <circle cx="16" cy="16" r="4" fill="var(--signal)" />
-          </svg>
+          <span className="sq" />
           <b>Followthrough</b>
         </div>
+        <NavRow entry={HOME} onNavigate={() => setSidebarOpen(false)} />
         <div className="navlbl">Pipeline</div>
         {PIPELINE.map((e) => (
           <NavRow key={e.to} entry={e} onNavigate={() => setSidebarOpen(false)} />
@@ -166,25 +166,12 @@ export function Shell() {
             aria-label="Open command palette"
           >
             <span aria-hidden="true">&#8981;</span>
-            <span>Search asks, clients, meetings</span>
+            <span>Search insights, clients, transcripts</span>
             <span className="kbd">Cmd K</span>
           </button>
           <div className="right">
-            {isGuest ? (
-              <>
-                <Tooltip content="No login required. Turn login on in Settings to add accounts.">
-                  <span className="lbl">Open access</span>
-                </Tooltip>
-                <button className="btn ghost sm" onClick={() => navigate("/login")}>
-                  Sign in
-                </button>
-              </>
-            ) : (
-              <>
-                <span className="small">{user?.name || user?.email}</span>
-                <UserMenu />
-              </>
-            )}
+            <span className="small">{user?.name || user?.email}</span>
+            <UserMenu />
           </div>
         </div>
         <div className="page-scroll">

@@ -195,7 +195,7 @@ let timer: ReturnType<typeof setInterval> | null = null;
  *
  *   import "./watchfolder/routes.ts";              // with the other route modules
  *   import { startWatchFolder } from "./watchfolder/service.ts";
- *   // inside if (import.meta.main), next to startDigestScheduler():
+ *   // inside if (import.meta.main), next to startDailyNudge():
  *   startWatchFolder();
  */
 export function startWatchFolder(): void {

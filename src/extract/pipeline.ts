@@ -66,6 +66,7 @@ interface MeetingRow {
   id: string;
   client_id: string;
   consent_confirmed: number;
+  attendees_json: string | null;
   deleted_at: string | null;
 }
 
@@ -81,7 +82,7 @@ interface Candidate {
 
 function loadMeeting(db: Database, meetingId: string): MeetingRow {
   const meeting = db
-    .query("SELECT id, client_id, consent_confirmed, deleted_at FROM meetings WHERE id = ?")
+    .query("SELECT id, client_id, consent_confirmed, attendees_json, deleted_at FROM meetings WHERE id = ?")
     .get(meetingId) as MeetingRow | null;
   if (!meeting) throw new ExtractionError("meeting_not_found", `Meeting not found: ${meetingId}`);
   if (meeting.deleted_at) throw new ExtractionError("meeting_deleted", "Meeting has been deleted");
@@ -98,6 +99,27 @@ function latestTranscript(db: Database, meetingId: string): TranscriptRow | null
 
 function plural(n: number, word: string): string {
   return `${n} ${word}${n === 1 ? "" : "s"}`;
+}
+
+/** Turn meetings.attendees_json into a short labelled list for the extractor, so
+ *  it can map speaker labels to client-vs-ours. Empty string when none/malformed. */
+function formatAttendees(attendeesJson: string | null): string | undefined {
+  if (!attendeesJson) return undefined;
+  try {
+    const arr = JSON.parse(attendeesJson) as Array<{ name?: string; email?: string; side?: string }>;
+    if (!Array.isArray(arr) || arr.length === 0) return undefined;
+    const lines = arr
+      .map((a) => {
+        const who = a.name || a.email;
+        if (!who) return null;
+        const side = a.side === "internal" ? "our team" : a.side === "client" ? "client" : "unknown side";
+        return `- ${who} (${side})`;
+      })
+      .filter(Boolean);
+    return lines.length ? lines.join("\n") : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function quoteAlreadyRecorded(db: Database, clientId: string, verbatim: string): boolean {
@@ -162,6 +184,9 @@ function insertNewInsight(
     actorUserId: string;
     now: string;
     aiSuggested?: { track?: string | null; owner?: string | null; assignee?: string | null };
+    side?: string | null;
+    sentiment?: string | null;
+    intent?: string | null;
   },
 ): string {
   const insightId = ulid();
@@ -170,8 +195,9 @@ function insertNewInsight(
     : null;
   db.query(
     `INSERT INTO insights (id, meeting_id, client_id, extraction_run_id, item_type, title,
-                           body_original, body_current, state, ai_confidence, ai_suggested_json, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'extracted', ?, ?, ?, ?)`,
+                           body_original, body_current, state, ai_confidence, ai_suggested_json,
+                           side, sentiment, intent, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'extracted', ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     insightId,
     opts.meetingId,
@@ -183,6 +209,9 @@ function insertNewInsight(
     opts.body,
     opts.aiConfidence,
     suggested,
+    opts.side ?? null,
+    opts.sentiment ?? null,
+    opts.intent ?? null,
     opts.now,
     opts.now,
   );
@@ -314,6 +343,7 @@ async function execute(
   const cleaned = cleanTranscript(transcript.content);
   const chunks = chunkTranscript(cleaned);
   const findQuote = buildQuoteMatcher(cleaned);
+  const attendees = formatAttendees(meeting.attendees_json);
 
   let tokensIn = 0;
   let tokensOut = 0;
@@ -332,7 +362,7 @@ async function execute(
     const chunk = chunks[i]!;
     const ext = await llm.completeJSON({
       system: EXTRACTION_SYSTEM_PROMPT,
-      prompt: extractionUserPrompt(chunk.text, i, chunks.length),
+      prompt: extractionUserPrompt(chunk.text, i, chunks.length, attendees),
       schema: ExtractionResponseSchema,
     });
     addUsage(ext);
@@ -526,6 +556,9 @@ async function execute(
             owner: c.item.suggested_owner ?? null,
             assignee: c.item.suggested_assignee ?? null,
           },
+          side: c.item.side ?? null,
+          sentiment: c.item.sentiment ?? null,
+          intent: c.item.intent ?? null,
         });
         touchedInsightIds.push(newId);
         created++;
