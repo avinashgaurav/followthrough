@@ -27,10 +27,14 @@ export const CSV_COLUMNS = [
   "Evidence URL",
 ] as const;
 
-/** RFC 4180 escaping: quote fields containing commas, quotes, or newlines. */
+/** RFC 4180 escaping + formula-injection neutralization. Fields derived from
+ * transcript text can start with = + - @ or tab, which spreadsheet apps treat
+ * as live formulas on import; prefix those with a single quote. */
 export function csvEscape(field: string): string {
-  if (/[",\r\n]/.test(field)) return `"${field.replace(/"/g, '""')}"`;
-  return field;
+  let f = field;
+  if (/^[=+\-@\t\r]/.test(f)) f = `'${f}`;
+  if (/[",\r\n]/.test(f)) return `"${f.replace(/"/g, '""')}"`;
+  return f;
 }
 
 export function toCsv(rows: string[][]): string {

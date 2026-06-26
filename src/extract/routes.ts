@@ -1,3 +1,4 @@
+import { extractionNudgeText, sendChat } from "../notify.ts";
 import { z } from "zod";
 import { route, json } from "../router.ts";
 import { getDb } from "../db.ts";
@@ -29,6 +30,22 @@ route("POST", "/api/meetings/:id/extract", "user", async (req, user, params) => 
     const db = getDb();
     const force = new URL(req.url).searchParams.get("force") === "true";
     const r = await runExtraction(db, getLLM(), params.id ?? "", user!.id, { force });
+    // Nudge the team chat (fire-and-forget; never fails the extraction).
+    if (r.created > 0) {
+      const meta = db
+        .query(
+          `SELECT m.title, c.name AS client_name FROM meetings m
+           LEFT JOIN clients c ON c.id = m.client_id WHERE m.id = ?`,
+        )
+        .get(params.id ?? "") as { title: string | null; client_name: string | null } | null;
+      void sendChat(
+        extractionNudgeText({
+          created: r.created,
+          clientName: meta?.client_name ?? null,
+          meetingTitle: meta?.title ?? null,
+        }),
+      );
+    }
     // Pass 4: the meeting-level brief. Extraction success matters more than the
     // brief, so a brief failure degrades to a warning instead of failing the run.
     let analysis: string | null = null;

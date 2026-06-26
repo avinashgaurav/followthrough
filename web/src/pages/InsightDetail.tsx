@@ -6,6 +6,7 @@ import {
   REPO_ALLOWLIST,
   TRACKS,
   EVIDENCE_KINDS,
+  insightHandle,
 } from "../api";
 import type {
   EmailDraft,
@@ -24,19 +25,20 @@ import {
   EmptyState,
   ErrorAlert,
   Field,
+  Markdown,
   Modal,
-  PaperBand,
   SectionHead,
   Skeleton,
   StatePill,
-  TestimonyQuote,
   Tooltip,
   useToast,
 } from "../components/ui";
 import {
   ageOf,
   formatDate,
+  insightTitle,
   itemTypeLabel,
+  nextStep,
   stateLabel,
   stateTooltipFor,
   titleCase,
@@ -63,7 +65,7 @@ export function InsightDetail() {
             onClick={() => navigate("/insights")}
             tooltip="Go back to the searchable list of every insight."
           >
-            Back to Insights
+            Back to Library
           </Btn>
         }
       />
@@ -72,7 +74,7 @@ export function InsightDetail() {
           <InsightDetailView insightId={id} />
         ) : (
           <div className="page-body">
-            <EmptyState title="No insight selected." body="Open one from the Insights list." />
+            <EmptyState title="No insight selected." body="Open one from the Library." />
           </div>
         )}
       </div>
@@ -102,12 +104,9 @@ function stepIndex(state: string | undefined): number {
 export function InsightDetailView({
   insightId,
   embedded = false,
-  onChanged: onParentChanged,
 }: {
   insightId: string;
   embedded?: boolean;
-  /** Notified after any successful mutation, so an embedding parent (Review) can refresh its queue. */
-  onChanged?: () => void;
 }) {
   const toast = useToast();
   const navigate = useNavigate();
@@ -141,7 +140,7 @@ export function InsightDetailView({
     api
       .listUsers()
       .then((u) => {
-        if (alive) setUsers(u.filter((x) => !x.revoked_at));
+        if (alive) setUsers(u.filter((x) => !x.disabled_at));
       })
       .catch(() => {
         /* picker degrades to "owner not available" */
@@ -156,12 +155,11 @@ export function InsightDetailView({
     try {
       const d = await api.getInsight(insightId);
       setData(d);
-      onParentChanged?.();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Could not refresh.";
       toast.push(msg, "warning");
     }
-  }, [insightId, toast, onParentChanged]);
+  }, [insightId, toast]);
 
   if (loading) {
     return (
@@ -215,7 +213,7 @@ function DetailBody({
 }) {
   const insight: Insight = data.insight ?? { id: insightId };
   const state = String(insight.state ?? "extracted");
-  const handle = data.handle ?? insight.handle ?? `INS-${insightId.slice(-6).toUpperCase()}`;
+  const handle = data.handle ?? insight.handle ?? insightHandle(insightId);
 
   const mentions: Mention[] = Array.isArray(data.mentions) ? data.mentions : [];
   const tickets: Ticket[] = Array.isArray(data.tickets) ? data.tickets : [];
@@ -440,6 +438,18 @@ function DetailBody({
           {/* state stepper */}
           <StateStepper state={state} />
 
+          {/* the one legal next move, in plain words, directly under the spine */}
+          {!isTerminal(state) && nextStep(state) && (
+            <div className="nextstep">
+              <span className="tick" aria-hidden="true" />
+              <span className="lead">Next</span>
+              <span>
+                <span className="verb">{nextStep(state)!.verb}.</span>{" "}
+                <span className="hint">{nextStep(state)!.hint}</span>
+              </span>
+            </div>
+          )}
+
           {isTerminal(state) && (
             <div style={{ margin: "0 0 14px" }}>
               <Alert
@@ -451,13 +461,10 @@ function DetailBody({
             </div>
           )}
 
-          <h2 className="htitle" style={{ fontSize: 18, fontWeight: 600, letterSpacing: "-0.02em", margin: "0 0 4px", maxWidth: 680, lineHeight: 1.3 }}>
-            {insight.title || "Untitled insight"}
+          <h2 className="htitle">
+            {insightTitle(insight.title) || "Untitled insight"}
           </h2>
-          <div
-            className="mono"
-            style={{ color: "var(--ink-subtle)", fontSize: 11.5, marginBottom: 8 }}
-          >
+          <div className="hsub mb-8">
             {handle}
             {" · "}
             {clientName}
@@ -485,6 +492,17 @@ function DetailBody({
             )}
           </div>
 
+          {/* AI read: who said it (client vs us), the client's sentiment, and their underlying intent */}
+          {(insight.side || insight.sentiment || insight.intent) && (
+            <p className="tiny muted" style={{ margin: "0 0 6px" }}>
+              {insight.side && insight.side !== "unknown" && (
+                <span>From: {insight.side === "client" ? "client" : "our team"}</span>
+              )}
+              {insight.sentiment && <span> · sentiment: {insight.sentiment}</span>}
+              {insight.intent && <span> · intent: {insight.intent}</span>}
+            </p>
+          )}
+
           {/* editing-by soft indicator */}
           {insight.editing_by_name && (
             <p className="tiny muted" style={{ margin: "2px 0 0" }}>
@@ -507,21 +525,20 @@ function DetailBody({
             )}
           </div>
           {mentions.length === 0 ? (
-            <p className="muted small" style={{ maxWidth: 680 }}>
+            <p className="muted small maxw-680">
               No verbatim quote was captured for this one.
             </p>
           ) : (
-            <div className="stack-sm" style={{ maxWidth: 680 }}>
+            <div className="stack-sm maxw-680">
               {mentions.map((m, i) => (
-                <TestimonyQuote
-                  key={m.id ?? i}
-                  quote={m.quote || "(no quote text)"}
-                  speaker={m.speaker || "Unknown speaker"}
-                  role={[m.client_name, m.meeting_seq != null ? `meeting ${m.meeting_seq}` : null]
-                    .filter(Boolean)
-                    .join(" · ") || null}
-                  timecode={m.meeting_date ? formatDate(m.meeting_date) : null}
-                />
+                <div className="quote" key={m.id ?? i}>
+                  {m.quote || "(no quote text)"}
+                  <span className="by">
+                    {[m.speaker || "Unknown speaker", m.client_name, m.meeting_seq != null ? `meeting ${m.meeting_seq}` : null, m.meeting_date ? formatDate(m.meeting_date) : null]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </div>
               ))}
             </div>
           )}
@@ -540,7 +557,7 @@ function DetailBody({
           {conflict !== null && (
             <div style={{ maxWidth: 680, marginBottom: 8 }}>
               <Alert severity="warning" title="Someone else saved a newer version.">
-                <p style={{ marginBottom: 8 }}>
+                <p className="mb-8">
                   Your copy is out of date (you had version {version}, the server has version {conflict}). Reload to
                   see their changes, then re-apply yours.
                 </p>
@@ -551,44 +568,44 @@ function DetailBody({
             </div>
           )}
 
-          {wordingLocked ? (
-            // Locked wording is read-only: render it on the warm paper reading surface.
-            <PaperBand className="insight-body-read">
-              {body ? (
-                body.split(/\n{2,}/).map((para, i) => <p key={i}>{para}</p>)
-              ) : (
-                <p className="paper-muted">No wording was written.</p>
-              )}
-            </PaperBand>
-          ) : (
-            <textarea
-              className="ctrl"
-              style={{ maxWidth: 680, minHeight: 130 }}
-              value={body}
-              disabled={savingBody}
-              onFocus={() => setEditing(true)}
-              onBlur={() => setEditing(false)}
-              onChange={(e) => {
-                setBody(e.target.value);
-                setBodyDirty(e.target.value !== serverBody);
-              }}
-              placeholder="Write the polished summary the rest of the team and the client will see."
-            />
-          )}
+          <textarea
+            className="ctrl"
+            style={{ maxWidth: 680, minHeight: 130 }}
+            value={body}
+            disabled={wordingLocked || savingBody}
+            onFocus={() => setEditing(true)}
+            onBlur={() => setEditing(false)}
+            onChange={(e) => {
+              setBody(e.target.value);
+              setBodyDirty(e.target.value !== serverBody);
+            }}
+            placeholder="Write the polished summary the rest of the team and the client will see."
+          />
           <div className="row" style={{ marginTop: 8, maxWidth: 680 }}>
-            <Btn
-              variant="primary"
-              size="sm"
-              disabled={wordingLocked || savingBody || !bodyDirty}
-              onClick={saveBody}
-              tooltip={
+            <Tooltip
+              content={
                 wordingLocked
                   ? "The wording is locked because this has been finalized."
-                  : "Save this wording. Everything downstream uses what you save here."
+                  : !bodyDirty
+                    ? "Nothing to save yet. Edit the summary first."
+                    : "Save this wording. Everything downstream uses what you save here."
               }
             >
-              {savingBody ? "Saving" : "Save wording"}
-            </Btn>
+              {/* span wrapper so the tooltip still shows while the button is disabled */}
+              <span>
+                {/* Secondary, matching Review: saving wording is a sub-step of the
+                    editor, not the screen's primary move. The one primary is the
+                    pipeline advance named in the Next-step banner (Route it /
+                    Finalize), so wording stays a quiet default button. */}
+                <Btn
+                  size="sm"
+                  disabled={wordingLocked || savingBody || !bodyDirty}
+                  onClick={saveBody}
+                >
+                  {savingBody ? "Saving" : "Save wording"}
+                </Btn>
+              </span>
+            </Tooltip>
             {bodyDirty && !wordingLocked && (
               <span className="tiny muted">Unsaved changes.</span>
             )}
@@ -610,19 +627,16 @@ function DetailBody({
             </div>
           )}
 
-          {/* AI suggestion chips */}
-          {(aiSuggested.track || aiSuggested.assignee_name || aiSuggested.owner) && !wordingLocked && (
+          {/* AI suggestion strip (hidden when the line is empty, e.g. a bare "Other") */}
+          {aiSuggestionLine(aiSuggested) !== "" && !wordingLocked && (
             <div className="aibox">
-              <b>AI suggests:</b>{" "}
-              {aiSuggested.track && <>track {trackLabel(aiSuggested.track)} · </>}
-              {aiSuggested.owner && <>owner {aiSuggested.owner} · </>}
-              {aiSuggested.assignee_name && <>person {aiSuggested.assignee_name} </>}
+              {aiSuggestionLine(aiSuggested)}{" "}
               <Tooltip title="Apply the suggestion" content="Fills the routing controls below with the AI's guess. You still review and Save it yourself.">
                 <button
                   onClick={applyAi}
                   style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "inherit", padding: 0 }}
                 >
-                  Apply →
+                  Apply suggestion
                 </button>
               </Tooltip>
             </div>
@@ -698,32 +712,53 @@ function DetailBody({
                 </div>
               </div>
               <div className="row" style={{ marginTop: 12, maxWidth: 680 }}>
-                <Btn
-                  size="sm"
-                  disabled={savingTriage || !track}
-                  onClick={saveTriage}
-                  tooltip="Save where this goes and who owns it. This moves it to Triaged if it was new."
+                <Tooltip
+                  content={
+                    !track
+                      ? "Pick a track first so it knows where this goes."
+                      : "Save where this goes and who owns it. This moves it to Routed if it was new."
+                  }
                 >
-                  {savingTriage ? "Saving" : "Save routing"}
-                </Btn>
+                  {/* span wrapper so the tooltip still shows while the button is disabled */}
+                  <span>
+                    {/* For a Found insight, routing IS the one legal next move, so
+                        it leads as the primary. Once Routed, Finalize takes the
+                        primary slot below and this stays a quiet re-route. */}
+                    <Btn
+                      size="sm"
+                      variant={state === "extracted" ? "primary" : "default"}
+                      disabled={savingTriage || !track}
+                      onClick={saveTriage}
+                    >
+                      {savingTriage ? "Saving" : "Save routing"}
+                    </Btn>
+                  </span>
+                </Tooltip>
               </div>
             </>
           )}
 
           {/* action bar */}
-          <div
-            className="row"
-            style={{ gap: 8, marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--line-soft)", maxWidth: 680 }}
-          >
-            {!isTerminal(state) && stepIndex(state) < 2 && (
-              <Btn
-                variant="primary"
-                disabled={busy !== null || bodyDirty}
-                onClick={doFinalize}
-                tooltip="Locks the wording. After this it can become a ticket or be marked shipped. You cannot edit the summary afterwards."
+          <div className="actions">
+            {!isTerminal(state) && state === "triaged" && (
+              <Tooltip
+                content={
+                  bodyDirty
+                    ? "Save your wording first, then finalize."
+                    : "Locks the wording. After this it can become a ticket or be marked shipped."
+                }
               >
-                {busy === "finalize" ? "Locking" : "Finalize wording"}
-              </Btn>
+                {/* span wrapper so the tooltip still shows while the button is disabled */}
+                <span>
+                  <Btn
+                    variant="primary"
+                    disabled={busy !== null || bodyDirty}
+                    onClick={doFinalize}
+                  >
+                    {busy === "finalize" ? "Locking" : "Finalize wording"}
+                  </Btn>
+                </span>
+              </Tooltip>
             )}
             {!isTerminal(state) && (
               <Btn
@@ -757,6 +792,11 @@ function DetailBody({
               </Btn>
             )}
           </div>
+          {!isTerminal(state) && state === "triaged" && (
+            <p className="helper" style={{ marginTop: 6, maxWidth: 680 }}>
+              Finalize locks the wording - you cannot edit the summary afterwards.
+            </p>
+          )}
         </div>
 
         {/* ============================ RIGHT: lifecycle rail ============================ */}
@@ -806,7 +846,7 @@ function DetailBody({
             className="ctrl"
             value={rejectReason}
             onChange={(e) => setRejectReason(e.target.value)}
-            placeholder="e.g. Duplicate of an older ask, or not something we will build."
+            placeholder="e.g. Duplicate of an older insight, or not something we will build."
           />
         </Field>
       </Modal>
@@ -865,10 +905,12 @@ function detailGrid(embedded: boolean): React.CSSProperties {
 
 // =================================================================== state stepper
 
-function StateStepper({ state }: { state: string }) {
+// Exported so Review's queue detail pane renders the exact same stepper:
+// one vocabulary (stateLabel), current stage = accent, done stages = success.
+export function StateStepper({ state }: { state: string }) {
   const cur = stepIndex(state);
   return (
-    <div className="states" style={{ marginBottom: 16 }}>
+    <div className="states mb-16">
       {STEPPER.map((s, i) => {
         let cls = "st";
         if (isTerminal(state)) {
@@ -904,7 +946,7 @@ function StateStepper({ state }: { state: string }) {
 
 function TimelinePanel({ events }: { events: TimelineEvent[] }) {
   return (
-    <section className="card" style={{ padding: 16 }}>
+    <section className="card p-16">
       <div className="lbl" style={{ margin: "0 0 12px" }}>History</div>
       {events.length === 0 ? (
         <p className="muted small" style={{ margin: 0 }}>Nothing has happened yet.</p>
@@ -1033,8 +1075,8 @@ function TicketPanel({
   }
 
   return (
-    <section className="card" style={{ padding: 16 }}>
-      <div className="row-between" style={{ marginBottom: 12 }}>
+    <section className="card p-16">
+      <div className="row-between mb-12">
         <div className="lbl" style={{ margin: 0 }}>Ticket</div>
         <Btn
           size="sm"
@@ -1055,7 +1097,7 @@ function TicketPanel({
             const externalUrl = t.external_url ?? t.issue_url ?? null;
             return (
               <div key={t.id} style={{ border: "1px solid var(--line-soft)", borderRadius: "var(--r)", padding: 10 }}>
-                <div className="row-between" style={{ marginBottom: 8 }}>
+                <div className="row-between mb-8">
                   <span className="tiny mono subtle">{t.repo || REPO_ALLOWLIST[0]}</span>
                   <StatePill state={t.state} />
                 </div>
@@ -1075,15 +1117,15 @@ function TicketPanel({
                 )}
 
                 {externalUrl ? (
-                  <p className="tiny" style={{ marginTop: 8 }}>
+                  <p className="tiny mt-8">
                     Raised:{" "}
                     <a href={externalUrl} target="_blank" rel="noreferrer">
                       {externalUrl}
                     </a>
                   </p>
                 ) : (
-                  <div className="stack-sm" style={{ marginTop: 10 }}>
-                    <div className="row" style={{ gap: 6 }}>
+                  <div className="stack-sm mt-10">
+                    <div className="row gap-6">
                       <input
                         className="ctrl"
                         style={{ flex: 1, minWidth: 0 }}
@@ -1100,7 +1142,7 @@ function TicketPanel({
                         Mark raised
                       </Btn>
                     </div>
-                    <div className="row" style={{ gap: 6 }}>
+                    <div className="row gap-6">
                       <select
                         className="ctrl"
                         style={{ flex: 1, minWidth: 0 }}
@@ -1200,8 +1242,8 @@ function EvidencePanel({
   }
 
   return (
-    <section className="card" style={{ padding: 16 }}>
-      <div className="row-between" style={{ marginBottom: 12 }}>
+    <section className="card p-16">
+      <div className="row-between mb-12">
         <div className="lbl" style={{ margin: 0 }}>Proof it shipped</div>
         <Tooltip title="What this is" content="The evidence that what the client asked for is actually live. Confirm it before you tell them.">
           <span className="help" tabIndex={0}>?</span>
@@ -1211,10 +1253,10 @@ function EvidencePanel({
       {evidence.length === 0 ? (
         <p className="muted small" style={{ margin: "0 0 12px" }}>No proof on record yet.</p>
       ) : (
-        <div className="stack-sm" style={{ marginBottom: 14 }}>
+        <div className="stack-sm mb-14">
           {evidence.map((ev) => (
             <div key={ev.id} style={{ border: "1px solid var(--line-soft)", borderRadius: "var(--r)", padding: 10 }}>
-              <div className="row-between" style={{ marginBottom: 4 }}>
+              <div className="row-between mb-4">
                 <span className="tiny mono subtle">{titleCase(ev.kind)}</span>
                 <StatePill state={ev.status} />
               </div>
@@ -1225,7 +1267,7 @@ function EvidencePanel({
               )}
               {ev.notes && <p className="tiny muted" style={{ margin: "0 0 6px" }}>{ev.notes}</p>}
               {String(ev.status ?? "").toLowerCase() === "proposed" && (
-                <div className="row" style={{ gap: 6 }}>
+                <div className="row gap-6">
                   <Btn size="sm" disabled={acting === ev.id} onClick={() => confirm(ev.id)} tooltip="Confirm this is real proof. This is what lets us tell the client it shipped.">
                     Confirm
                   </Btn>
@@ -1250,7 +1292,7 @@ function EvidencePanel({
             ))}
           </select>
         </div>
-        <div className="row" style={{ gap: 6 }}>
+        <div className="row gap-6">
           <input
             className="ctrl"
             style={{ flex: 1, minWidth: 0 }}
@@ -1320,25 +1362,35 @@ function EmailPanel({
     }
   }
 
-  async function copy(d: EmailDraft) {
-    const text = d.body ?? d.body_draft ?? "";
+  async function copyEmail(d: EmailDraft) {
+    const bodyText = d.body ?? d.body_draft ?? "";
+    const text = d.subject ? `Subject: ${d.subject}\n\n${bodyText}` : bodyText;
     setActing(d.id);
     try {
-      // Record the copy first so the client is marked told, then copy.
-      await api.emailCopied(d.id);
-      try {
-        await navigator.clipboard.writeText(text);
-      } catch {
-        toastPush("Marked as told, but the clipboard was blocked. Copy the text by hand.", "warning");
-        await onChanged();
+      const ok = await copyPlainText(text);
+      if (!ok) {
+        toastPush("Could not reach the clipboard. Select the text and copy it by hand.", "warning");
         return;
       }
-      toastPush("Copied. Client marked as told.", "success");
-      await onChanged();
-    } catch (e) {
-      toastPush(e instanceof Error ? e.message : "Could not copy.", "critical");
+      toastPush("Copied. Paste it into your email client.", "success");
+      // Copying is the tracked send-proxy moment: record it so the client is marked told.
+      try {
+        await api.emailCopied(d.id);
+        await onChanged();
+      } catch {
+        toastPush("Copied, but we could not record it. Press Copy email again so it counts.", "warning");
+      }
     } finally {
       setActing(null);
+    }
+  }
+
+  async function copySubject(d: EmailDraft) {
+    const ok = await copyPlainText(d.subject ?? "");
+    if (ok) {
+      toastPush("Subject copied.", "success");
+    } else {
+      toastPush("Could not reach the clipboard. Copy the subject by hand.", "warning");
     }
   }
 
@@ -1356,8 +1408,8 @@ function EmailPanel({
   }
 
   return (
-    <section className="card" style={{ padding: 16 }}>
-      <div className="row-between" style={{ marginBottom: 12 }}>
+    <section className="card p-16">
+      <div className="row-between mb-12">
         <div className="lbl" style={{ margin: 0 }}>Tell the client</div>
         <Btn
           size="sm"
@@ -1377,7 +1429,7 @@ function EmailPanel({
             const bodyText = d.body ?? d.body_draft ?? "";
             return (
               <div key={d.id} style={{ border: "1px solid var(--line-soft)", borderRadius: "var(--r)", padding: 10 }}>
-                <div className="row-between" style={{ marginBottom: 6 }}>
+                <div className="row-between mb-6">
                   <span className="tiny mono subtle">{d.client_name || "Client"}</span>
                   {(d.sent_confirmed_at || String(d.status ?? "") === "sent") && (
                     <Tooltip title="Sent" content="You confirmed this email went out to the client.">
@@ -1390,22 +1442,32 @@ function EmailPanel({
                     </Tooltip>
                   )}
                 </div>
-                {d.subject && <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 6 }}>{d.subject}</div>}
-                <pre
-                  className="mono"
-                  style={{ background: "var(--p1)", border: "1px solid var(--line)", borderRadius: "var(--r)", padding: 10, fontSize: 11, lineHeight: 1.55, maxHeight: 180, overflow: "auto", whiteSpace: "pre-wrap", margin: "0 0 8px" }}
+                <div style={{ fontSize: 12.5, marginBottom: 6 }}>
+                  <strong>{d.subject || "(no subject)"}</strong>
+                </div>
+                <div
+                  style={{ background: "var(--p1)", border: "1px solid var(--line)", borderRadius: "var(--r)", padding: 10, fontSize: 11.5, lineHeight: 1.55, maxHeight: 200, overflow: "auto", margin: "0 0 8px" }}
                 >
-                  {bodyText || "(empty draft)"}
-                </pre>
-                <div className="row" style={{ gap: 6 }}>
+                  {bodyText ? <Markdown text={bodyText} /> : <span className="muted">(empty draft)</span>}
+                </div>
+                <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
                   <Btn
                     size="sm"
                     variant="primary"
                     disabled={acting === d.id}
-                    onClick={() => copy(d)}
-                    tooltip="Copy this email and mark the client as told. Paste it into your mail app to send."
+                    onClick={() => copyEmail(d)}
+                    tooltip="Copy the subject and body as plain text. Paste them into your mail app to send."
                   >
-                    Copy
+                    Copy email
+                  </Btn>
+                  <Btn
+                    size="sm"
+                    variant="ghost"
+                    disabled={acting === d.id || !d.subject}
+                    onClick={() => copySubject(d)}
+                    tooltip="Copy just the subject line."
+                  >
+                    Copy subject
                   </Btn>
                   <Btn
                     size="sm"
@@ -1417,6 +1479,9 @@ function EmailPanel({
                     Mark sent
                   </Btn>
                 </div>
+                <p className="tiny subtle" style={{ margin: "6px 0 0" }}>
+                  Copy email records the client as told. Mark sent confirms it actually went out.
+                </p>
               </div>
             );
           })}
@@ -1495,7 +1560,7 @@ function MergeModal({
         </>
       }
     >
-      <p style={{ marginTop: 0 }}>
+      <p className="mt-0">
         This insight becomes a duplicate of the one you pick. Its mentions count toward that one instead.
       </p>
       {loading ? (
@@ -1524,7 +1589,7 @@ function MergeModal({
                   onClick={() => setTarget(o.id)}
                   style={{ border: "none", borderBottom: "1px solid var(--line-soft)" }}
                 >
-                  <div className="t">{o.title || "Untitled"}</div>
+                  <div className="t">{insightTitle(o.title) || "Untitled"}</div>
                   <div className="meta">
                     {o.client_name && <span>{o.client_name}</span>}
                     <StatePill state={o.state} />
@@ -1541,11 +1606,54 @@ function MergeModal({
 
 // =================================================================== helpers (local)
 
+/**
+ * Copy plain text to the clipboard. Uses the async clipboard API where it is
+ * available (secure contexts only), and falls back to the hidden-textarea
+ * execCommand trick so copying still works over plain http.
+ */
+async function copyPlainText(text: string): Promise<boolean> {
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      /* fall through to the textarea fallback */
+    }
+  }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
 interface AiSuggestion {
   track?: string;
   owner?: string;
   assignee_name?: string;
   assignee_user_id?: string;
+}
+
+/** One properly-cased sentence for the AI suggestion strip. */
+function aiSuggestionLine(s: AiSuggestion): string {
+  const owner = s.assignee_name ?? s.owner;
+  if (s.track && owner) {
+    return `AI suggests routing this to ${trackLabel(s.track)}, owned by ${owner}.`;
+  }
+  if (s.track === "other" && !owner) return "";
+  if (s.track) return `AI suggests routing this to ${trackLabel(s.track)}.`;
+  if (owner) return `AI suggests ${owner} as the owner.`;
+  return "";
 }
 
 function parseAi(raw: unknown): AiSuggestion {

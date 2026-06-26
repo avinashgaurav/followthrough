@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, type MetricsOverview } from "../api";
-import { fmtNum, metricTooltipFor, relativeAge, titleCase, trackLabel } from "../format";
-import { Alert, Btn, EmptyState, ErrorAlert, Help, SectionHead, Skeleton, Sparkline, Tooltip } from "../components/ui";
+import { fmtNum, insightTitle, metricTooltipFor, relativeAge, stateLabel, titleCase, trackLabel } from "../format";
+import { Alert, Btn, EmptyState, ErrorAlert, Help, SectionHead, Skeleton, Tooltip } from "../components/ui";
 
-// Admin. Job: how fast asks move from meeting to shipped to told.
+// Admin. Job: how fast insights move from meeting to shipped to told.
 // Data: api.metricsOverview(). Rendered as dense tables + CSS bars, no chart libraries.
 // The wrapper types this as Record<string, unknown> (field drift expected), so every
 // accessor below is defensive and never throws on a missing shape.
@@ -64,23 +64,30 @@ function dur(v: number | null): string {
   return relativeAge(v);
 }
 
-// the canonical stage-pair columns in pipeline order
+// the canonical stage-pair columns in pipeline order; labels come from the one
+// pipeline vocabulary in format.ts (stateLabel) so they can never drift
 const STAGE_PAIRS: { key: string; label: string }[] = [
-  { key: "extracted_to_finalized", label: "Found → Locked" },
-  { key: "finalized_to_ticketed", label: "Locked → Ticketed" },
-  { key: "ticketed_to_shipped", label: "Ticketed → Shipped" },
-  { key: "finalized_to_shipped", label: "Locked → Shipped" },
-  { key: "shipped_to_notified", label: "Shipped → Told" },
-  { key: "end_to_end", label: "Meeting → Told" },
+  { key: "extracted_to_finalized", label: `${stateLabel("extracted")} → ${stateLabel("finalized")}` },
+  { key: "finalized_to_ticketed", label: `${stateLabel("finalized")} → ${stateLabel("ticketed")}` },
+  { key: "ticketed_to_shipped", label: `${stateLabel("ticketed")} → ${stateLabel("shipped")}` },
+  { key: "finalized_to_shipped", label: `${stateLabel("finalized")} → ${stateLabel("shipped")}` },
+  { key: "shipped_to_notified", label: `${stateLabel("shipped")} → ${stateLabel("client_notified")}` },
+  { key: "end_to_end", label: `Meeting → ${stateLabel("client_notified")}` },
 ];
+
+/** Pipeline-state label that tolerates API drift ("client notified", "Client Notified", "client_notified"). */
+function pipelineStageLabel(raw: string): string {
+  if (!raw) return "";
+  return stateLabel(raw.trim().toLowerCase().replaceAll(" ", "_"));
+}
 
 // ---------------------------------------------------------------- small layout helpers
 
-function MetricLabel({ k, children }: { k: string; children: React.ReactNode }) {
+function MetricLabel({ k, title, children }: { k: string; title?: string; children: React.ReactNode }) {
   const tip = metricTooltipFor(k);
   if (!tip) return <>{children}</>;
   return (
-    <Tooltip title={titleCase(k)} content={tip}>
+    <Tooltip title={title ?? titleCase(k)} content={tip}>
       <span style={{ cursor: "help" }}>{children}</span>
     </Tooltip>
   );
@@ -88,7 +95,7 @@ function MetricLabel({ k, children }: { k: string; children: React.ReactNode }) 
 
 function Section({ title, tip, children }: { title: string; tip?: string; children: React.ReactNode }) {
   return (
-    <section style={{ marginBottom: 28 }}>
+    <section className="mb-28">
       <h2 style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, display: "flex", alignItems: "center", gap: 7 }}>
         <span className="lbl" style={{ margin: 0, fontSize: 9.5 }}>
           {title}
@@ -104,8 +111,8 @@ function Section({ title, tip, children }: { title: string; tip?: string; childr
 function Bar({ value, max, label, sub }: { value: number; max: number; label: string; sub?: string }) {
   const pct = max > 0 ? Math.max(2, Math.round((value / max) * 100)) : 0;
   return (
-    <div style={{ marginBottom: 10 }}>
-      <div className="row-between" style={{ marginBottom: 4 }}>
+    <div className="mb-10">
+      <div className="row-between mb-4">
         <span style={{ fontSize: 12 }}>{label}</span>
         <span className="num muted" style={{ fontSize: 12 }}>
           {sub ?? fmtNum(value)}
@@ -115,10 +122,15 @@ function Bar({ value, max, label, sub }: { value: number; max: number; label: st
         <div
           style={{
             height: "100%",
-            width: `${pct}%`,
-            background: "var(--accent)",
+            width: "100%",
+            // Fill via GPU transform (scaleX from the left), not an animated
+            // width — avoids layout thrash. Corners are sharp (--r:0) so scaling
+            // introduces no radius distortion.
+            transformOrigin: "left",
+            transform: `scaleX(${Math.max(0, Math.min(100, pct)) / 100})`,
+            background: "var(--ink-muted)",
             borderRadius: "var(--r)",
-            transition: "width var(--dur-med) var(--ease-out)",
+            transition: "transform var(--dur-med) var(--ease-out)",
           }}
         />
       </div>
@@ -148,8 +160,8 @@ export function Numbers() {
   return (
     <>
       <SectionHead
-        title="Numbers"
-        job="How fast asks move from meeting to shipped to told."
+        title="Speed"
+        job="How fast insights move from meeting to shipped to told."
         actions={
           <Btn
             size="sm"
@@ -198,27 +210,153 @@ function MetricsBody({ data }: { data: MetricsOverview }) {
     Object.keys(wip).length === 0 &&
     Object.keys(aiQuality).length === 0;
 
-  if (nothing) {
-    return (
-      <EmptyState
-        title="Not enough data yet"
-        body="Once a few asks move through the pipeline, turnaround times and the funnel will show up here."
-      />
-    );
-  }
-
   return (
     <>
-      <StageTats stageTats={stageTats} />
-      <Funnel rows={funnel} />
-      <WipAging wip={wip} />
-      <StuckItems items={stuck} />
-      <ThemeDemand rows={theme} />
-      <PerPerson rows={perPerson} />
-      <PerClient rows={perClient} />
-      <AiQuality data={aiQuality} />
-      <CaptureVolume rows={capture} />
+      <Lead stageTats={stageTats} wip={wip} perClient={perClient} />
+      {nothing ? (
+        <EmptyState
+          title="Not enough data yet"
+          body="Once a few insights move through the pipeline, turnaround times and the funnel will show up here."
+        />
+      ) : (
+        <>
+          <StageTats stageTats={stageTats} />
+          <Funnel rows={funnel} />
+          <WipAging wip={wip} />
+          <StuckItems items={stuck} />
+          <PerPerson rows={perPerson} />
+          <PerClient rows={perClient} />
+          <ThemeDemand rows={theme} />
+          <AiQuality data={aiQuality} />
+          <CaptureVolume rows={capture} />
+        </>
+      )}
     </>
+  );
+}
+
+// ---------------------------------------------------------------- lead: the story in four numbers
+
+/** Overall end-to-end stat: prefer an "all"/"overall" track row, else the row with the most data behind it. */
+function leadEndToEnd(stageTats: Record<string, unknown>[]): Stat | null {
+  let best: Stat | null = null;
+  for (const row of stageTats) {
+    const track = str(pick(row, "track", "name")).trim().toLowerCase();
+    const s = readStat(row["end_to_end"]);
+    if (isEmptyStat(s)) continue;
+    if (track === "all" || track === "overall" || track === "total") return s;
+    if (best === null || (s.n ?? 0) > (best.n ?? 0)) best = s;
+  }
+  return best;
+}
+
+/** Total work in flight: explicit total if present, else the sum of the by-state counts. */
+function leadWip(wip: Record<string, unknown>): number | null {
+  const total = num(pick(wip, "total", "wip_total", "in_flight"));
+  if (total !== null) return total;
+  const byState = obj(pick(wip, "byState", "by_state", "wip", "counts"));
+  const vals = Object.values(byState)
+    .map(num)
+    .filter((v): v is number => v !== null);
+  return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) : null;
+}
+
+/** Overall closed-loop percent across all clients: told / shipped. */
+function leadClosedLoop(rows: Record<string, unknown>[]): number | null {
+  let shipped = 0;
+  let told = 0;
+  let any = false;
+  for (const r of rows) {
+    const s = num(pick(r, "shipped", "shipped_count"));
+    const t = num(pick(r, "notified", "told", "client_notified", "notified_count"));
+    if (s !== null) {
+      shipped += s;
+      any = true;
+    }
+    if (t !== null) told += t;
+  }
+  if (!any || shipped <= 0) return null;
+  return Math.round((told / shipped) * 100);
+}
+
+/**
+ * One headline number. Non-clickable cousin of the Home page action card:
+ * big number, then a sentence a founder can read cold. No data yet shows "-"
+ * dimmed, so the card still says what will be measured.
+ */
+function LeadCard({
+  label,
+  value,
+  what,
+  tipKey,
+}: {
+  label: string;
+  value: string | null;
+  what: string;
+  tipKey?: string;
+}) {
+  const zero = value === null;
+  const count = <div className="count">{value ?? "-"}</div>;
+  const tip = tipKey ? metricTooltipFor(tipKey) : "";
+  return (
+    <div className={`action-card${zero ? " zero" : ""}`} style={{ cursor: "default" }}>
+      <div className="lbl" style={{ margin: "0 0 10px" }}>
+        {label}
+      </div>
+      {tip ? (
+        <Tooltip title={label} content={tip}>
+          <span style={{ cursor: "help", display: "inline-block" }}>{count}</span>
+        </Tooltip>
+      ) : (
+        count
+      )}
+      <div className="what">{what}</div>
+    </div>
+  );
+}
+
+function Lead({
+  stageTats,
+  wip,
+  perClient,
+}: {
+  stageTats: Record<string, unknown>[];
+  wip: Record<string, unknown>;
+  perClient: Record<string, unknown>[];
+}) {
+  const e2e = leadEndToEnd(stageTats);
+  const e2eDays = e2e ? (e2e.median ?? e2e.avg) : null;
+  const wipTotal = leadWip(wip);
+  const oldest = num(pick(wip, "oldest_days", "oldestDays", "oldest"));
+  const closed = leadClosedLoop(perClient);
+
+  return (
+    <div className="home-cards">
+      <LeadCard
+        label="Meeting to client told"
+        value={e2eDays === null ? null : dur(e2eDays)}
+        what="How long the typical insight takes from the meeting to the client hearing it shipped."
+        tipKey="end_to_end"
+      />
+      <LeadCard
+        label="In flight now"
+        value={wipTotal === null ? null : fmtNum(wipTotal)}
+        what="Insights being worked on right now that have not reached the client yet."
+        tipKey="wipAndAging"
+      />
+      <LeadCard
+        label="Oldest open insight"
+        value={oldest === null ? null : dur(oldest)}
+        what="How long the longest-waiting open insight has been sitting. If this grows, something is stuck."
+        tipKey="oldestOpenItem"
+      />
+      <LeadCard
+        label="Loop closed"
+        value={closed === null ? null : `${fmtNum(closed)}%`}
+        what="Of everything we shipped, the share we went back and told the client about."
+        tipKey="perClientClosedLoop"
+      />
+    </div>
   );
 }
 
@@ -229,8 +367,8 @@ function StageTats({ stageTats }: { stageTats: Record<string, unknown>[] }) {
   return (
     <Section title="Turnaround time by stage" tip={metricTooltipFor("turnaround")}>
       <p className="muted small" style={{ margin: "0 0 12px" }}>
-        Middle value shown in each cell. Hover a number for the average and the slow-tail (90 percent
-        finished within).
+        Middle value shown in each cell. Hover a number to see the average and how long the slowest
+        cases took.
       </p>
       <div className="table-wrap">
         <table className="table">
@@ -239,7 +377,9 @@ function StageTats({ stageTats }: { stageTats: Record<string, unknown>[] }) {
               <th>Track</th>
               {STAGE_PAIRS.map((p) => (
                 <th key={p.key} className="num">
-                  <MetricLabel k={p.key}>{p.label}</MetricLabel>
+                  <MetricLabel k={p.key} title={p.label}>
+                    {p.label}
+                  </MetricLabel>
                 </th>
               ))}
             </tr>
@@ -263,7 +403,7 @@ function StageTats({ stageTats }: { stageTats: Record<string, unknown>[] }) {
                         title={p.label}
                         content={
                           <span>
-                            Average {dur(s.avg)} · 90% within {dur(s.p90)} · based on {s.n ?? 0} items
+                            Average {dur(s.avg)} · 90% within {dur(s.p90)} · based on {s.n ?? 0} insight{(s.n ?? 0) === 1 ? "" : "s"}
                           </span>
                         }
                       >
@@ -303,7 +443,7 @@ function readFunnel(v: unknown): FunnelRow[] {
   const o = obj(v);
   return Object.entries(o)
     .filter(([, val]) => num(val) !== null)
-    .map(([k, val]) => ({ label: titleCase(k), count: num(val) ?? 0 }));
+    .map(([k, val]) => ({ label: k, count: num(val) ?? 0 }));
 }
 
 function Funnel({ rows }: { rows: FunnelRow[] }) {
@@ -311,13 +451,8 @@ function Funnel({ rows }: { rows: FunnelRow[] }) {
   const max = Math.max(...rows.map((r) => r.count), 1);
   return (
     <Section title="Funnel" tip={metricTooltipFor("funnel")}>
-      {rows.length > 1 && (
-        <div style={{ marginBottom: 14 }}>
-          <Sparkline values={rows.map((r) => r.count)} title="Count by funnel stage, in pipeline order" />
-        </div>
-      )}
       {rows.map((r, i) => (
-        <Bar key={i} label={titleCase(r.label)} value={r.count} max={max} sub={fmtNum(r.count)} />
+        <Bar key={i} label={pipelineStageLabel(r.label)} value={r.count} max={max} sub={fmtNum(r.count)} />
       ))}
     </Section>
   );
@@ -331,7 +466,7 @@ function WipAging({ wip }: { wip: Record<string, unknown> }) {
   // WIP by-state counts may live under a key or be the object itself
   const byState = obj(pick(wip, "byState", "by_state", "wip", "counts"));
   const stateRows = Object.entries(byState)
-    .map(([k, v]) => ({ k: titleCase(k), v: num(v) }))
+    .map(([k, v]) => ({ k: pipelineStageLabel(k), v: num(v) }))
     .filter((r) => r.v !== null) as { k: string; v: number }[];
 
   const totalWip = num(pick(wip, "total", "wip_total", "in_flight"));
@@ -342,12 +477,14 @@ function WipAging({ wip }: { wip: Record<string, unknown> }) {
 
   return (
     <Section title="Work in flight and aging" tip={metricTooltipFor("wipAndAging")}>
-      <div className="grid-auto" style={{ marginBottom: 14 }}>
+      <div className="grid-auto mb-14">
         {totalWip !== null && (
           <div className="stat">
             <div className="v">{fmtNum(totalWip)}</div>
             <div className="k lbl" style={{ margin: 0 }}>
-              <MetricLabel k="wipAndAging">In flight now</MetricLabel>
+              <MetricLabel k="wipAndAging" title="In flight now">
+                In flight now
+              </MetricLabel>
             </div>
           </div>
         )}
@@ -355,7 +492,9 @@ function WipAging({ wip }: { wip: Record<string, unknown> }) {
           <div className="stat">
             <div className="v">{dur(oldest)}</div>
             <div className="k lbl" style={{ margin: 0 }}>
-              <MetricLabel k="oldestOpenItem">Oldest open item</MetricLabel>
+              <MetricLabel k="oldestOpenItem" title="Oldest open insight">
+                Oldest open insight
+              </MetricLabel>
             </div>
           </div>
         )}
@@ -368,22 +507,13 @@ function WipAging({ wip }: { wip: Record<string, unknown> }) {
           </div>
         ))}
       </div>
-      {buckets.length > 1 && (
-        <div style={{ marginBottom: 14 }}>
-          <Sparkline
-            values={buckets.map((b) => num(pick(b, "count", "n", "items")) ?? 0)}
-            highlightLast={false}
-            title="Open items per age bucket, oldest at right"
-          />
-        </div>
-      )}
       {buckets.length > 0 && (
         <div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
-                <th>Age bucket</th>
-                <th className="num">Items</th>
+                <th>How long it has waited</th>
+                <th className="num">Insights</th>
               </tr>
             </thead>
             <tbody>
@@ -407,18 +537,18 @@ function StuckItems({ items }: { items: Record<string, unknown>[] }) {
   if (items.length === 0) return null;
   return (
     <Section title="Stuck and needs a nudge" tip={metricTooltipFor("stuckItems")}>
-      <Alert severity="warning" title={`${items.length} item${items.length === 1 ? "" : "s"} have not moved in a while`}>
+      <Alert severity="warning" title={`${items.length} insight${items.length === 1 ? "" : "s"} have not moved in a while`}>
         <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
           {items.map((it, i) => {
-            const title = str(pick(it, "title", "insight_title", "name")) || "Untitled";
+            const title = insightTitle(str(pick(it, "title", "insight_title", "name"))) || "Untitled";
             const state = str(pick(it, "state", "current_state"));
             const age = num(pick(it, "age_days", "ageDays", "days_in_state", "age"));
             const client = str(pick(it, "client_name", "client"));
             return (
-              <li key={i} style={{ marginBottom: 4 }}>
+              <li key={i} className="mb-4">
                 {title}
                 {client && <span className="subtle"> · {client}</span>}
-                {state && <span className="subtle"> · {titleCase(state)}</span>}
+                {state && <span className="subtle"> · {pipelineStageLabel(state)}</span>}
                 {age !== null && <span className="subtle"> · stuck {dur(age)}</span>}
               </li>
             );
@@ -441,19 +571,10 @@ function ThemeDemand({ rows }: { rows: Record<string, unknown>[] }) {
   const max = Math.max(...norm.map((r) => r.clients), 1);
   return (
     <Section title="What clients ask for most" tip={metricTooltipFor("themeDemand")}>
-      {norm.length > 1 && (
-        <div style={{ marginBottom: 14 }}>
-          <Sparkline
-            values={norm.map((r) => r.clients)}
-            highlightLast={false}
-            title="Distinct clients asking, by theme"
-          />
-        </div>
-      )}
       {norm.map((r, i) => (
         <Bar
           key={i}
-          label={r.tag || "untagged"}
+          label={r.tag || "No topic yet"}
           value={r.clients}
           max={max}
           sub={`${fmtNum(r.clients)} client${r.clients === 1 ? "" : "s"}${
@@ -477,7 +598,7 @@ function PerPerson({ rows }: { rows: Record<string, unknown>[] }) {
             <tr>
               <th>Person</th>
               <th className="num">
-                <Tooltip title="Owns" content="How many items this person currently owns.">
+                <Tooltip title="Owns" content="How many insights this person currently owns.">
                   <span>Owns</span>
                 </Tooltip>
               </th>
@@ -487,13 +608,16 @@ function PerPerson({ rows }: { rows: Record<string, unknown>[] }) {
                 </Tooltip>
               </th>
               <th className="num">
-                <Tooltip title="Shipped" content="How many of their items engineering shipped.">
+                <Tooltip title="Shipped" content="How many of their insights engineering shipped.">
                   <span>Shipped</span>
                 </Tooltip>
               </th>
               <th className="num">
-                <Tooltip title="Median turnaround" content="Their middle time to move an item along.">
-                  <span>Median TAT</span>
+                <Tooltip
+                  title="Typical turnaround"
+                  content="The middle time they take to move an insight along. Half are faster, half slower."
+                >
+                  <span>Typical turnaround</span>
                 </Tooltip>
               </th>
             </tr>
@@ -527,19 +651,19 @@ function PerClient({ rows }: { rows: Record<string, unknown>[] }) {
             <tr>
               <th>Client</th>
               <th className="num">
-                <Tooltip title="Shipped" content="Asks from this client that engineering shipped.">
+                <Tooltip title="Shipped" content="Insights from this client that engineering shipped.">
                   <span>Shipped</span>
                 </Tooltip>
               </th>
               <th className="num">
-                <Tooltip title="Told" content="Of those, how many we actually told the client about.">
-                  <span>Told</span>
+                <Tooltip title="Client told" content="Of those, how many we actually told the client about.">
+                  <span>Client told</span>
                 </Tooltip>
               </th>
               <th className="num">
                 <Tooltip
                   title="Closed-loop rate"
-                  content="Share of shipped asks the client has been told about. Higher is better."
+                  content="Share of shipped insights the client has been told about. Higher is better."
                 >
                   <span>Closed loop</span>
                 </Tooltip>
@@ -585,7 +709,7 @@ function AiQuality({ data }: { data: Record<string, unknown> }) {
     cards.push({
       v: `${fmtNum(discard)}%`,
       k: "Discard rate",
-      tip: "Share of AI-found asks a person rejected as wrong or not useful. Lower is better.",
+      tip: "Share of AI-found insights a person rejected as wrong or not useful. Lower is better.",
     });
   if (keptRate !== null)
     cards.push({
@@ -596,7 +720,7 @@ function AiQuality({ data }: { data: Record<string, unknown> }) {
   if (edit !== null)
     cards.push({
       v: fmtNum(edit),
-      k: "Edit distance",
+      k: "Rewording needed",
       tip: "How much people changed the AI's wording on average. Lower means less rewriting.",
     });
 
@@ -624,30 +748,11 @@ function CaptureVolume({ rows }: { rows: Record<string, unknown>[] }) {
   const norm = rows.map((r) => ({
     week: str(pick(r, "week", "label", "period", "date", "bucket")),
     meetings: num(pick(r, "meetings", "meeting_count", "meetings_count")) ?? 0,
-    asks: num(pick(r, "asks", "insights", "insight_count", "mentions")),
+    insights: num(pick(r, "asks", "insights", "insight_count", "mentions")),
   }));
   const max = Math.max(...norm.map((r) => r.meetings), 1);
-  const askSeries = norm.map((r) => r.asks).filter((v): v is number => v !== null);
   return (
     <Section title="Capture volume by week" tip={metricTooltipFor("captureVolume")}>
-      {norm.length > 1 && (
-        <div className="row" style={{ gap: 24, alignItems: "flex-end", marginBottom: 16 }}>
-          <div>
-            <Sparkline values={norm.map((r) => r.meetings)} title="Meetings per week, latest at right" />
-            <div className="lbl" style={{ margin: "6px 0 0", fontSize: 9.5 }}>
-              Meetings / week
-            </div>
-          </div>
-          {askSeries.length === norm.length && askSeries.length > 1 && (
-            <div>
-              <Sparkline values={askSeries} title="Asks per week, latest at right" />
-              <div className="lbl" style={{ margin: "6px 0 0", fontSize: 9.5 }}>
-                Asks / week
-              </div>
-            </div>
-          )}
-        </div>
-      )}
       {norm.map((r, i) => (
         <Bar
           key={i}
@@ -655,7 +760,7 @@ function CaptureVolume({ rows }: { rows: Record<string, unknown>[] }) {
           value={r.meetings}
           max={max}
           sub={`${fmtNum(r.meetings)} meeting${r.meetings === 1 ? "" : "s"}${
-            r.asks !== null ? ` · ${fmtNum(r.asks)} asks` : ""
+            r.insights !== null ? ` · ${fmtNum(r.insights)} insight${r.insights === 1 ? "" : "s"}` : ""
           }`}
         />
       ))}

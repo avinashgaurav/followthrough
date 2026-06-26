@@ -179,11 +179,11 @@ describe("generateCsvExport", () => {
     db.query("UPDATE insights SET state = 'shipped' WHERE id = ?").run(canonical);
     db.query(
       `INSERT INTO completion_evidence (id, insight_id, kind, url, confidence, status, created_at)
-       VALUES (?, ?, 'release_match', 'https://github.com/XYZ/XYZ/releases/v1.20.0', 100, 'confirmed', ?)`,
+       VALUES (?, ?, 'release_match', 'https://github.com/xyz/xyz/releases/v1.20.0', 100, 'confirmed', ?)`,
     ).run(ulid(), canonical, nowIso());
 
     const result = generateCsvExport(db, { requestedBy: user, blobDir });
     expect(result.csv).toContain(D("2026-06-07"));
-    expect(result.csv).toContain("https://github.com/XYZ/XYZ/releases/v1.20.0");
+    expect(result.csv).toContain("https://github.com/xyz/xyz/releases/v1.20.0");
   });
 });

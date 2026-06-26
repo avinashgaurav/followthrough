@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import type { Client, SearchInsightHit } from "../api";
 import { useAuth } from "../auth";
+import { insightTitle } from "../format";
 import { isPaletteChord } from "./shortcuts";
 import { useToast } from "./ui";
 
@@ -100,11 +101,12 @@ export function CommandPalette() {
   const navCommands = useMemo<Command[]>(() => {
     const items: Array<{ id: string; label: string; path: string; admin?: boolean }> = [
       { id: "nav-capture", label: "Go to Capture", path: "/capture" },
-      { id: "nav-review", label: "Go to Review", path: "/" },
-      { id: "nav-insights", label: "Go to Insights", path: "/insights" },
+      { id: "nav-home", label: "Go to Home", path: "/" },
+      { id: "nav-review", label: "Go to Review", path: "/review" },
+      { id: "nav-insights", label: "Go to Library", path: "/insights" },
       { id: "nav-clients", label: "Go to Clients", path: "/clients" },
-      { id: "nav-proof", label: "Go to Shipped?", path: "/proof" },
-      { id: "nav-numbers", label: "Go to Numbers", path: "/numbers", admin: true },
+      { id: "nav-proof", label: "Go to Confirm shipped", path: "/proof" },
+      { id: "nav-numbers", label: "Go to Speed", path: "/numbers", admin: true },
       { id: "nav-settings", label: "Go to Settings", path: "/settings", admin: true },
     ];
     return items
@@ -173,7 +175,7 @@ export function CommandPalette() {
       id: `ins-${it.id ?? i}`,
       kind: "insight",
       kindLabel: "Insight",
-      label: it.title ?? it.handle ?? "Insight",
+      label: (it.title ? insightTitle(it.title) : null) ?? it.handle ?? "Insight",
       sub: it.client_name ?? it.handle ?? "",
       run: () => {
         if (it.id) navigate(`/insights/${it.id}`);

@@ -154,7 +154,7 @@ describe("runExtraction happy path", () => {
     const run = db.query("SELECT * FROM extraction_runs WHERE id = ?").get(r.runId) as Record<string, unknown>;
     expect(run.status).toBe("succeeded");
     expect(run.coverage_note).toBe("1 chunk, 0 citation failures, 0 verifier drops");
-    expect(run.prompt_version).toBe("v2");
+    expect(run.prompt_version).toBe("v4");
     expect(run.finished_at).toBeTruthy();
 
     const meeting = db.query("SELECT status FROM meetings WHERE id = ?").get(meetingId) as { status: string };

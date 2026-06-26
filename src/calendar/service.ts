@@ -48,6 +48,7 @@ export function setFeedUrl(db: Database, url: string, userId: string): void {
   if (parsed.protocol !== "https:") {
     throw new CalendarConfigError("Calendar feed URL must use https.");
   }
+  assertPublicHost(parsed.hostname);
   const tx = db.transaction(() => {
     db.query(
       `INSERT INTO app_settings (key, value, updated_by, updated_at) VALUES (?, ?, ?, ?)
@@ -89,6 +90,19 @@ let cache: { url: string; fetchedAt: number; events: IcsEvent[] } | null = null;
 /** Test hook + invalidation on settings changes. */
 export function clearCalendarCache(): void {
   cache = null;
+}
+
+/** SSRF guard: refuse loopback, private, link-local, and cloud-metadata hosts. */
+export function assertPublicHost(hostname: string): void {
+  const h = hostname.toLowerCase();
+  const privatePatterns = [
+    /^localhost$/, /^127\./, /^0\.0\.0\.0$/, /^10\./, /^192\.168\./,
+    /^172\.(1[6-9]|2\d|3[01])\./, /^169\.254\./, /^\[?::1\]?$/, /^\[?fe80:/, /^\[?fc/, /^\[?fd/,
+    /^metadata\.google/, /^169\.254\.169\.254$/,
+  ];
+  if (privatePatterns.some((re) => re.test(h))) {
+    throw new CalendarConfigError("Calendar feed URL points at a private or internal host.");
+  }
 }
 
 async function fetchParsedFeed(url: string, fetchImpl: typeof fetch): Promise<IcsEvent[]> {

@@ -265,11 +265,21 @@ export function perPerson(db: Database): PersonWeek[] {
   type Counter = keyof Pick<PersonWeek, "finalized" | "ticketed" | "evidence_confirms" | "email_copies">;
   const agg = new Map<string, PersonWeek>();
   const names = new Map<string, string>();
-  for (const u of db.query("SELECT id, name FROM users").all() as Array<{ id: string; name: string }>) {
+  // Disabled (offboarded) users are dropped from the per-person leaderboard:
+  // it is a current-team-pace view, and disabled accounts (e.g. the QA Bot,
+  // the generic founder account) are noise here, the same way they are filtered
+  // out of every owner picker. Raw history still lives in the events table.
+  const disabled = new Set<string>();
+  for (const u of db.query("SELECT id, name, disabled_at FROM users").all() as Array<{
+    id: string;
+    name: string;
+    disabled_at: string | null;
+  }>) {
     names.set(u.id, u.name);
+    if (u.disabled_at) disabled.add(u.id);
   }
   const bump = (userId: string | null, occurredAt: string, counter: Counter) => {
-    if (!userId) return;
+    if (!userId || disabled.has(userId)) return;
     const week = isoWeek(occurredAt);
     const key = `${userId}|${week}`;
     let row = agg.get(key);

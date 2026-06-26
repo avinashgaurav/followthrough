@@ -7,7 +7,7 @@ import { parseRelease, persistEntries } from "./parser.ts";
 
 /**
  * Release poller (SPEC.md section 6): READ-ONLY mirror of GitHub releases for
- * env.RELEASE_REPO (XYZ/XYZ) into the local releases table.
+ * env.RELEASE_REPO (xyz/xyz) into the local releases table.
  *
  * Org safety: this module only ever issues GET requests. The read token, when
  * present, is a read-only scope token (SPEC.md section 17) and never leaves
@@ -55,6 +55,54 @@ export async function fetchReleases(fetchImpl: FetchLike = fetch): Promise<GitHu
  * release.fetched event under the idempotency key
  * "release-<repo>-<github_release_id>". Returns the new local release ids.
  */
+/**
+ * Manual changelog intake: when GitHub is not connected, an admin can paste or
+ * upload release notes. Stored exactly like a polled release (parsed into
+ * entries, evented), with a synthetic github_release_id so re-submits of the
+ * same tag do not duplicate.
+ */
+export function addManualRelease(
+  db: Database,
+  input: { tag_name: string; name?: string | null; body_md: string; published_at?: string | null },
+  actorUserId: string,
+): { id: string; entry_count: number } {
+  const syntheticId = `manual:${input.tag_name.trim().toLowerCase()}`;
+  const existing = db
+    .query("SELECT id FROM releases WHERE repo = ? AND github_release_id = ?")
+    .get(env.RELEASE_REPO, syntheticId) as { id: string } | null;
+  if (existing) {
+    throw new Error(`A manual changelog for tag "${input.tag_name}" already exists.`);
+  }
+  const id = ulid();
+  const entries = parseRelease(input.body_md, input.tag_name);
+  const tx = db.transaction(() => {
+    db.query(
+      `INSERT INTO releases (id, repo, github_release_id, tag_name, name, body_md, published_at, fetched_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      id,
+      env.RELEASE_REPO,
+      syntheticId,
+      input.tag_name.trim(),
+      input.name ?? null,
+      input.body_md,
+      input.published_at ?? nowIso(),
+      nowIso(),
+    );
+    persistEntries(db, id, entries);
+    appendEvent(db, {
+      actorUserId,
+      entityType: "release",
+      entityId: id,
+      eventType: "release.added_manually",
+      payload: { tag_name: input.tag_name.trim(), entry_count: entries.length },
+      idempotencyKey: `release-${env.RELEASE_REPO}-${syntheticId}`,
+    });
+  });
+  tx();
+  return { id, entry_count: entries.length };
+}
+
 export function upsertReleases(db: Database, list: GitHubRelease[]): string[] {
   const newIds: string[] = [];
   const exists = db.query("SELECT id FROM releases WHERE repo = ? AND github_release_id = ?");

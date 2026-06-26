@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api, ApiError, type SttStatus, type User } from "../api";
 import { formatDate } from "../format";
 import {
@@ -20,7 +21,7 @@ import { useAuth } from "../auth";
 
 // Admin. Job: users, calendar feed, releases, digest, search.
 // Data: listUsers/createUser/rotateCode/revokeUser, calendarStatus/setCalendar/deleteCalendar,
-//       pollReleases, digestPreview, rebuildSearch, sttStatus, watchfolderStatus.
+//       releasesStatus/pollReleases, rebuildSearch, sttStatus, watchfolderStatus.
 
 function readCode(r: { loginCode?: string; login_code?: string } | undefined | null): string {
   if (!r) return "";
@@ -30,7 +31,10 @@ function readCode(r: { loginCode?: string; login_code?: string } | undefined | n
 export function Settings() {
   return (
     <>
-      <SectionHead title="Settings" job="Users, calendar feed, releases, digest, and search." />
+      <SectionHead
+        title="Settings"
+        job="Set up once, then come back only when something changes: users, calendar feed, releases, search, and system health."
+      />
       <div className="page-body stack" style={{ display: "flex", flexDirection: "column", gap: 28, maxWidth: 860 }}>
         <AccessSection />
         <UsersSection />
@@ -57,10 +61,12 @@ function Panel({
 }) {
   return (
     <section>
-      <div className="row-between" style={{ marginBottom: 12 }}>
+      <div className="row-between mb-12">
         <div>
-          <h2 style={{ fontSize: 15, fontWeight: 600 }}>{title}</h2>
-          <p className="muted small" style={{ margin: "3px 0 0", maxWidth: 560, lineHeight: 1.5 }}>
+          <h2 className="dlbl" style={{ margin: 0 }}>
+            {title}
+          </h2>
+          <p className="muted small" style={{ margin: "6px 0 0", maxWidth: 560, lineHeight: 1.5 }}>
             {desc}
           </p>
         </div>
@@ -68,101 +74,6 @@ function Panel({
       </div>
       {children}
     </section>
-  );
-}
-
-// ================================================================ Access (open by default)
-
-function AccessSection() {
-  const toast = useToast();
-  const { refresh } = useAuth();
-  const [state, setState] = useState<{ require_login: boolean; can_require: boolean } | null>(null);
-  const [error, setError] = useState<unknown>(null);
-  const [busy, setBusy] = useState(false);
-
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      setState(await api.getAccess());
-    } catch (e) {
-      setError(e);
-    }
-  }, []);
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  async function toggle(next: boolean) {
-    setBusy(true);
-    try {
-      await api.setAccess(next);
-      toast.push(
-        next
-          ? "Login is now required. You will need an account and code to get back in."
-          : "Access is now open. Anyone who can reach the app can use it.",
-        "success",
-      );
-      await load();
-      await refresh();
-    } catch (e) {
-      toast.push(e instanceof Error ? e.message : "Could not change access.", "critical");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Panel
-      title="Access"
-      desc="Followthrough is open by default: anyone who can reach it can use it, no login. Turn login on once you have added at least one teammate with a code below."
-    >
-      {error ? (
-        <ErrorAlert error={error} onRetry={load} />
-      ) : !state ? (
-        <Skeleton rows={2} />
-      ) : (
-        <div className="stack-sm" style={{ maxWidth: 560 }}>
-          <Alert
-            severity={state.require_login ? "info" : "warning"}
-            title={state.require_login ? "Login required" : "Open access"}
-          >
-            <p style={{ margin: 0 }}>
-              {state.require_login
-                ? "Only people with an account and a login code can get in."
-                : "Anyone who can reach this app has full access. Fine for local or trusted use; turn login on before exposing it publicly."}
-            </p>
-          </Alert>
-          {state.require_login ? (
-            <Btn
-              variant="ghost"
-              disabled={busy}
-              onClick={() => toggle(false)}
-              tooltip="Drop the login wall. Anyone with the link can use the app again."
-            >
-              {busy ? "Working" : "Make it open again"}
-            </Btn>
-          ) : (
-            <Btn
-              variant="primary"
-              disabled={busy || !state.can_require}
-              onClick={() => toggle(true)}
-              tooltip={
-                state.can_require
-                  ? "Require a login. You will be signed out and asked for a code."
-                  : "Add a teammate with a login code below first, or you would lock everyone out."
-              }
-            >
-              {busy ? "Working" : "Require login"}
-            </Btn>
-          )}
-          {!state.require_login && !state.can_require && (
-            <p className="tiny subtle" style={{ margin: 0 }}>
-              Add a teammate with a login code below first, then you can require login.
-            </p>
-          )}
-        </div>
-      )}
-    </Panel>
   );
 }
 
@@ -274,7 +185,7 @@ function UsersSection() {
   return (
     <Panel
       title="Users"
-      desc="People who can sign in. Each gets a one-time login code you share with them."
+      desc="Who can sign in; come here to add a teammate, hand out a login code, or cut off access when someone leaves."
       actions={
         <Btn
           variant="primary"
@@ -289,8 +200,13 @@ function UsersSection() {
         </Btn>
       }
     >
+      <p className="muted small" style={{ margin: "0 0 14px" }}>
+        If a shared team password (<code className="mono">ACCESS_PASSWORD</code>) is configured, anyone
+        with a <code className="mono">@xyz.com</code> email can sign in as a member without being added
+        here. Admins always sign in with a personal login code.
+      </p>
       {revealed && (
-        <div style={{ marginBottom: 14 }}>
+        <div className="mb-14">
           <Alert
             severity="success"
             title={revealed.rotated ? "New login code" : "User added"}
@@ -300,7 +216,7 @@ function UsersSection() {
               Share this login code with {revealed.who} now. It will not be shown again. If they lose it,
               rotate the code to issue a new one.
             </p>
-            <div className="row" style={{ gap: 8 }}>
+            <div className="row gap-8">
               <code
                 className="mono"
                 style={{
@@ -329,7 +245,7 @@ function UsersSection() {
       ) : users.length === 0 ? (
         <EmptyState title="No users yet" body="Add the first teammate to let them sign in." />
       ) : (
-        <div className="card" style={{ padding: 0 }}>
+        <div className="card p-0">
           <div className="table-wrap">
             <table className="table">
               <thead>
@@ -343,7 +259,7 @@ function UsersSection() {
               </thead>
               <tbody>
                 {users.map((u) => {
-                  const revoked = !!u.revoked_at;
+                  const revoked = !!u.disabled_at;
                   return (
                     <tr key={u.id}>
                       <td>{u.name || "-"}</td>
@@ -371,7 +287,7 @@ function UsersSection() {
                             variant="ghost"
                             disabled={revoked || rowBusy === u.id}
                             onClick={() => setRotateUser(u)}
-                            tooltip="Issue a fresh login code and invalidate the old one. Use if a code leaked or was lost."
+                            tooltip="Issue a fresh login code. Their old code stops working. Use if a code leaked or was lost."
                           >
                             Rotate code
                           </Btn>
@@ -438,7 +354,7 @@ function UsersSection() {
           <Field
             label="Role"
             htmlFor="nu-role"
-            help="Admins can reach Numbers and Settings. Members cannot."
+            help="Admins can reach Speed and Settings. Members cannot."
           >
             <select id="nu-role" className="ctrl" value={role} onChange={(e) => setRole(e.target.value)}>
               <option value="member">Member</option>
@@ -544,7 +460,7 @@ function CalendarSection() {
   return (
     <Panel
       title="Calendar feed"
-      desc="Connect a read-only iCal feed so upcoming meetings show up on the Capture page, ready to log."
+      desc="Paste your calendar's iCal feed once and upcoming meetings show up on the Capture page, ready to log."
     >
       {error ? (
         <ErrorAlert error={error} onRetry={() => void load()} />
@@ -553,7 +469,7 @@ function CalendarSection() {
       ) : configured ? (
         <div className="card">
           <div className="row-between">
-            <div className="row" style={{ gap: 8 }}>
+            <div className="row gap-8">
               <span className="st green">Connected</span>
               <span className="muted small">Upcoming meetings appear on Capture.</span>
             </div>
@@ -618,7 +534,27 @@ function CalendarSection() {
 
 function ReleasesSection() {
   const toast = useToast();
+  const navigate = useNavigate();
   const [polling, setPolling] = useState(false);
+  const [repo, setRepo] = useState("");
+  const [tokenMissing, setTokenMissing] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    api
+      .releasesStatus()
+      .then((r) => {
+        if (!alive) return;
+        if (typeof r?.repo === "string") setRepo(r.repo);
+        setTokenMissing(r?.github_token_configured === false);
+      })
+      .catch(() => {
+        // Status is a nice-to-have; the section works without it.
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   async function poll() {
     setPolling(true);
@@ -636,8 +572,8 @@ function ReleasesSection() {
         (typeof o.proposed === "number" && o.proposed) ||
         0;
       toast.push(
-        `Pulled releases. ${added} new release${added === 1 ? "" : "s"}` +
-          (matches ? `, ${matches} new match${matches === 1 ? "" : "es"} to confirm.` : "."),
+        `Checked GitHub. ${added} new release${added === 1 ? "" : "s"}` +
+          (matches ? `, ${matches} new proof${matches === 1 ? "" : "s"} to confirm.` : "."),
         "success",
       );
     } catch (e) {
@@ -650,73 +586,45 @@ function ReleasesSection() {
   return (
     <Panel
       title="Releases"
-      desc="Pull the latest releases from GitHub. New ones get matched against client asks on the Shipped? page."
+      desc="We check GitHub for new releases every hour and match them against client insights on the Confirm shipped page."
     >
+      {tokenMissing && (
+        <div className="mb-12">
+          <Alert severity="warning" title="GitHub is not connected.">
+            The server has no GITHUB_READ_TOKEN, so release checks will find nothing. Set
+            GITHUB_READ_TOKEN on the server to turn this on.
+          </Alert>
+        </div>
+      )}
       <div className="card">
         <div className="row-between">
-          <span className="muted small">Releases are usually pulled automatically. Use this to pull now.</span>
+          <span className="muted small">
+            {repo ? `Watching ${repo}. ` : ""}The next check runs on its own within the hour. Use this
+            if you just shipped and do not want to wait.
+          </span>
           <Btn
             variant="primary"
             size="sm"
             onClick={() => void poll()}
             disabled={polling}
-            tooltip="Fetch new releases from GitHub right now and run the matcher against open asks."
+            tooltip="Check GitHub right now instead of waiting for the hourly check. New releases get matched against open insights."
           >
-            {polling ? "Pulling" : "Poll now"}
+            {polling ? "Checking" : "Check GitHub now"}
           </Btn>
         </div>
-      </div>
-    </Panel>
-  );
-}
-
-// ================================================================ Digest
-
-function DigestSection() {
-  const [md, setMd] = useState<string | null>(null);
-  const [error, setError] = useState<unknown>(null);
-
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      setMd(await api.digestPreview());
-    } catch (e) {
-      setError(e);
-      setMd("");
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  return (
-    <Panel
-      title="Weekly digest"
-      desc="A summary of the week's progress. This is sent automatically every Monday. Below is a live preview."
-      actions={
-        <Btn
-          size="sm"
-          variant="ghost"
-          onClick={() => void load()}
-          tooltip="Re-build the preview from the latest data."
-        >
-          Refresh preview
-        </Btn>
-      }
-    >
-      <div className="card corner" style={{ maxHeight: 380, overflow: "auto" }}>
-        {error ? (
-          <ErrorAlert error={error} onRetry={() => void load()} />
-        ) : md === null ? (
-          <Skeleton rows={6} />
-        ) : md.trim() === "" ? (
-          <p className="muted small" style={{ margin: 0 }}>
-            Nothing to summarize yet. Once asks move through the pipeline, the Monday digest will fill in.
-          </p>
-        ) : (
-          <Markdown text={md} />
-        )}
+        <div className="row" style={{ gap: 10, marginTop: 12, flexWrap: "wrap" }}>
+          <span className="muted small">
+            No token yet? Paste changelogs manually on the Confirm shipped page.
+          </span>
+          <Btn
+            size="sm"
+            variant="ghost"
+            onClick={() => navigate("/proof")}
+            tooltip="Opens the Confirm shipped page, where you can paste a changelog by hand under the Releases tab."
+          >
+            Open Confirm shipped
+          </Btn>
+        </div>
       </div>
     </Panel>
   );
@@ -747,7 +655,7 @@ function SearchSection() {
   return (
     <Panel
       title="Search"
-      desc="Search across insights and transcripts stays current on its own. Rebuild only if results look stale."
+      desc="Search across insights and transcripts stays current on its own; rebuild only if results look out of date."
     >
       <div className="card">
         <div className="row-between">
@@ -756,7 +664,7 @@ function SearchSection() {
             size="sm"
             onClick={() => void rebuild()}
             disabled={busy}
-            tooltip="Re-index every insight and transcript. Safe to run anytime; takes a moment."
+            tooltip="Re-index every insight and transcript so search matches the latest edits. Safe to run anytime."
           >
             {busy ? "Rebuilding" : "Rebuild search index"}
           </Btn>
@@ -822,7 +730,7 @@ function SystemSection() {
   return (
     <Panel
       title="System status"
-      desc="Quick health of the helpers that run in the background."
+      desc="Health of the helpers that run in the background; check here only if transcription or the watch folder seems stuck."
       actions={
         <Btn size="sm" variant="ghost" onClick={() => void load()} tooltip="Re-check both helpers.">
           Refresh
@@ -831,7 +739,7 @@ function SystemSection() {
     >
       <div className="grid-2">
         <div className="card">
-          <div className="row-between" style={{ marginBottom: 6 }}>
+          <div className="row-between mb-6">
             <span className="lbl" style={{ margin: 0 }}>
               Transcription
             </span>
@@ -845,13 +753,13 @@ function SystemSection() {
           ) : stt === null ? (
             <Skeleton rows={2} />
           ) : sttOk ? (
-            <div className="row" style={{ gap: 8 }}>
+            <div className="row gap-8">
               <span className="st green">Available</span>
               <span className="muted small">Audio uploads can be transcribed.</span>
             </div>
           ) : (
             <div className="stack-sm">
-              <div className="row" style={{ gap: 8 }}>
+              <div className="row gap-8">
                 <span className="st muted">Off</span>
                 <span className="muted small">Audio cannot be transcribed yet. Paste transcripts by hand.</span>
               </div>
@@ -865,7 +773,7 @@ function SystemSection() {
         </div>
 
         <div className="card">
-          <div className="row-between" style={{ marginBottom: 6 }}>
+          <div className="row-between mb-6">
             <span className="lbl" style={{ margin: 0 }}>
               Watch folder
             </span>
@@ -880,7 +788,7 @@ function SystemSection() {
             <Skeleton rows={2} />
           ) : watchEnabled ? (
             <div className="stack-sm">
-              <div className="row" style={{ gap: 8 }}>
+              <div className="row gap-8">
                 <span className="st green">Watching</span>
                 {pending !== null && (
                   <span className="muted small">
@@ -896,12 +804,159 @@ function SystemSection() {
               {lastSeen && <p className="subtle tiny" style={{ margin: 0 }}>Last activity {formatDate(lastSeen)}</p>}
             </div>
           ) : (
-            <div className="row" style={{ gap: 8 }}>
+            <div className="row gap-8">
               <span className="st muted">Off</span>
               <span className="muted small">Not watching any folder. Upload transcripts on Capture instead.</span>
             </div>
           )}
         </div>
+      </div>
+    </Panel>
+  );
+}
+
+// ================================================================ Access (open by default)
+
+function AccessSection() {
+  const toast = useToast();
+  const { refresh } = useAuth();
+  const [state, setState] = useState<{ require_login: boolean; can_require: boolean } | null>(null);
+  const [error, setError] = useState<unknown>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      setState(await api.getAccess());
+    } catch (e) {
+      setError(e);
+    }
+  }, []);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function toggle(next: boolean) {
+    setBusy(true);
+    try {
+      await api.setAccess(next);
+      toast.push(
+        next
+          ? "Login is now required. You will need an account and code to get back in."
+          : "Access is now open. Anyone who can reach the app can use it.",
+        "success",
+      );
+      await load();
+      await refresh();
+    } catch (e) {
+      toast.push(e instanceof Error ? e.message : "Could not change access.", "critical");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Panel
+      title="Access"
+      desc="Followthrough is open by default: anyone who can reach it can use it, no login. Turn login on once you have added at least one teammate with a code below."
+    >
+      {error ? (
+        <ErrorAlert error={error} onRetry={load} />
+      ) : !state ? (
+        <Skeleton rows={2} />
+      ) : (
+        <div className="stack-sm" style={{ maxWidth: 560 }}>
+          <Alert
+            severity={state.require_login ? "info" : "warning"}
+            title={state.require_login ? "Login required" : "Open access"}
+          >
+            <p style={{ margin: 0 }}>
+              {state.require_login
+                ? "Only people with an account and a login code can get in."
+                : "Anyone who can reach this app has full access. Fine for local or trusted use; turn login on before exposing it publicly."}
+            </p>
+          </Alert>
+          {state.require_login ? (
+            <Btn
+              variant="ghost"
+              disabled={busy}
+              onClick={() => toggle(false)}
+              tooltip="Drop the login wall. Anyone with the link can use the app again."
+            >
+              {busy ? "Working" : "Make it open again"}
+            </Btn>
+          ) : (
+            <Btn
+              variant="primary"
+              disabled={busy || !state.can_require}
+              onClick={() => toggle(true)}
+              tooltip={
+                state.can_require
+                  ? "Require a login. You will be signed out and asked for a code."
+                  : "Add a teammate with a login code below first, or you would lock everyone out."
+              }
+            >
+              {busy ? "Working" : "Require login"}
+            </Btn>
+          )}
+          {!state.require_login && !state.can_require && (
+            <p className="tiny subtle" style={{ margin: 0 }}>
+              Add a teammate with a login code below first, then you can require login.
+            </p>
+          )}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+// ================================================================ Digest
+
+function DigestSection() {
+  const [md, setMd] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
+
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      setMd(await api.digestPreview());
+    } catch (e) {
+      setError(e);
+      setMd("");
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  return (
+    <Panel
+      title="Weekly digest"
+      desc="A summary of the week's progress. This is sent automatically every Monday. Below is a live preview."
+      actions={
+        <Btn
+          size="sm"
+          variant="ghost"
+          onClick={() => void load()}
+          tooltip="Re-build the preview from the latest data."
+        >
+          Refresh preview
+        </Btn>
+      }
+    >
+      <div className="card corner" style={{ maxHeight: 380, overflow: "auto" }}>
+        {error ? (
+          <ErrorAlert error={error} onRetry={() => void load()} />
+        ) : md === null ? (
+          <Skeleton rows={6} />
+        ) : md.trim() === "" ? (
+          <p className="muted small" style={{ margin: 0 }}>
+            Nothing to summarize yet. Once asks move through the pipeline, the Monday digest will fill in.
+          </p>
+        ) : (
+          <Markdown text={md} />
+        )}
       </div>
     </Panel>
   );

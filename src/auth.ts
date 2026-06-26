@@ -1,15 +1,39 @@
 import type { Database } from "bun:sqlite";
+import { timingSafeEqual } from "node:crypto";
 import { nowIso } from "./db.ts";
 import { ulid } from "./ids.ts";
 import { env } from "./config.ts";
+import { appendEvent } from "./events.ts";
 
 /**
  * Auth (SPEC.md section 1): admin issues email + login code. Codes hashed,
  * revocable. Rate-limited login. Sessions as HTTP-only cookies.
+ *
+ * Shared-password access: when ACCESS_PASSWORD is set, any allowed-domain email
+ * plus that one password signs in, auto-provisioned as a member. The per-user
+ * login-code path below stays as a fallback — admins still sign in with their
+ * personal code, and the shared password is deliberately refused for admin
+ * accounts so it can never escalate privileges.
  */
 
 const MAX_FAILURES = 8;
 const WINDOW_MINUTES = 15;
+
+/**
+ * Constant-time string compare. Pads both inputs to the same length so the
+ * timing-sensitive comparison always runs (no early return), then folds in the
+ * length check — so neither equality nor input length is revealed by timing.
+ */
+function secretsEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  const len = Math.max(ab.length, bb.length, 1);
+  const pa = Buffer.alloc(len);
+  const pb = Buffer.alloc(len);
+  ab.copy(pa);
+  bb.copy(pb);
+  return timingSafeEqual(pa, pb) && ab.length === bb.length;
+}
 
 /** Hardcoded by founder decision (2026-06-10): only xyz.com people can have accounts. */
 export const ALLOWED_EMAIL_DOMAIN = "xyz.com";
@@ -53,17 +77,74 @@ export type LoginResult =
   | { ok: true; sessionId: string; userId: string; role: "admin" | "member" }
   | { ok: false; reason: "locked_out" | "invalid" };
 
+/** Create a session row and return its id. */
+function openSession(db: Database, userId: string, ip: string | null, userAgent: string | null): string {
+  const sessionId = ulid() + ulid(); // 52 chars of entropy
+  const expires = new Date(Date.now() + env.SESSION_TTL_HOURS * 3_600_000).toISOString();
+  db.query(
+    "INSERT INTO sessions (id, user_id, created_at, expires_at, ip, user_agent) VALUES (?, ?, ?, ?, ?, ?)",
+  ).run(sessionId, userId, nowIso(), expires, ip, userAgent);
+  return sessionId;
+}
+
+/**
+ * Resolve the user for a shared-password sign-in. Auto-provisions an unknown
+ * allowed-domain email as a member. Returns null (refuse) for a disabled account
+ * or an admin — admins must use their personal login code, so the shared password
+ * can never be used to sign in as an admin.
+ */
+function resolveSharedUser(db: Database, email: string): { id: string; role: "admin" | "member" } | null {
+  const existing = db
+    .query("SELECT id, role, disabled_at FROM users WHERE email = ?")
+    .get(email) as { id: string; role: "admin" | "member"; disabled_at: string | null } | null;
+  if (existing) {
+    if (existing.disabled_at) return null;
+    if (existing.role === "admin") return null;
+    return { id: existing.id, role: existing.role };
+  }
+  const id = ulid();
+  const name = email.split("@")[0] || email; // local part as a starting display name
+  db.query(
+    "INSERT INTO users (id, email, name, role, code_hash, created_at) VALUES (?, ?, ?, 'member', NULL, ?)",
+  ).run(id, email, name, nowIso());
+  appendEvent(db, {
+    actorUserId: id,
+    entityType: "user",
+    entityId: id,
+    eventType: "user.created",
+    payload: { email, via: "shared_password" },
+  });
+  return { id, role: "member" };
+}
+
 export async function login(
   db: Database,
   email: string,
   code: string,
   ip: string | null,
   userAgent: string | null,
+  opts: { accessPassword?: string } = {},
 ): Promise<LoginResult> {
   const normalized = email.trim().toLowerCase();
   if (!isAllowedEmail(normalized)) return { ok: false, reason: "invalid" };
   if (recentFailures(db, normalized, ip) >= MAX_FAILURES) {
     return { ok: false, reason: "locked_out" };
+  }
+
+  // Shared-password path: any allowed-domain email + the one ACCESS_PASSWORD signs in.
+  // The whole branch is one transaction so auto-provisioning, the attempt record,
+  // and the session are all-or-nothing — a failure mid-way leaves no half-created
+  // user or unlogged attempt.
+  const shared = (opts.accessPassword ?? env.ACCESS_PASSWORD)?.trim();
+  if (shared && secretsEqual(code.trim(), shared)) {
+    return db.transaction((): LoginResult => {
+      const su = resolveSharedUser(db, normalized);
+      db.query(
+        "INSERT INTO login_attempts (email, ip, occurred_at, success) VALUES (?, ?, ?, ?)",
+      ).run(normalized, ip, nowIso(), su ? 1 : 0);
+      if (!su) return { ok: false, reason: "invalid" }; // disabled or admin → must use code
+      return { ok: true, sessionId: openSession(db, su.id, ip, userAgent), userId: su.id, role: su.role };
+    })();
   }
 
   const user = db
@@ -72,20 +153,20 @@ export async function login(
     )
     .get(normalized) as { id: string; role: "admin" | "member"; code_hash: string | null } | null;
 
-  const valid = !!user?.code_hash && (await verifyCode(code, user.code_hash));
+  // Verify against a dummy hash when the user is unknown so response timing
+  // does not reveal which emails have accounts.
+  const DUMMY_HASH =
+    "$argon2id$v=19$m=65536,t=2,p=1$isXupw/JrHHHFNGx0DfPHluXBtWYcLtQY6ZKH1jNi90$+gy6DYlg+xOtZRYcXi5jYhBUzm4B/8Kv/SqaIXD6yP0";
+  const valid = user?.code_hash
+    ? await verifyCode(code, user.code_hash)
+    : ((await verifyCode(code, DUMMY_HASH)), false);
   db.query(
     "INSERT INTO login_attempts (email, ip, occurred_at, success) VALUES (?, ?, ?, ?)",
   ).run(normalized, ip, nowIso(), valid ? 1 : 0);
 
   if (!user || !valid) return { ok: false, reason: "invalid" };
 
-  const sessionId = ulid() + ulid(); // 52 chars of entropy
-  const expires = new Date(Date.now() + env.SESSION_TTL_HOURS * 3_600_000).toISOString();
-  db.query(
-    "INSERT INTO sessions (id, user_id, created_at, expires_at, ip, user_agent) VALUES (?, ?, ?, ?, ?, ?)",
-  ).run(sessionId, user.id, nowIso(), expires, ip, userAgent);
-
-  return { ok: true, sessionId, userId: user.id, role: user.role };
+  return { ok: true, sessionId: openSession(db, user.id, ip, userAgent), userId: user.id, role: user.role };
 }
 
 export interface AuthedUser {
@@ -136,7 +217,11 @@ export function logout(db: Database, sessionId: string): void {
 
 /** Revoke a user's login code (offboarding). Kills their sessions too. */
 export function revokeCode(db: Database, userId: string): void {
-  db.query("UPDATE users SET code_hash = NULL, code_rotated_at = ? WHERE id = ?").run(
+  // Full offboard: clear the login code, mark the account disabled (so it drops
+  // out of owner pickers and can no longer sign in via code OR shared password),
+  // and kill any live sessions. Re-issuing a code (rotate) re-enables them.
+  db.query("UPDATE users SET code_hash = NULL, code_rotated_at = ?, disabled_at = ? WHERE id = ?").run(
+    nowIso(),
     nowIso(),
     userId,
   );

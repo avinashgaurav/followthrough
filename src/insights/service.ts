@@ -18,7 +18,6 @@ export const ITEM_TYPES = [
   "key_insight",
   "action_item_ours",
   "commitment_theirs",
-  "status_update",
 ] as const;
 export const STATES = [
   "extracted",
@@ -153,16 +152,46 @@ export function getInsightDetail(db: Database, id: string): Record<string, unkno
     .get(id) as Record<string, unknown> | null;
   if (!insight) return null;
 
-  const mentions = db
-    .query(
-      `SELECT m.id, m.meeting_id, m.client_id, m.quote, m.speaker, m.char_start, m.char_end, m.created_at,
-              mt.meeting_date, mt.seq AS meeting_seq, c.name AS client_name
-       FROM insight_mentions m
-       JOIN meetings mt ON mt.id = m.meeting_id
-       JOIN clients c ON c.id = m.client_id
-       WHERE m.insight_id = ? ORDER BY m.created_at, m.id`,
-    )
-    .all(id);
+  // Extraction sometimes emits overlapping quotes for the same point (e.g. one
+  // quote is a longer version of another). Collapse those so the detail view and
+  // the "asked N times" count don't double-show the same line: drop a mention whose
+  // quote is contained in a longer quote from the same meeting, and keep the earliest
+  // of exact duplicates. To avoid clobbering a short-but-distinct quote that merely
+  // shares a substring (e.g. "needs SSO" inside an unrelated longer quote), the
+  // containment must be backed by overlapping transcript char ranges; when positions
+  // are missing (legacy rows) we require a longer-quote AND a length floor instead.
+  const MIN_CONTAIN_LEN = 24;
+  const dedupeMentions = (rows: Array<Record<string, unknown>>): Array<Record<string, unknown>> => {
+    const norm = (q: unknown) => (typeof q === "string" ? q : "").toLowerCase().replace(/\s+/g, " ").trim();
+    const pos = (v: unknown) => (typeof v === "number" ? v : null);
+    return rows.filter((a, ai) => {
+      const na = norm(a.quote);
+      if (!na) return true;
+      return !rows.some((b, bi) => {
+        if (bi === ai || b.meeting_id !== a.meeting_id) return false;
+        const nb = norm(b.quote);
+        if (nb === na) return bi < ai; // exact duplicate: keep the earliest
+        if (nb.length <= na.length || !nb.includes(na)) return false;
+        const aS = pos(a.char_start), aE = pos(a.char_end), bS = pos(b.char_start), bE = pos(b.char_end);
+        if (aS !== null && aE !== null && bS !== null && bE !== null) {
+          return aS >= bS && aE <= bE; // a's transcript span sits inside b's
+        }
+        return na.length >= MIN_CONTAIN_LEN; // no positions: only collapse substantial quotes
+      });
+    });
+  };
+  const mentions = dedupeMentions(
+    db
+      .query(
+        `SELECT m.id, m.meeting_id, m.client_id, m.quote, m.speaker, m.char_start, m.char_end, m.created_at,
+                mt.meeting_date, mt.seq AS meeting_seq, c.name AS client_name
+         FROM insight_mentions m
+         JOIN meetings mt ON mt.id = m.meeting_id
+         JOIN clients c ON c.id = m.client_id
+         WHERE m.insight_id = ? ORDER BY m.created_at, m.id`,
+      )
+      .all(id) as Array<Record<string, unknown>>,
+  );
   const requesters = db
     .query(
       `SELECT r.client_id, c.name AS client_name, r.first_requested_at, r.last_requested_at
@@ -520,8 +549,10 @@ interface QueueItem {
 
 const QUEUE_SELECT = `
   SELECT i.id, i.title, i.state, i.track, i.item_type, i.priority,
-         i.client_id, c.name AS client_name, i.assignee_user_id, i.created_at
-  FROM insights i JOIN clients c ON c.id = i.client_id`;
+         i.client_id, c.name AS client_name, i.assignee_user_id, i.created_at,
+         i.meeting_id, mt.seq AS meeting_seq, mt.meeting_date, mt.title AS meeting_title
+  FROM insights i JOIN clients c ON c.id = i.client_id
+  JOIN meetings mt ON mt.id = i.meeting_id`;
 
 function withHandles(rows: QueueItem[]): QueueItem[] {
   return rows.map((r) => ({ ...r, handle: insightHandle(r.id) }));
@@ -539,15 +570,18 @@ export function getQueue(db: Database, user: Actor): Record<string, unknown> {
   const toFinalize = db
     .query(
       `${QUEUE_SELECT}
-       WHERE i.state = 'triaged' AND i.assignee_user_id = ?
+       WHERE i.state = 'triaged' AND (i.assignee_user_id IS NULL OR i.assignee_user_id = ?)
        ORDER BY i.priority DESC, i.created_at`,
     )
     .all(user.id) as QueueItem[];
 
+  // All finalized insights without a raised ticket, regardless of track. Ticketing
+  // is human-triggered, so non-engineering items stay visible here rather than
+  // vanishing after they are locked (the "work goes invisible" failure, ISSUE-001).
   const toTicket = db
     .query(
       `${QUEUE_SELECT}
-       WHERE i.state = 'finalized' AND i.track = 'engineering' AND i.assignee_user_id = ?
+       WHERE i.state = 'finalized' AND (i.assignee_user_id IS NULL OR i.assignee_user_id = ?)
          AND NOT EXISTS (SELECT 1 FROM tickets t WHERE t.insight_id = i.id AND t.raised_at IS NOT NULL)
        ORDER BY i.priority DESC, i.created_at`,
     )
@@ -561,7 +595,7 @@ export function getQueue(db: Database, user: Actor): Record<string, unknown> {
        FROM completion_evidence ce
        JOIN insights i ON i.id = ce.insight_id
        JOIN clients c ON c.id = i.client_id
-       WHERE ce.status = 'proposed' AND i.assignee_user_id = ?
+       WHERE ce.status = 'proposed' AND (i.assignee_user_id IS NULL OR i.assignee_user_id = ?)
        ORDER BY ce.created_at`,
     )
     .all(user.id) as Array<QueueItem & { evidence_id: string; evidence_kind: string; confidence: number; proposed_at: string }>;
@@ -570,7 +604,7 @@ export function getQueue(db: Database, user: Actor): Record<string, unknown> {
   const toEmail = db
     .query(
       `${QUEUE_SELECT}
-       WHERE i.state = 'shipped' AND i.assignee_user_id = ?
+       WHERE i.state = 'shipped' AND (i.assignee_user_id IS NULL OR i.assignee_user_id = ?)
          AND NOT EXISTS (
            SELECT 1 FROM events e
            LEFT JOIN email_drafts d ON d.id = e.entity_id

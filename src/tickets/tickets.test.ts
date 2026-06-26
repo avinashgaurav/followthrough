@@ -189,16 +189,16 @@ describe("mark-raised (manual paste-back)", () => {
     const { db, assigneeId, insightId } = seed();
     const ticketId = insertDraft(db, insightId, assigneeId);
 
-    // paste-back may name ANY repo, including XYZ: the human created the issue
+    // paste-back may name ANY repo, including xyz: the human created the issue
     const ticket = markRaised(db, {
       ticketId,
-      externalUrl: "https://github.com/XYZ/XYZ/issues/123",
+      externalUrl: "https://github.com/xyz/xyz/issues/123",
       actor: { id: assigneeId, role: "member" },
     });
 
-    expect(ticket.repo).toBe("XYZ/XYZ");
+    expect(ticket.repo).toBe("xyz/xyz");
     expect(ticket.external_number).toBe(123);
-    expect(ticket.external_url).toBe("https://github.com/XYZ/XYZ/issues/123");
+    expect(ticket.external_url).toBe("https://github.com/xyz/xyz/issues/123");
     expect(ticket.create_mode).toBe("manual_paste");
     expect(ticket.state).toBe("raised");
     expect(ticket.raised_at).toBeTruthy();
@@ -207,7 +207,7 @@ describe("mark-raised (manual paste-back)", () => {
     const events = ticketEvents(db, ticketId, "ticket.raised");
     expect(events).toHaveLength(1);
     const payload = JSON.parse(String(events[0]!.payload_json)) as Record<string, unknown>;
-    expect(payload.repo).toBe("XYZ/XYZ");
+    expect(payload.repo).toBe("xyz/xyz");
     expect(payload.number).toBe(123);
     expect(payload.mode).toBe("manual_paste");
   });
@@ -253,15 +253,15 @@ describe("mark-raised (manual paste-back)", () => {
 });
 
 describe("create-direct (org safety)", () => {
-  test("XYZ repo returns 403 even with a token set; GitHub is never called", async () => {
+  test("xyz repo returns 403 even with a token set; GitHub is never called", async () => {
     const { db, assigneeId, insightId } = seed();
     const ticketId = insertDraft(db, insightId, assigneeId);
-    const gh = stubFetch(201, { html_url: "https://github.com/XYZ/XYZ/issues/9", number: 9 });
+    const gh = stubFetch(201, { html_url: "https://github.com/xyz/xyz/issues/9", number: 9 });
 
     const err = await expectHttp(
       createDirect(db, {
         ticketId,
-        repo: "XYZ/XYZ",
+        repo: "xyz/xyz",
         actor: { id: assigneeId, role: "member" },
         token: "ghp_test_token",
         fetchImpl: gh.fn,
@@ -269,7 +269,7 @@ describe("create-direct (org safety)", () => {
       403,
     );
 
-    expect(err.message).toContain("XYZ");
+    expect(err.message).toContain("xyz");
     expect(gh.calls).toHaveLength(0); // the write never reached the network
     expect(getTicket(db, ticketId).state).toBe("draft");
     expect(insightState(db, insightId)).toBe("finalized");
@@ -382,9 +382,9 @@ describe("create-direct (org safety)", () => {
     expect(insightState(db, insightId)).toBe("finalized");
   });
 
-  test("createIssue itself refuses XYZ even when called directly (defense in depth)", async () => {
+  test("createIssue itself refuses xyz even when called directly (defense in depth)", async () => {
     const gh = stubFetch(201, {});
-    await expect(createIssue("XYZ/XYZ", "t", "b", "ghp_test_token", gh.fn)).rejects.toThrow(/XYZ/);
+    await expect(createIssue("xyz/xyz", "t", "b", "ghp_test_token", gh.fn)).rejects.toThrow(/xyz/);
     expect(gh.calls).toHaveLength(0);
   });
 });
