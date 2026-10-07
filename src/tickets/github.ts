@@ -4,7 +4,7 @@ import { assertRepoWritable } from "../config.ts";
  * GitHub issue creation (SPEC.md section 7). This is the ONLY code path that
  * writes to GitHub. assertRepoWritable runs inside createIssue itself, not
  * just in the route, so no caller can reach the GitHub API write without
- * passing the org-safety allowlist (xyz is blocked there).
+ * passing the org-safety allowlist (BLOCKED_ORGS are refused there).
  */
 
 export type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;

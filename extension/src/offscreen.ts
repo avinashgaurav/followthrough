@@ -8,14 +8,13 @@
  * Uploading from here (instead of relaying to the SW) avoids shipping the
  * blob through chrome.runtime messages, which JSON-serialize payloads.
  */
-import { BASE_URL } from "./config.ts";
 import type { OffscreenMessage, OffscreenStartPayload, RecState } from "./types.ts";
 
 let stream: MediaStream | null = null;
 let audioCtx: AudioContext | null = null;
 let recorder: MediaRecorder | null = null;
 let chunks: Blob[] = [];
-let meta: { clientId: string; clientName: string; title: string } | null = null;
+let meta: { clientId: string; clientName: string; title: string; baseUrl: string } | null = null;
 let pendingBlob: Blob | null = null;
 let stopping = false;
 
@@ -37,7 +36,12 @@ function todayIso(): string {
 
 async function start(payload: OffscreenStartPayload): Promise<void> {
   if (recorder) throw new Error("Already recording.");
-  meta = { clientId: payload.clientId, clientName: payload.clientName, title: payload.title };
+  meta = {
+    clientId: payload.clientId,
+    clientName: payload.clientName,
+    title: payload.title,
+    baseUrl: payload.baseUrl,
+  };
   chunks = [];
   pendingBlob = null;
   stopping = false;
@@ -135,7 +139,7 @@ async function upload(): Promise<void> {
 
   let res: Response;
   try {
-    res = await fetch(`${BASE_URL}/api/meetings`, {
+    res = await fetch(`${meta.baseUrl}/api/meetings`, {
       method: "POST",
       body: fd,
       credentials: "include",
@@ -143,7 +147,7 @@ async function upload(): Promise<void> {
   } catch (err) {
     pushState({
       phase: "error",
-      error: `Upload failed: ${String(err)}. Is the server running at ${BASE_URL}?`,
+      error: `Upload failed: ${String(err)}. Is the server running at ${meta.baseUrl}?`,
       canRetry: true,
     });
     return;

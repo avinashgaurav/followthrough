@@ -60,6 +60,11 @@ declare namespace chrome {
     function closeDocument(): Promise<void>;
   }
 
+  namespace permissions {
+    function request(permissions: { origins?: string[] }): Promise<boolean>;
+    function contains(permissions: { origins?: string[] }): Promise<boolean>;
+  }
+
   namespace storage {
     interface StorageArea {
       get(keys?: string | string[] | null): Promise<Record<string, unknown>>;

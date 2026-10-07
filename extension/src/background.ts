@@ -9,6 +9,7 @@
  * - Hold the canonical recording state in chrome.storage.session so the
  *   popup can close and reopen mid-recording.
  */
+import { getBaseUrl } from "./config.ts";
 import type { Ack, BgMessage, RecState, StartRecordingPayload } from "./types.ts";
 
 const OFFSCREEN_URL = "offscreen.html";
@@ -76,7 +77,7 @@ async function handleStart(payload: StartRecordingPayload): Promise<Ack> {
   const ack = (await chrome.runtime.sendMessage({
     target: "offscreen",
     type: "OFFSCREEN_START",
-    payload: { ...payload, streamId },
+    payload: { ...payload, streamId, baseUrl: await getBaseUrl() },
   })) as Ack | undefined;
 
   if (!ack?.ok) {

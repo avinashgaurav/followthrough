@@ -103,8 +103,16 @@ export const EVIDENCE_KINDS = [
   "manual_attestation",
 ] as const;
 
-/** Hardcoded direct-create allowlist. The xyz org is write-blocked server-side. */
-export const REPO_ALLOWLIST = ["avinashgaurav/followthrough"] as const;
+/** Account email rule from the server's ALLOWED_EMAIL_DOMAINS. Empty list → any email. */
+export function emailAllowed(email: string, domains: string[]): boolean {
+  const mail = email.trim().toLowerCase();
+  return domains.length === 0 || domains.some((d) => mail.endsWith(`@${d}`));
+}
+
+/** "@acme.com" or "@acme.com or @acme.io"; null when any domain is allowed. */
+export function domainRule(domains: string[]): string | null {
+  return domains.length ? domains.map((d) => `@${d}`).join(" or ") : null;
+}
 
 export function insightHandle(id: string): string {
   return `INS-${id.slice(-6).toUpperCase()}`;
@@ -440,7 +448,16 @@ export const api = {
   login: (email: string, code: string) =>
     post<{ user?: User; [k: string]: unknown }>("/api/auth/login", { email, code }),
   logout: () => post<unknown>("/api/auth/logout"),
-  me: () => get<{ user: User; require_login?: boolean; is_guest?: boolean }>("/api/me"),
+  me: () =>
+    get<{
+      user: User;
+      require_login?: boolean;
+      is_guest?: boolean;
+      allowed_email_domains?: string[];
+      writable_repos?: string[];
+    }>("/api/me"),
+  // Public: the email-domain rule, readable before sign-in.
+  authConfig: () => get<{ allowed_email_domains: string[] }>("/api/auth/config"),
   // Public probe used on app load; returns { user: null } (200) when signed out.
   session: () => get<{ user: User | null }>("/api/auth/session"),
 

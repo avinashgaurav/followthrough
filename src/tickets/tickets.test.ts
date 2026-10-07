@@ -3,7 +3,7 @@ import type { Database } from "bun:sqlite";
 import { openTestDb, nowIso } from "../db.ts";
 import { ulid, insightHandle } from "../ids.ts";
 import { MockLLM, setLLM } from "../llm/provider.ts";
-import { WRITABLE_REPO_ALLOWLIST } from "../config.ts";
+import { writableRepos } from "../config.ts";
 import { createIssue, GitHubApiError, type FetchLike } from "./github.ts";
 import {
   HttpError,
@@ -16,7 +16,7 @@ import {
   ticketFooter,
 } from "./service.ts";
 
-const ALLOWED_REPO = WRITABLE_REPO_ALLOWLIST[0]!;
+const ALLOWED_REPO = writableRepos()[0]!;
 
 interface Seeded {
   db: Database;

@@ -13,8 +13,8 @@ import {
   isAllowedEmail,
   isGuestUser,
   GUEST_USER_ID,
-  ALLOWED_EMAIL_DOMAIN,
 } from "./auth.ts";
+import { allowedEmailDomains, writableRepos } from "./config.ts";
 import { authRequired, setAuthRequired } from "./settings.ts";
 import { appendEvent } from "./events.ts";
 
@@ -64,7 +64,18 @@ route("POST", "/api/auth/logout", "user", (req) => {
 });
 
 route("GET", "/api/me", "user", (_req, user) =>
-  json({ user, require_login: authRequired(getDb()), is_guest: isGuestUser(user) }),
+  json({
+    user,
+    require_login: authRequired(getDb()),
+    is_guest: isGuestUser(user),
+    allowed_email_domains: allowedEmailDomains(),
+    writable_repos: writableRepos(),
+  }),
+);
+
+// Public: the login screen needs the domain rule before anyone is signed in.
+route("GET", "/api/auth/config", "public", () =>
+  json({ allowed_email_domains: allowedEmailDomains() }),
 );
 
 // Access mode: read + toggle whether login is required (admin only).
@@ -109,7 +120,8 @@ route("POST", "/api/users", "admin", async (req, admin) => {
   const body = CreateUserSchema.safeParse(await req.json().catch(() => null));
   if (!body.success) return json({ error: body.error.flatten() }, 400);
   if (!isAllowedEmail(body.data.email)) {
-    return json({ error: `Only @${ALLOWED_EMAIL_DOMAIN} emails can have accounts.` }, 400);
+    const domains = allowedEmailDomains().map((d) => `@${d}`).join(", ");
+    return json({ error: `Only ${domains} emails can have accounts.` }, 400);
   }
   const code = generateLoginCode();
   const id = ulid();
