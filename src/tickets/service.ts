@@ -10,7 +10,7 @@ import { createIssue, type FetchLike } from "./github.ts";
 /**
  * Ticketing (SPEC.md section 7): draft-first, human-triggered only.
  * The tool never creates a GitHub issue on its own. Direct API creation is
- * gated by assertRepoWritable (xyz org blocked); manual paste-back may
+ * gated by assertRepoWritable (BLOCKED_ORGS refused); manual paste-back may
  * name any repo because the human created that issue, not the tool.
  */
 
@@ -240,7 +240,7 @@ function persistRaise(
 }
 
 /**
- * Manual copy-paste path. The pasted URL may name ANY repo including xyz:
+ * Manual copy-paste path. The pasted URL may name ANY repo, including a blocked org:
  * the human created that issue by hand, so assertRepoWritable does not apply.
  */
 export function markRaised(
@@ -262,7 +262,7 @@ export function markRaised(
 
 /**
  * Direct API creation. assertRepoWritable runs FIRST, before any other check:
- * xyz and non-allowlisted repos get a 403 before the ticket is even loaded.
+ * blocked-org and non-allowlisted repos get a 403 before the ticket is even loaded.
  */
 export async function createDirect(
   db: Database,

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api, ApiError, type SttStatus, type User } from "../api";
+import { api, ApiError, domainRule, emailAllowed, type SttStatus, type User } from "../api";
 import { formatDate } from "../format";
 import {
   Alert,
@@ -80,6 +80,8 @@ function Panel({
 // ================================================================ Users
 
 function UsersSection() {
+  const { allowedDomains } = useAuth();
+  const rule = domainRule(allowedDomains);
   const toast = useToast();
   const [users, setUsers] = useState<User[] | null>(null);
   const [error, setError] = useState<unknown>(null);
@@ -120,8 +122,8 @@ function UsersSection() {
       setAddError("Enter a name.");
       return;
     }
-    if (!mail.endsWith("@xyz.com")) {
-      setAddError("Use a @xyz.com email. Only @xyz.com accounts can sign in.");
+    if (!emailAllowed(mail, allowedDomains)) {
+      setAddError(`Use a ${rule} email. Only ${rule} accounts can sign in.`);
       return;
     }
     setAdding(true);
@@ -202,7 +204,7 @@ function UsersSection() {
     >
       <p className="muted small" style={{ margin: "0 0 14px" }}>
         If a shared team password (<code className="mono">ACCESS_PASSWORD</code>) is configured, anyone
-        with a <code className="mono">@xyz.com</code> email can sign in as a member without being added
+        with {rule ? <>a <code className="mono">{rule}</code></> : "any"} email can sign in as a member without being added
         here. Admins always sign in with a personal login code.
       </p>
       {revealed && (
@@ -338,17 +340,17 @@ function UsersSection() {
               className="ctrl"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Avinash Gaurav"
+              placeholder="Jane Doe"
             />
           </Field>
-          <Field label="Work email" htmlFor="nu-email" hint="Must be a @xyz.com address.">
+          <Field label="Work email" htmlFor="nu-email" hint={rule ? `Must be a ${rule} address.` : undefined}>
             <input
               id="nu-email"
               className="ctrl mono"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@xyz.com"
+              placeholder={allowedDomains[0] ? `you@${allowedDomains[0]}` : "you@company.com"}
             />
           </Field>
           <Field

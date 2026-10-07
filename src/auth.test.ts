@@ -3,6 +3,7 @@ import type { Database } from "bun:sqlite";
 import { openTestDb, nowIso } from "./db.ts";
 import { ulid } from "./ids.ts";
 import { login, hashCode, isAllowedEmail } from "./auth.ts";
+import { env } from "./config.ts";
 
 const PW = "team-shared-password-123";
 
@@ -20,7 +21,33 @@ function seedUser(
 }
 
 describe("isAllowedEmail", () => {
-  test("only @xyz.com passes", () => {
+  test("no domains configured → any well-formed email passes", () => {
+    expect(isAllowedEmail("a@gmail.com", [])).toBe(true);
+    expect(isAllowedEmail("  B@Startup.IO ", [])).toBe(true);
+    expect(isAllowedEmail("not-an-email", [])).toBe(false);
+    expect(isAllowedEmail("a@b@c.com", [])).toBe(false);
+  });
+
+  test("multiple domains: any listed domain passes, lookalikes fail", () => {
+    expect(isAllowedEmail("a@acme.com", ["acme.com", "acme.io"])).toBe(true);
+    expect(isAllowedEmail("a@acme.io", ["acme.com", "acme.io"])).toBe(true);
+    expect(isAllowedEmail("a@notacme.com", ["acme.com"])).toBe(false);
+  });
+
+  test("ALLOWED_EMAIL_DOMAINS env drives the default (normalized, @ optional)", () => {
+    const saved = env.ALLOWED_EMAIL_DOMAINS;
+    try {
+      env.ALLOWED_EMAIL_DOMAINS = " @Acme.com , ";
+      expect(isAllowedEmail("x@acme.com")).toBe(true);
+      expect(isAllowedEmail("x@xyz.com")).toBe(false);
+      env.ALLOWED_EMAIL_DOMAINS = undefined;
+      expect(isAllowedEmail("x@anything.dev")).toBe(true);
+    } finally {
+      env.ALLOWED_EMAIL_DOMAINS = saved;
+    }
+  });
+
+  test("only @xyz.com passes when locked to xyz.com", () => {
     expect(isAllowedEmail("a@xyz.com")).toBe(true);
     expect(isAllowedEmail("A@XYZ.COM")).toBe(true);
     expect(isAllowedEmail("a@gmail.com")).toBe(false);

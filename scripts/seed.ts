@@ -5,8 +5,8 @@ import { ulid } from "../src/ids.ts";
 import { generateLoginCode, hashCode } from "../src/auth.ts";
 import { appendEvent } from "../src/events.ts";
 
-const email = (process.argv[2] ?? "admin@xyz.com").toLowerCase();
-const name = process.argv[3] ?? "Avinash Gaurav";
+const email = (process.argv[2] ?? process.env.ADMIN_EMAIL ?? "admin@example.com").toLowerCase();
+const name = process.argv[3] ?? process.env.ADMIN_NAME ?? "Admin";
 
 const db = getDb();
 const existing = db.query("SELECT id FROM users WHERE email = ?").get(email);

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "../auth";
 import {
   api,
   ApiError,
-  REPO_ALLOWLIST,
   TRACKS,
   EVIDENCE_KINDS,
   insightHandle,
@@ -1014,6 +1014,7 @@ function TicketPanel({
   onChanged: () => Promise<void>;
   toastPush: (m: string, s?: "info" | "success" | "warning" | "critical") => void;
 }) {
+  const { writableRepos } = useAuth();
   const [drafting, setDrafting] = useState(false);
   const [urlByTicket, setUrlByTicket] = useState<Record<string, string>>({});
   const [repoByTicket, setRepoByTicket] = useState<Record<string, string>>({});
@@ -1060,7 +1061,7 @@ function TicketPanel({
   }
 
   async function createDirect(ticketId: string) {
-    const repo = repoByTicket[ticketId] ?? REPO_ALLOWLIST[0];
+    const repo = repoByTicket[ticketId] ?? writableRepos[0];
     if (!repo) return;
     setActing(ticketId);
     try {
@@ -1098,7 +1099,7 @@ function TicketPanel({
             return (
               <div key={t.id} style={{ border: "1px solid var(--line-soft)", borderRadius: "var(--r)", padding: 10 }}>
                 <div className="row-between mb-8">
-                  <span className="tiny mono subtle">{t.repo || REPO_ALLOWLIST[0]}</span>
+                  <span className="tiny mono subtle">{t.repo || writableRepos[0] || "GitHub"}</span>
                   <StatePill state={t.state} />
                 </div>
                 {t.title && <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 6 }}>{t.title}</div>}
@@ -1142,14 +1143,15 @@ function TicketPanel({
                         Mark raised
                       </Btn>
                     </div>
+                    {writableRepos.length > 0 && (
                     <div className="row gap-6">
                       <select
                         className="ctrl"
                         style={{ flex: 1, minWidth: 0 }}
-                        value={repoByTicket[t.id] ?? REPO_ALLOWLIST[0]}
+                        value={repoByTicket[t.id] ?? writableRepos[0]}
                         onChange={(e) => setRepoByTicket((m) => ({ ...m, [t.id]: e.target.value }))}
                       >
-                        {REPO_ALLOWLIST.map((r) => (
+                        {writableRepos.map((r) => (
                           <option key={r} value={r}>
                             {r}
                           </option>
@@ -1164,6 +1166,7 @@ function TicketPanel({
                         Create on GitHub
                       </Btn>
                     </div>
+                    )}
                     <p className="tiny subtle" style={{ margin: 0 }}>
                       Nothing is ever created automatically. You choose.
                     </p>

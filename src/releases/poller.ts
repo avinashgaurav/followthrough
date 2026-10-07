@@ -1,5 +1,5 @@
 import type { Database } from "bun:sqlite";
-import { env } from "../config.ts";
+import { env, releaseRepo } from "../config.ts";
 import { nowIso } from "../db.ts";
 import { ulid } from "../ids.ts";
 import { appendEvent } from "../events.ts";
@@ -7,7 +7,7 @@ import { parseRelease, persistEntries } from "./parser.ts";
 
 /**
  * Release poller (SPEC.md section 6): READ-ONLY mirror of GitHub releases for
- * env.RELEASE_REPO (xyz/xyz) into the local releases table.
+ * env.RELEASE_REPO into the local releases table. Off when RELEASE_REPO is unset.
  *
  * Org safety: this module only ever issues GET requests. The read token, when
  * present, is a read-only scope token (SPEC.md section 17) and never leaves
@@ -32,6 +32,9 @@ export type FetchLike = (
 
 /** Fetch the latest releases (newest first, GitHub default ordering). */
 export async function fetchReleases(fetchImpl: FetchLike = fetch): Promise<GitHubRelease[]> {
+  if (!env.RELEASE_REPO) {
+    throw new Error("RELEASE_REPO is not set. Add owner/name of your releases repo to .env, or paste changelogs manually.");
+  }
   const url = `https://api.github.com/repos/${env.RELEASE_REPO}/releases?per_page=30`;
   const headers: Record<string, string> = {
     accept: "application/vnd.github+json",
@@ -69,7 +72,7 @@ export function addManualRelease(
   const syntheticId = `manual:${input.tag_name.trim().toLowerCase()}`;
   const existing = db
     .query("SELECT id FROM releases WHERE repo = ? AND github_release_id = ?")
-    .get(env.RELEASE_REPO, syntheticId) as { id: string } | null;
+    .get(releaseRepo(), syntheticId) as { id: string } | null;
   if (existing) {
     throw new Error(`A manual changelog for tag "${input.tag_name}" already exists.`);
   }
@@ -81,7 +84,7 @@ export function addManualRelease(
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       id,
-      env.RELEASE_REPO,
+      releaseRepo(),
       syntheticId,
       input.tag_name.trim(),
       input.name ?? null,
@@ -96,7 +99,7 @@ export function addManualRelease(
       entityId: id,
       eventType: "release.added_manually",
       payload: { tag_name: input.tag_name.trim(), entry_count: entries.length },
-      idempotencyKey: `release-${env.RELEASE_REPO}-${syntheticId}`,
+      idempotencyKey: `release-${releaseRepo()}-${syntheticId}`,
     });
   });
   tx();
@@ -113,7 +116,7 @@ export function upsertReleases(db: Database, list: GitHubRelease[]): string[] {
 
   for (const rel of list) {
     if (rel.draft) continue; // unpublished drafts are not shipping evidence
-    if (exists.get(env.RELEASE_REPO, rel.id)) continue;
+    if (exists.get(releaseRepo(), rel.id)) continue;
 
     const id = ulid();
     const body = rel.body ?? "";
@@ -121,7 +124,7 @@ export function upsertReleases(db: Database, list: GitHubRelease[]): string[] {
     const tx = db.transaction(() => {
       insert.run(
         id,
-        env.RELEASE_REPO,
+        releaseRepo(),
         rel.id,
         rel.tag_name,
         rel.name ?? null,
@@ -136,13 +139,13 @@ export function upsertReleases(db: Database, list: GitHubRelease[]): string[] {
         entityId: id,
         eventType: "release.fetched",
         payload: {
-          repo: env.RELEASE_REPO,
+          repo: releaseRepo(),
           github_release_id: rel.id,
           tag_name: rel.tag_name,
           published_at: rel.published_at ?? null,
           entry_count: entries.length,
         },
-        idempotencyKey: `release-${env.RELEASE_REPO}-${rel.id}`,
+        idempotencyKey: `release-${releaseRepo()}-${rel.id}`,
       });
     });
     tx();

@@ -1,5 +1,6 @@
 import type { Database } from "bun:sqlite";
 import { timingSafeEqual } from "node:crypto";
+import { allowedEmailDomains } from "./config.ts";
 import { nowIso } from "./db.ts";
 import { ulid } from "./ids.ts";
 import { env } from "./config.ts";
@@ -35,11 +36,11 @@ function secretsEqual(a: string, b: string): boolean {
   return timingSafeEqual(pa, pb) && ab.length === bb.length;
 }
 
-/** Hardcoded by founder decision (2026-06-10): only xyz.com people can have accounts. */
-export const ALLOWED_EMAIL_DOMAIN = "xyz.com";
-
-export function isAllowedEmail(email: string): boolean {
-  return email.trim().toLowerCase().endsWith(`@${ALLOWED_EMAIL_DOMAIN}`);
+/** Accounts are limited to ALLOWED_EMAIL_DOMAINS when set; otherwise any email may hold one. */
+export function isAllowedEmail(email: string, domains: string[] = allowedEmailDomains()): boolean {
+  const normalized = email.trim().toLowerCase();
+  if (domains.length === 0) return /^[^@\s]+@[^@\s]+$/.test(normalized);
+  return domains.some((d) => normalized.endsWith(`@${d}`));
 }
 
 export async function hashCode(code: string): Promise<string> {
