@@ -3,7 +3,7 @@
  * Plain TS, no framework. The service worker owns recording state; the
  * popup renders it and polls while a recording or upload is in flight.
  */
-import { BASE_URL, MEETINGS_PAGE_URL } from "./config.ts";
+import { DEFAULT_BASE_URL, getBaseUrl, normalizeBaseUrl, setBaseUrl } from "./config.ts";
 import type { Ack, RecState } from "./types.ts";
 
 interface Client {
@@ -16,6 +16,7 @@ const root = document.getElementById("root") as HTMLElement;
 let clients: Client[] = [];
 let state: RecState = { phase: "idle" };
 let lastEmail = "";
+let baseUrl = DEFAULT_BASE_URL;
 let formClientId = "";
 let formTitle = "";
 let formConsent = false;
@@ -62,7 +63,7 @@ async function send(msg: unknown): Promise<Ack> {
 }
 
 async function api(path: string, init?: RequestInit): Promise<Response> {
-  return fetch(`${BASE_URL}${path}`, { ...init, credentials: "include" });
+  return fetch(`${baseUrl}${path}`, { ...init, credentials: "include" });
 }
 
 function stopTimers(): void {
@@ -112,7 +113,7 @@ async function doLogin(email: string, code: string): Promise<void> {
       body: JSON.stringify({ email, code }),
     });
   } catch {
-    throw new Error(`Cannot reach the server at ${BASE_URL}. Start it with: bun run dev`);
+    throw new Error(`Cannot reach the server at ${baseUrl}. Check the server URL.`);
   }
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { error?: string } | null;
@@ -126,7 +127,7 @@ async function doLogin(email: string, code: string): Promise<void> {
   if (me.status === 401) {
     throw new Error(
       "Login succeeded but the session cookie was not accepted on the follow-up request. Check the server is on " +
-        BASE_URL +
+        baseUrl +
         " and try again.",
     );
   }
@@ -152,7 +153,7 @@ async function loadClients(): Promise<Client[] | null> {
   try {
     res = await api("/api/clients");
   } catch {
-    throw new Error(`Cannot reach the server at ${BASE_URL}. Start it with: bun run dev`);
+    throw new Error(`Cannot reach the server at ${baseUrl}. Check the server URL.`);
   }
   if (res.status === 401) return null;
   if (!res.ok) throw new Error(`Failed to load clients (${res.status}).`);
@@ -182,13 +183,14 @@ function renderLogin(error?: string): void {
   root.innerHTML = `
     <form id="login-form" class="view">
       <p class="hint">Log in with your Followthrough email and login code.</p>
+      <label for="server">Server URL</label>
+      <input id="server" type="text" inputmode="url" autocomplete="url" required value="${esc(baseUrl)}" placeholder="https://followthrough.example.com" />
       <label for="email">Email</label>
-      <input id="email" type="email" autocomplete="email" required value="${esc(lastEmail)}" placeholder="you@xyz.com" />
+      <input id="email" type="email" autocomplete="email" required value="${esc(lastEmail)}" placeholder="you@company.com" />
       <label for="code">Login code</label>
       <input id="code" type="password" required minlength="4" placeholder="code from your admin" />
       <p id="login-error" class="error${error ? "" : " hidden"}">${esc(error ?? "")}</p>
       <button id="login-btn" type="submit" class="btn btn-accent">Log in</button>
-      <p class="hint dim">Server: ${esc(BASE_URL)}</p>
     </form>`;
 
   const form = document.getElementById("login-form") as HTMLFormElement;
@@ -197,11 +199,22 @@ function renderLogin(error?: string): void {
     void (async () => {
       const email = (document.getElementById("email") as HTMLInputElement).value.trim();
       const code = (document.getElementById("code") as HTMLInputElement).value;
+      const serverInput = (document.getElementById("server") as HTMLInputElement).value;
       const btn = document.getElementById("login-btn") as HTMLButtonElement;
       const errEl = document.getElementById("login-error") as HTMLElement;
       btn.disabled = true;
       btn.textContent = "Checking...";
       try {
+        const origin = normalizeBaseUrl(serverInput);
+        // Must run inside the submit gesture: Chrome only shows the host
+        // permission prompt in response to a user action. Do NOT add an
+        // await above this line or the prompt silently fails.
+        if (origin !== DEFAULT_BASE_URL) {
+          const granted = await chrome.permissions.request({ origins: [`${origin}/*`] });
+          if (!granted) throw new Error(`Chrome blocked access to ${origin}. Allow it to log in.`);
+        }
+        await setBaseUrl(origin);
+        baseUrl = origin;
         await doLogin(email, code);
         await init();
       } catch (err) {
@@ -243,7 +256,7 @@ function renderIdle(): void {
     root.innerHTML = `
       <div class="view">
         <p class="hint">No clients yet. Create one in the web app first.</p>
-        <a class="link" href="${esc(BASE_URL)}" target="_blank" rel="noreferrer">Open Followthrough</a>
+        <a class="link" href="${esc(baseUrl)}" target="_blank" rel="noreferrer">Open Followthrough</a>
         <button id="logout" class="btn btn-ghost">Log out</button>
       </div>`;
     wireLogout();
@@ -387,7 +400,7 @@ function renderDone(): void {
         <p class="meta">Meeting <span class="mono">${esc(state.meetingId ?? "unknown")}</span></p>
         ${dupNote}
       </div>
-      <a class="btn btn-accent center" href="${esc(MEETINGS_PAGE_URL)}" target="_blank" rel="noreferrer">Open Followthrough</a>
+      <a class="btn btn-accent center" href="${esc(`${baseUrl}/capture`)}" target="_blank" rel="noreferrer">Open Followthrough</a>
       <button id="again" class="btn btn-ghost">Record another</button>
     </div>`;
 
@@ -436,6 +449,7 @@ function renderRecError(): void {
 
 async function init(): Promise<void> {
   renderLoading();
+  baseUrl = await getBaseUrl();
 
   try {
     const ack = await send({ target: "background", type: "GET_STATE" });

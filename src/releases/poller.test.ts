@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { env } from "../config.ts";
+import { env, releaseRepo } from "../config.ts";
 import { openTestDb } from "../db.ts";
-import { fetchReleases, upsertReleases, type FetchLike, type GitHubRelease } from "./poller.ts";
+import { addManualRelease, fetchReleases, upsertReleases, type FetchLike, type GitHubRelease } from "./poller.ts";
 import { fixtureGitHubRelease } from "./test-helpers.ts";
 
 interface Captured {
@@ -76,7 +76,7 @@ describe("upsertReleases", () => {
       .query("SELECT id, repo, github_release_id, tag_name FROM releases ORDER BY github_release_id")
       .all() as Array<{ id: string; repo: string; github_release_id: number; tag_name: string }>;
     expect(releases).toHaveLength(2);
-    expect(releases[0]!.repo).toBe(env.RELEASE_REPO);
+    expect(releases[0]!.repo).toBe(releaseRepo());
     expect(releases.map((r) => r.tag_name).sort()).toEqual(["v1.17.4", "v1.18.0"]);
 
     // v1.18.0 parses to 4 entries, v1.17.4 to 1
@@ -88,8 +88,8 @@ describe("upsertReleases", () => {
       .all() as Array<{ entity_id: string; idempotency_key: string; actor_user_id: string | null }>;
     expect(events).toHaveLength(2);
     expect(events.map((e) => e.idempotency_key).sort()).toEqual([
-      `release-${env.RELEASE_REPO}-174`,
-      `release-${env.RELEASE_REPO}-180`,
+      `release-${releaseRepo()}-174`,
+      `release-${releaseRepo()}-180`,
     ]);
     expect(events[0]!.actor_user_id).toBeNull(); // system event
     expect(new Set(events.map((e) => e.entity_id))).toEqual(new Set(newIds));
@@ -128,5 +128,45 @@ describe("upsertReleases", () => {
     const draft = { ...fixtureGitHubRelease("v1.17.4", 999), draft: true };
     expect(upsertReleases(db, [draft])).toHaveLength(0);
     expect((db.query("SELECT COUNT(*) AS n FROM releases").get() as { n: number }).n).toBe(0);
+  });
+});
+
+describe("RELEASE_REPO unset", () => {
+  test("fetchReleases refuses without touching the network; storage falls back to 'manual'", async () => {
+    const saved = env.RELEASE_REPO;
+    env.RELEASE_REPO = undefined;
+    try {
+      let called = false;
+      const fetchImpl: FetchLike = async () => {
+        called = true;
+        throw new Error("network should not be called");
+      };
+      await expect(fetchReleases(fetchImpl)).rejects.toThrow(/RELEASE_REPO is not set/);
+      expect(called).toBe(false);
+      expect(releaseRepo()).toBe("manual");
+    } finally {
+      env.RELEASE_REPO = saved;
+    }
+  });
+});
+
+describe("addManualRelease dedup", () => {
+  test("same tag is a duplicate even after the repo key changes", () => {
+    const db = openTestDb();
+    db.query(
+      "INSERT INTO users (id, email, name, role, created_at) VALUES ('u1', 'u1@xyz.com', 'U', 'admin', '2026-01-01T00:00:00Z')",
+    ).run();
+    const saved = env.RELEASE_REPO;
+    try {
+      env.RELEASE_REPO = "XYZ/XYZ";
+      addManualRelease(db, { tag_name: "v2.0.0", body_md: "## Feature\n\n### SSO\n\nShipped." }, "u1");
+      env.RELEASE_REPO = undefined; // now stored under "manual"
+      expect(() =>
+        addManualRelease(db, { tag_name: "V2.0.0", body_md: "## Feature\n\n### SSO\n\nShipped." }, "u1"),
+      ).toThrow(/already exists/);
+      expect((db.query("SELECT COUNT(*) n FROM releases").get() as { n: number }).n).toBe(1);
+    } finally {
+      env.RELEASE_REPO = saved;
+    }
   });
 });

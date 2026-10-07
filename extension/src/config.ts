@@ -1,12 +1,34 @@
 /**
- * Single source of truth for the Followthrough server location.
- *
- * When the app deploys, change BASE_URL here AND the matching
- * host_permissions entry in manifest.json, then rebuild. Both must
- * point at the same origin or fetches will fail CORS and the session
- * cookie will not be sent.
+ * Followthrough server location. Defaults to a local dev server; the user can
+ * point the extension at a hosted instance from the popup's login screen. The
+ * choice lives in chrome.storage.local, and the popup asks Chrome for host
+ * permission on that origin when it is saved (manifest optional_host_permissions).
  */
-export const BASE_URL = "http://localhost:4500";
+export const DEFAULT_BASE_URL = "http://localhost:4500";
 
-/** Web app page linked from the upload-success view. */
-export const MEETINGS_PAGE_URL = `${BASE_URL}/capture`;
+const KEY = "serverUrl";
+
+/** Validates and normalizes user input to a bare origin, e.g. "https://ft.acme.com". */
+export function normalizeBaseUrl(input: string): string {
+  const raw = input.trim();
+  let url: URL;
+  try {
+    url = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+  } catch {
+    throw new Error("Enter a valid server URL, e.g. https://followthrough.example.com");
+  }
+  if (url.protocol !== "https:" && url.protocol !== "http:") {
+    throw new Error("Server URL must start with http:// or https://");
+  }
+  return url.origin;
+}
+
+export async function getBaseUrl(): Promise<string> {
+  const obj = await chrome.storage.local.get(KEY);
+  const saved = obj[KEY];
+  return typeof saved === "string" && saved ? saved : DEFAULT_BASE_URL;
+}
+
+export async function setBaseUrl(origin: string): Promise<void> {
+  await chrome.storage.local.set({ [KEY]: origin });
+}

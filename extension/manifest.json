@@ -2,10 +2,11 @@
   "manifest_version": 3,
   "name": "Followthrough Recorder",
   "version": "0.1.0",
-  "description": "Records the current tab's audio and uploads it to the Followthrough as a client meeting.",
+  "description": "Records the current tab's audio and uploads it to Followthrough as a client meeting.",
   "minimum_chrome_version": "116",
   "permissions": ["tabCapture", "offscreen", "storage", "activeTab"],
   "host_permissions": ["http://localhost:4500/*"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
   "background": { "service_worker": "background.js", "type": "module" },
   "action": {
     "default_popup": "popup.html",

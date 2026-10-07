@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { openTestDb, nowIso } from "../db.ts";
 import { ulid } from "../ids.ts";
-import { env } from "../config.ts";
+import { releaseRepo } from "../config.ts";
 import { persistEntries, type ParsedEntry } from "./parser.ts";
 import type { GitHubRelease } from "./poller.ts";
 
@@ -92,7 +92,7 @@ export function makeRelease(
      VALUES (?, ?, ?, ?, ?, '', ?, ?)`,
   ).run(
     releaseId,
-    env.RELEASE_REPO,
+    releaseRepo(),
     opts.githubId,
     opts.tag,
     `Release ${opts.tag}`,

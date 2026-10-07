@@ -16,29 +16,62 @@ const EnvSchema = z.object({
   ACCESS_PASSWORD: z.string().optional(),
   GITHUB_READ_TOKEN: z.string().optional(), // releases polling, read-only scope
   GITHUB_WRITE_TOKEN: z.string().optional(), // direct ticket creation, allowlisted repos only
-  RELEASE_REPO: z.string().default("XYZ/XYZ"),
+  // owner/name of the GitHub repo whose releases are polled. Unset → poller off.
+  RELEASE_REPO: z.string().optional(),
+  // Comma-separated owner/name repos the tool may create issues in. Unset → none.
+  WRITABLE_REPOS: z.string().optional(),
+  // Comma-separated GitHub orgs the tool must never write to, even if allowlisted.
+  BLOCKED_ORGS: z.string().optional(),
+  // Comma-separated email domains allowed to hold accounts. Unset → any email.
+  ALLOWED_EMAIL_DOMAINS: z.string().optional(),
+  // Your company/product, used to frame every AI prompt.
+  PRODUCT_NAME: z.string().optional(),
+  PRODUCT_DESCRIPTION: z.string().optional(),
   DIGEST_WEBHOOK_URL: z.string().optional(),
 });
 
 export const env = EnvSchema.parse(process.env);
 
-/**
- * Org safety (SPEC.md section 7): repos the tool may EVER create issues in.
- * The XYZ org is intentionally absent. Adding it requires an explicit
- * admin decision and a code change here; there is no runtime override.
- */
-export const WRITABLE_REPO_ALLOWLIST: string[] = [
-  "avinashgaurav/followthrough",
-];
+function csv(value: string | undefined): string[] {
+  return (value ?? "")
+    .split(",")
+    .map((v) => v.trim().toLowerCase())
+    .filter(Boolean);
+}
 
-const BLOCKED_ORGS = ["xyz"];
+/** Who the AI is working for, e.g. "Acme, a payroll platform for SMBs". */
+export function productLabel(): string {
+  const name = env.PRODUCT_NAME?.trim() || "our company";
+  const desc = env.PRODUCT_DESCRIPTION?.trim();
+  return desc ? `${name}, ${desc}` : name;
+}
+
+/** Repo key releases are stored under; "manual" when no GitHub repo is polled. */
+export function releaseRepo(): string {
+  return env.RELEASE_REPO?.trim() || "manual";
+}
+
+/** Allowed account email domains (lowercase). Empty → any domain. */
+export function allowedEmailDomains(): string[] {
+  return csv(env.ALLOWED_EMAIL_DOMAINS).map((d) => d.replace(/^@/, ""));
+}
+
+/**
+ * Org safety (SPEC.md section 7): repos the tool may EVER create issues in,
+ * from WRITABLE_REPOS. Orgs in BLOCKED_ORGS are refused even if allowlisted.
+ * There is no runtime override; changing either needs a restart.
+ */
+export function writableRepos(): string[] {
+  return csv(env.WRITABLE_REPOS);
+}
 
 export function assertRepoWritable(repo: string): void {
-  const owner = repo.split("/")[0]?.toLowerCase() ?? "";
-  if (BLOCKED_ORGS.includes(owner)) {
+  const normalized = repo.toLowerCase();
+  const owner = normalized.split("/")[0] ?? "";
+  if (csv(env.BLOCKED_ORGS).includes(owner)) {
     throw new Error(`Refusing to write to blocked org: ${repo}. See SPEC.md section 7.`);
   }
-  if (!WRITABLE_REPO_ALLOWLIST.includes(repo)) {
+  if (!writableRepos().includes(normalized)) {
     throw new Error(`Repo not in writable allowlist: ${repo}`);
   }
 }

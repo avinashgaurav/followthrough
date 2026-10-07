@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { api, ApiError } from "../api";
+import { api, ApiError, domainRule, emailAllowed } from "../api";
 import { useAuth } from "../auth";
 import { Alert, Btn, Field } from "../components/ui";
 
 export function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { setUser, refresh } = useAuth();
+  const { setUser, refresh, allowedDomains } = useAuth();
+  const rule = domainRule(allowedDomains);
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -24,8 +25,8 @@ export function Login() {
       setError("Enter your work email and password.");
       return;
     }
-    if (!mail.toLowerCase().endsWith("@xyz.com")) {
-      setError("Use your @xyz.com email. Only @xyz.com accounts can sign in.");
+    if (!emailAllowed(mail, allowedDomains)) {
+      setError(`Use your ${rule} email. Only ${rule} accounts can sign in.`);
       return;
     }
     setBusy(true);
@@ -41,9 +42,9 @@ export function Login() {
       if (err instanceof ApiError && err.status === 429) {
         setError("Too many attempts. Wait a few minutes, then try again.");
       } else if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
-        setError("That didn't match. Check your @xyz.com email and the team password (or your personal login code).");
+        setError("That didn't match. Check your email and the team password (or your personal login code).");
       } else if (err instanceof ApiError && err.status === 400) {
-        setError("Only @xyz.com emails can sign in here.");
+        setError(rule ? `Only ${rule} emails can sign in here.` : "That email can't sign in here.");
       } else {
         setError(err instanceof Error ? err.message : "Sign in failed. Try again.");
       }
@@ -87,13 +88,13 @@ export function Login() {
           </div>
         )}
         <form onSubmit={onSubmit} className="stack">
-          <Field label="Work email" htmlFor="login-email" hint="Must be a @xyz.com address.">
+          <Field label="Work email" htmlFor="login-email" hint={rule ? `Must be a ${rule} address.` : undefined}>
             <input
               id="login-email"
               className="ctrl"
               type="email"
               autoComplete="email"
-              placeholder="you@xyz.com"
+              placeholder={allowedDomains[0] ? `you@${allowedDomains[0]}` : "you@company.com"}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />

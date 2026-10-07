@@ -10,6 +10,10 @@ interface AuthState {
   loading: boolean;
   isGuest: boolean;
   requireLogin: boolean;
+  /** ALLOWED_EMAIL_DOMAINS from the server; empty → any email. */
+  allowedDomains: string[];
+  /** WRITABLE_REPOS from the server; empty → direct GitHub creation is off. */
+  writableRepos: string[];
   setUser: (u: User | null) => void;
   refresh: () => Promise<void>;
 }
@@ -19,6 +23,8 @@ const AuthCtx = createContext<AuthState>({
   loading: true,
   isGuest: false,
   requireLogin: false,
+  allowedDomains: [],
+  writableRepos: [],
   setUser: () => undefined,
   refresh: async () => undefined,
 });
@@ -32,6 +38,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
   const [requireLogin, setRequireLogin] = useState(false);
+  const [allowedDomains, setAllowedDomains] = useState<string[]>([]);
+  const [writableRepos, setWritableRepos] = useState<string[]>([]);
 
   const refresh = useCallback(async () => {
     try {
@@ -39,11 +47,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(r.user ?? null);
       setIsGuest(!!r.is_guest);
       setRequireLogin(!!r.require_login);
+      setAllowedDomains(r.allowed_email_domains ?? []);
+      setWritableRepos(r.writable_repos ?? []);
     } catch (e) {
       if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
         setUser(null);
         setIsGuest(false);
         setRequireLogin(true);
+        const cfg = await api.authConfig().catch(() => null);
+        setAllowedDomains(cfg?.allowed_email_domains ?? []);
       }
     } finally {
       setLoading(false);
@@ -55,8 +67,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const value = useMemo(
-    () => ({ user, loading, isGuest, requireLogin, setUser, refresh }),
-    [user, loading, isGuest, requireLogin, refresh],
+    () => ({ user, loading, isGuest, requireLogin, allowedDomains, writableRepos, setUser, refresh }),
+    [user, loading, isGuest, requireLogin, allowedDomains, writableRepos, refresh],
   );
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 }

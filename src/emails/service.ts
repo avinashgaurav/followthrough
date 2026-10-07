@@ -1,6 +1,7 @@
 import type { Database } from "bun:sqlite";
 import { z } from "zod";
 import { nowIso } from "../db.ts";
+import { productLabel } from "../config.ts";
 import { ulid, insightHandle } from "../ids.ts";
 import { appendEvent, transitionInsight, type Role } from "../events.ts";
 import { getLLM } from "../llm/provider.ts";
@@ -44,7 +45,7 @@ const EmailSchema = z.object({ subject: z.string(), body_md: z.string() });
 
 // Stable system prompt: do not interpolate per-call data here, it gets cached.
 const EMAIL_SYSTEM_PROMPT = [
-  "You write client follow-up emails for XYZ, a cloud cost optimization platform.",
+  `You write client follow-up emails for ${productLabel()}.`,
   "Brand voice: direct, confident, short sentences. No fluff, no hype.",
   "Hard rules:",
   "- Never use em-dashes anywhere in the subject or body. Use a period or comma instead.",

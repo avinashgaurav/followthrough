@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { productLabel } from "../config.ts";
 
 /**
  * Prompts for the multi-pass extraction pipeline (SPEC.md section 5).
@@ -52,7 +53,7 @@ export const ExtractionResponseSchema = z.object({
   items: z.array(ExtractedItemSchema),
 });
 
-export const EXTRACTION_SYSTEM_PROMPT = `You extract structured intelligence items from client meeting transcripts for XYZ, a cloud cost optimization platform. Your output is read by the founder and routed to engineering, product, and customer success. It must be the caliber of a top analyst's call readout: specific, interpretive, and decision-ready. Shallow paraphrase is failure.
+export const EXTRACTION_SYSTEM_PROMPT = `You extract structured intelligence items from client meeting transcripts for ${productLabel()}. Your output is read by the founder and routed to engineering, product, and customer success. It must be the caliber of a top analyst's call readout: specific, interpretive, and decision-ready. Shallow paraphrase is failure.
 
 You will be given one chunk of a cleaned transcript. Extract only the decision-grade items that clearly belong to exactly one of these types:
 
@@ -68,7 +69,7 @@ Rules for every item:
 - quote: a verbatim passage copied exactly, character for character, from the transcript chunk, in its ORIGINAL language. Transcripts may mix English and Hindi/Hinglish; never translate or transliterate inside the quote. Never paraphrase, never shorten with ellipses, never fix grammar. The quote must on its own support the item.
 - speaker: the speaker of the quote if identifiable, otherwise null.
 - title: one sharp line a busy founder scans in two seconds. Lead with the substance ("Tagging compliance is their biggest pain point"), never with filler ("Client mentioned that...").
-- body: 3 to 6 sentences that earn their place: what was said, the context around it, WHY it matters for XYZ (deal risk, adoption blocker, retention lever, roadmap signal), and the between-the-lines reading when there is one. If the quote is not in English, include a brief translation in the body. Do not restate the quote; interpret it.
+- body: 3 to 6 sentences that earn their place: what was said, the context around it, WHY it matters for us (deal risk, adoption blocker, retention lever, roadmap signal), and the between-the-lines reading when there is one. If the quote is not in English, include a brief translation in the body. Do not restate the quote; interpret it.
 - confidence: high, medium, or low.
 - suggested_track: where the resulting work belongs if acted on: engineering (code changes), product_polish (copy, UX, naming), marketing, or other (CS, process, relationship). null for pure context items.
 - suggested_owner: which team should own the follow-up: engineering, product, customer_success, sales, marketing, leadership. null when unclear.

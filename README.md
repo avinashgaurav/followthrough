@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Bun](https://img.shields.io/badge/Bun-1.3+-fbf0df?logo=bun&logoColor=black)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-296%20passing-brightgreen.svg)](#development)
+[![Tests](https://img.shields.io/badge/tests-311%20passing-brightgreen.svg)](#development)
 [![LLM: Claude](https://img.shields.io/badge/LLM-Claude-d97757.svg)](https://www.anthropic.com/)
 
 *Meeting → extract → review → ticket → shipped → client told → closed. Every step timestamped.*
@@ -85,14 +85,17 @@ echo 'ANTHROPIC_API_KEY=sk-ant-...'    >> .env   # preferred (direct Anthropic)
 # or
 echo 'OPENROUTER_API_KEY=sk-or-...'    >> .env   # fallback, pinned to Claude, retention denied
 
+# Tell the AI who it works for (see .env.example for every option)
+echo 'PRODUCT_NAME=Acme'                 >> .env
+
 # Build the web UI
-bun run build:web        # if absent: cd web && bun install && bun run build
+bun run build:web
 
 # Start the server (serves the API and the built UI on one port)
 bun run start            # http://localhost:4500
 ```
 
-The app serves on `http://localhost:4500` by default (set `PORT` to change it). **It's open by default** — no login required. When you're ready to lock it down, go to **Settings → Access**, add a teammate (you get a one-time login code), then turn **Require login** on. Login is email + code, restricted to a configurable email domain (see `src/config.ts`). You can also seed a first admin from the CLI with `bun run seed`.
+The app serves on `http://localhost:4500` by default (set `PORT` to change it). **It's open by default** — no login required, and every visitor is an admin. Fine on your laptop; **turn on Require login before exposing it to the internet.** When you're ready to lock it down, go to **Settings → Access**, add a teammate (you get a one-time login code), then turn **Require login** on. Login is email + code. Any email can hold an account unless you set `ALLOWED_EMAIL_DOMAINS` (e.g. `acme.com`). You can also seed a first admin from the CLI with `bun run seed`.
 
 <details>
 <summary><b>Optional setup</b> (local transcription, backups, env vars)</summary>
@@ -108,13 +111,19 @@ bun run backup
 | Env var | Purpose |
 |---|---|
 | `PORT` | server port (default `4500`) |
+| `PRODUCT_NAME` | your company or product; the AI frames every insight and email around it (e.g. `Acme`) |
+| `PRODUCT_DESCRIPTION` | one line on what you sell (e.g. `a payroll platform for SMBs`) |
+| `ALLOWED_EMAIL_DOMAINS` | comma-separated domains allowed to hold accounts (e.g. `acme.com,acme.io`); unset = any email |
+| `RELEASE_REPO` | `owner/name` of the GitHub repo whose releases are matched against client asks; unset = poller off (paste changelogs manually) |
+| `WRITABLE_REPOS` | comma-separated `owner/name` repos the tool may create issues in; unset = direct creation off (copy-paste still works) |
+| `BLOCKED_ORGS` | comma-separated GitHub orgs never written to, even if allowlisted |
 | `GITHUB_READ_TOKEN` | poll a releases repo for changelog matching |
 | `GITHUB_WRITE_TOKEN` | direct ticket creation in an allowlisted repo only |
 | `DIGEST_WEBHOOK_URL` | Slack / Google Chat webhook for the weekly digest + nudges |
 | `WATCH_DIR` | folder to auto-ingest dropped recordings |
 | `DEEPGRAM_API_KEY` | cloud STT alternative to local whisper |
 | `DEEPGRAM_KEYTERMS` | comma-separated terms to boost Deepgram accuracy (names, jargon) |
-| `ACCESS_PASSWORD` | optional shared team password: any allowed-domain email + this signs in as a member |
+| `ACCESS_PASSWORD` | optional shared team password: any allowed-domain email + this signs in as a member. **Set `ALLOWED_EMAIL_DOMAINS` too**, or the password alone admits any email |
 
 </details>
 
@@ -189,7 +198,7 @@ One runtime, one source of truth.
 
 ## Safety, by construction
 
-- **Never writes to a protected GitHub org.** Reads only. Direct ticket creation is blocked to a config allowlist in code (`src/config.ts`) — a protected org can't be targeted even by accident. Tickets are draft-first.
+- **Never writes to a protected GitHub org.** Direct ticket creation only reaches repos in `WRITABLE_REPOS`, and orgs in `BLOCKED_ORGS` are refused even if listed. Both are read at startup; there is no runtime override. Tickets are draft-first.
 - **Consent gate.** A meeting can't be processed until consent is confirmed at upload.
 - **No auto-send.** The confidence score only *suggests* "shipped"; a human confirms before any client email exists. Copy-to-clipboard is the send proxy, and the copy moment is the tracked timestamp.
 - **Retention.** A meeting can be purged (audio, transcript, derived quotes) while keeping the insight record. `DELETE /api/meetings/:id`.
@@ -201,7 +210,7 @@ One runtime, one source of truth.
 ```bash
 bun run dev            # server with --watch
 cd web && bun run dev  # vite dev server, proxies /api to :4500
-bun test               # 296 tests
+bun test               # 311 tests
 bunx tsc --noEmit      # typecheck
 bun run evals          # extraction quality scoring (needs an LLM key)
 ```

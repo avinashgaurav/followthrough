@@ -27,6 +27,8 @@ export interface StartRecordingPayload {
 
 export interface OffscreenStartPayload extends StartRecordingPayload {
   streamId: string;
+  /** Server origin to upload to; the offscreen doc cannot read chrome.storage. */
+  baseUrl: string;
 }
 
 /** Messages handled by the service worker's single onMessage hub. */

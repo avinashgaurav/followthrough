@@ -1,6 +1,7 @@
 import type { Database } from "bun:sqlite";
 import { z } from "zod";
 import { nowIso } from "../db.ts";
+import { productLabel } from "../config.ts";
 import { ulid, insightHandle } from "../ids.ts";
 import { appendEvent } from "../events.ts";
 import type { LLM } from "../llm/provider.ts";
@@ -49,7 +50,7 @@ export function confidenceFor(
   return confidence;
 }
 
-const SYSTEM_PROMPT = `You are matching a client-requested product insight against the entries of one software release of XYZ, a cloud cost optimization platform.
+const SYSTEM_PROMPT = `You are matching a client-requested product insight against the entries of one software release of ${productLabel()}.
 
 Decide for each candidate entry whether it ships the insight:
 - "full": the entry clearly delivers what the insight asks for.

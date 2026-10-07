@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { existsSync } from "node:fs";
-import { env } from "./config.ts";
+import { env, allowedEmailDomains } from "./config.ts";
 import { getDb, nowIso } from "./db.ts";
 import { route, json, dispatch } from "./router.ts";
 
@@ -82,4 +82,12 @@ if (import.meta.main) {
     },
   });
   console.log(`followthrough listening on :${env.PORT}`);
+  if (env.ACCESS_PASSWORD && allowedEmailDomains().length === 0) {
+    console.warn(
+      "WARNING: ACCESS_PASSWORD is set but ALLOWED_EMAIL_DOMAINS is empty: anyone with the password can sign in with any email. Set ALLOWED_EMAIL_DOMAINS.",
+    );
+  }
+  if (!env.PRODUCT_NAME) {
+    console.warn("PRODUCT_NAME is not set: AI output will refer to \"our company\". Set it in .env for sharper insights.");
+  }
 }

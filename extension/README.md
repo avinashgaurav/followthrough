@@ -4,7 +4,7 @@ A minimal Chrome MV3 extension that records the audio of the current tab and upl
 
 ## Assumptions
 
-- The Followthrough server is running at **http://localhost:4500** (`bun run dev` at the repo root). The base URL lives in a single constant in `src/config.ts`; when the app deploys, change `BASE_URL` there AND the `host_permissions` entry in `manifest.json`, then rebuild.
+- A Followthrough server is reachable. The popup's login screen has a **Server URL** field (default `http://localhost:4500`). Enter your hosted URL there; Chrome asks once for permission to reach that site.
 - You have a login (email + login code) issued by the admin in the web app.
 - At least one client exists in the web app (the popup's client dropdown is loaded from `GET /api/clients`).
 
@@ -42,7 +42,7 @@ If an upload fails (server down, session expired), the recording is kept in memo
 - **Service worker** (`src/background.ts`): single `onMessage` hub (only ONE listener may exist in the SW; Chrome closes the response channel when any listener returns a falsy value, so a second listener never gets `sendResponse`). Resolves the tabCapture `streamId` for the active tab, manages the offscreen document, and persists recording state in `chrome.storage.session`.
 - **Offscreen document** (`src/offscreen.ts`, reason `AUDIO_PLAYBACK`): runs `getUserMedia` with `chromeMediaSource: "tab"`, records with `MediaRecorder` (`audio/webm;codecs=opus`), routes the stream through a gain node so the tab is not muted, and uploads the finished blob directly with `fetch(..., { credentials: "include" })`.
 
-All requests use the session cookie (`credentials: "include"`). The `host_permissions` grant for `http://localhost:4500/*` is what lets extension pages send that cookie and skip CORS; this is why `BASE_URL` and `host_permissions` must always match.
+All requests use the session cookie (`credentials: "include"`). Host permission for the server origin (`http://localhost:4500/*` built in; any other origin requested at login via `optional_host_permissions`) is what lets extension pages send that cookie and skip CORS.
 
 ## Limitations
 

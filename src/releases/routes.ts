@@ -69,8 +69,12 @@ export async function runPollPipeline(
   };
 }
 
-/** Hourly poll of xyz/xyz releases. Errors are logged, never fatal. */
-export function startReleasePoller(): ReturnType<typeof setInterval> {
+/** Hourly poll of RELEASE_REPO releases. Errors are logged, never fatal. */
+export function startReleasePoller(): ReturnType<typeof setInterval> | null {
+  if (!env.RELEASE_REPO) {
+    console.log("release poller: RELEASE_REPO not set, polling off (manual changelog intake still works)");
+    return null;
+  }
   const tick = () => {
     runPollPipeline(getDb(), getLLM()).catch((err) => console.warn("release poller:", err));
   };
@@ -254,6 +258,12 @@ route("POST", "/api/releases/manual", "admin", async (req, user) => {
 });
 
 route("POST", "/api/releases/poll", "admin", async () => {
+  if (!env.RELEASE_REPO) {
+    return json(
+      { error: "RELEASE_REPO is not set. Add owner/name of your releases repo to .env, or paste changelogs manually." },
+      400,
+    );
+  }
   try {
     const counts = await runPollPipeline(getDb(), getLLM());
     return json(counts);
@@ -287,7 +297,7 @@ route("GET", "/api/releases", "user", () => {
   // GITHUB_READ_TOKEN in .env) instead of silently showing nothing.
   return json({
     releases,
-    repo: env.RELEASE_REPO,
+    repo: env.RELEASE_REPO ?? null,
     github_token_configured: Boolean(env.GITHUB_READ_TOKEN),
   });
 });
