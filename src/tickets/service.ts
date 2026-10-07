@@ -300,7 +300,7 @@ export async function createDirect(
     opts.fetchImpl ?? fetch,
   );
   return persistRaise(db, ticket, {
-    repo: opts.repo,
+    repo: opts.repo.toLowerCase(),
     url: issue.url,
     number: issue.number,
     mode: "direct_api",

@@ -207,7 +207,8 @@ function renderLogin(error?: string): void {
       try {
         const origin = normalizeBaseUrl(serverInput);
         // Must run inside the submit gesture: Chrome only shows the host
-        // permission prompt in response to a user action.
+        // permission prompt in response to a user action. Do NOT add an
+        // await above this line or the prompt silently fails.
         if (origin !== DEFAULT_BASE_URL) {
           const granted = await chrome.permissions.request({ origins: [`${origin}/*`] });
           if (!granted) throw new Error(`Chrome blocked access to ${origin}. Allow it to log in.`);

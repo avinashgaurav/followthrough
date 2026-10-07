@@ -235,7 +235,7 @@ CREATE INDEX IF NOT EXISTS idx_tickets_insight ON tickets(insight_id);
 
 CREATE TABLE IF NOT EXISTS releases (
   id                TEXT PRIMARY KEY,
-  repo              TEXT NOT NULL,            -- 'XYZ/XYZ'
+  repo              TEXT NOT NULL,            -- RELEASE_REPO owner/name, or 'manual'
   github_release_id INTEGER NOT NULL,
   tag_name          TEXT NOT NULL,
   name              TEXT,
@@ -251,7 +251,7 @@ CREATE TABLE IF NOT EXISTS release_entries (
   section_type TEXT NOT NULL CHECK (section_type IN ('feature','fix','technical','baseline','other')),
   title        TEXT NOT NULL,
   body_md      TEXT,
-  product_area TEXT,                          -- XYZ | XYZ Day | unspecified...
+  product_area TEXT,                          -- detected product area, or unspecified
   pr_refs_json TEXT,                          -- validated PR numbers only
   flags_json   TEXT,                          -- ['flag_gated','internal_only','shadow','advisory','reverted']
   created_at   TEXT NOT NULL

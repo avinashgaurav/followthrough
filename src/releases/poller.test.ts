@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { env, releaseRepo } from "../config.ts";
 import { openTestDb } from "../db.ts";
-import { fetchReleases, upsertReleases, type FetchLike, type GitHubRelease } from "./poller.ts";
+import { addManualRelease, fetchReleases, upsertReleases, type FetchLike, type GitHubRelease } from "./poller.ts";
 import { fixtureGitHubRelease } from "./test-helpers.ts";
 
 interface Captured {
@@ -144,6 +144,27 @@ describe("RELEASE_REPO unset", () => {
       await expect(fetchReleases(fetchImpl)).rejects.toThrow(/RELEASE_REPO is not set/);
       expect(called).toBe(false);
       expect(releaseRepo()).toBe("manual");
+    } finally {
+      env.RELEASE_REPO = saved;
+    }
+  });
+});
+
+describe("addManualRelease dedup", () => {
+  test("same tag is a duplicate even after the repo key changes", () => {
+    const db = openTestDb();
+    db.query(
+      "INSERT INTO users (id, email, name, role, created_at) VALUES ('u1', 'u1@xyz.com', 'U', 'admin', '2026-01-01T00:00:00Z')",
+    ).run();
+    const saved = env.RELEASE_REPO;
+    try {
+      env.RELEASE_REPO = "XYZ/XYZ";
+      addManualRelease(db, { tag_name: "v2.0.0", body_md: "## Feature\n\n### SSO\n\nShipped." }, "u1");
+      env.RELEASE_REPO = undefined; // now stored under "manual"
+      expect(() =>
+        addManualRelease(db, { tag_name: "V2.0.0", body_md: "## Feature\n\n### SSO\n\nShipped." }, "u1"),
+      ).toThrow(/already exists/);
+      expect((db.query("SELECT COUNT(*) n FROM releases").get() as { n: number }).n).toBe(1);
     } finally {
       env.RELEASE_REPO = saved;
     }

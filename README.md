@@ -95,7 +95,7 @@ bun run build:web
 bun run start            # http://localhost:4500
 ```
 
-The app serves on `http://localhost:4500` by default (set `PORT` to change it). **It's open by default** — no login required. When you're ready to lock it down, go to **Settings → Access**, add a teammate (you get a one-time login code), then turn **Require login** on. Login is email + code. Any email can hold an account unless you set `ALLOWED_EMAIL_DOMAINS` (e.g. `acme.com`). You can also seed a first admin from the CLI with `bun run seed`.
+The app serves on `http://localhost:4500` by default (set `PORT` to change it). **It's open by default** — no login required, and every visitor is an admin. Fine on your laptop; **turn on Require login before exposing it to the internet.** When you're ready to lock it down, go to **Settings → Access**, add a teammate (you get a one-time login code), then turn **Require login** on. Login is email + code. Any email can hold an account unless you set `ALLOWED_EMAIL_DOMAINS` (e.g. `acme.com`). You can also seed a first admin from the CLI with `bun run seed`.
 
 <details>
 <summary><b>Optional setup</b> (local transcription, backups, env vars)</summary>
@@ -123,7 +123,7 @@ bun run backup
 | `WATCH_DIR` | folder to auto-ingest dropped recordings |
 | `DEEPGRAM_API_KEY` | cloud STT alternative to local whisper |
 | `DEEPGRAM_KEYTERMS` | comma-separated terms to boost Deepgram accuracy (names, jargon) |
-| `ACCESS_PASSWORD` | optional shared team password: any allowed-domain email + this signs in as a member |
+| `ACCESS_PASSWORD` | optional shared team password: any allowed-domain email + this signs in as a member. **Set `ALLOWED_EMAIL_DOMAINS` too**, or the password alone admits any email |
 
 </details>
 

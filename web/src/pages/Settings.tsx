@@ -204,7 +204,7 @@ function UsersSection() {
     >
       <p className="muted small" style={{ margin: "0 0 14px" }}>
         If a shared team password (<code className="mono">ACCESS_PASSWORD</code>) is configured, anyone
-        with {rule ? <>a <code className="mono">{rule}</code></> : "any"} email can sign in as a member without being added
+        with {rule ? <>a <code className="mono">{rule}</code></> : <strong>any</strong>} email can sign in as a member without being added
         here. Admins always sign in with a personal login code.
       </p>
       {revealed && (

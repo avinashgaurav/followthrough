@@ -71,8 +71,10 @@ export function addManualRelease(
 ): { id: string; entry_count: number } {
   const syntheticId = `manual:${input.tag_name.trim().toLowerCase()}`;
   const existing = db
-    .query("SELECT id FROM releases WHERE repo = ? AND github_release_id = ?")
-    .get(releaseRepo(), syntheticId) as { id: string } | null;
+    // Match on the synthetic id alone: a manual tag is a duplicate regardless of
+    // which repo key it was stored under (keys changed when RELEASE_REPO became optional).
+    .query("SELECT id FROM releases WHERE github_release_id = ?")
+    .get(syntheticId) as { id: string } | null;
   if (existing) {
     throw new Error(`A manual changelog for tag "${input.tag_name}" already exists.`);
   }

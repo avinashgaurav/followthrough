@@ -1144,28 +1144,28 @@ function TicketPanel({
                       </Btn>
                     </div>
                     {writableRepos.length > 0 && (
-                    <div className="row gap-6">
-                      <select
-                        className="ctrl"
-                        style={{ flex: 1, minWidth: 0 }}
-                        value={repoByTicket[t.id] ?? writableRepos[0]}
-                        onChange={(e) => setRepoByTicket((m) => ({ ...m, [t.id]: e.target.value }))}
-                      >
-                        {writableRepos.map((r) => (
-                          <option key={r} value={r}>
-                            {r}
-                          </option>
-                        ))}
-                      </select>
-                      <Btn
-                        size="sm"
-                        disabled={acting === t.id}
-                        onClick={() => createDirect(t.id)}
-                        tooltip="Create this issue on GitHub right now, in the repo you pick. You choose to do this; it never happens on its own."
-                      >
-                        Create on GitHub
-                      </Btn>
-                    </div>
+                      <div className="row gap-6">
+                        <select
+                          className="ctrl"
+                          style={{ flex: 1, minWidth: 0 }}
+                          value={repoByTicket[t.id] ?? writableRepos[0]}
+                          onChange={(e) => setRepoByTicket((m) => ({ ...m, [t.id]: e.target.value }))}
+                        >
+                          {writableRepos.map((r) => (
+                            <option key={r} value={r}>
+                              {r}
+                            </option>
+                          ))}
+                        </select>
+                        <Btn
+                          size="sm"
+                          disabled={acting === t.id}
+                          onClick={() => createDirect(t.id)}
+                          tooltip="Create this issue on GitHub right now, in the repo you pick. You choose to do this; it never happens on its own."
+                        >
+                          Create on GitHub
+                        </Btn>
+                      </div>
                     )}
                     <p className="tiny subtle" style={{ margin: 0 }}>
                       Nothing is ever created automatically. You choose.
