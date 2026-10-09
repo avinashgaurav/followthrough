@@ -1,0 +1,12 @@
+Speaker 0 (Sam, Tallyhall): Hi Elena, thanks for the time. You said you wanted to talk about the multi-entity rollout?
+Speaker 1 (Elena, Globex): Yes. We have four legal entities, two in the EU, and right now everyone sees everyone's spend. Our German works council will not accept that. We need entity-level permissions before we can roll out to the EU teams.
+Speaker 0 (Sam, Tallyhall): So a finance user in Germany should only see German entity spend.
+Speaker 1 (Elena, Globex): Correct, and approvers too. Without that, the EU rollout is blocked, which is about three hundred seats.
+Speaker 2 (Tom, Globex): The other thing is receipts. Our field team photographs receipts in bad light and the scanner reads the totals wrong maybe one time in ten. Then finance has to catch it.
+Speaker 0 (Sam, Tallyhall): Do you have examples you could send over?
+Speaker 2 (Tom, Globex): I'll send you twenty of the worst ones by Friday.
+Speaker 1 (Elena, Globex): And I'll be honest, we looked at a competitor last quarter because of the entity issue. We stayed because your approvals are better, but I need a date for entity permissions to keep that decision.
+Speaker 0 (Sam, Tallyhall): I'll come back to you with a date from product next week.
+Speaker 1 (Elena, Globex): Also, on the mobile side, approving from a phone without seeing the receipt is a problem for our managers too.
+Speaker 0 (Sam, Tallyhall): You're not the first to say that. I'll add your vote.
+Speaker 1 (Elena, Globex): Good. Talk next week.

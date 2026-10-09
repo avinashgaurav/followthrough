@@ -103,7 +103,7 @@ function Kbd({ k }: { k: string }) {
 }
 
 export function Shell() {
-  const { user } = useAuth();
+  const { user, demo } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -174,6 +174,14 @@ export function Shell() {
             <UserMenu />
           </div>
         </div>
+        {demo && (
+          <div className="demo-banner" role="status">
+            <b>Live demo</b> with fictional clients. Browse anything and try Ask; changes are off.{" "}
+            <a href="https://github.com/avinashgaurav/followthrough" target="_blank" rel="noreferrer">
+              Self-host it free
+            </a>
+          </div>
+        )}
         <div className="page-scroll">
           <Outlet />
         </div>

@@ -3,6 +3,7 @@ import { getDb, nowIso } from "../db.ts";
 import { ulid } from "../ids.ts";
 import { appendEvent } from "../events.ts";
 import { formatHtml } from "./page.ts";
+import { demoMode } from "../config.ts";
 
 /**
  * Client-facing "You asked, we shipped" page (AUDIT.md P2-10).
@@ -87,13 +88,16 @@ route("GET", "/share/:token", "public", (_req, _user, params) => {
     )
     .all(client.id) as Array<{ title: string }>;
 
-  appendEvent(db, {
-    actorUserId: null,
-    entityType: "client",
-    entityId: client.id,
-    eventType: "client.share_page_viewed",
-    payload: { at: nowIso() },
-  });
+  // A public demo link gets hammered; don't grow the event log per view.
+  if (!demoMode()) {
+    appendEvent(db, {
+      actorUserId: null,
+      entityType: "client",
+      entityId: client.id,
+      eventType: "client.share_page_viewed",
+      payload: { at: nowIso() },
+    });
+  }
 
   return new Response(
     formatHtml(

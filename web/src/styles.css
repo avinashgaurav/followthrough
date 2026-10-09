@@ -2111,3 +2111,16 @@ select.ctrl {
 }
 .meet-side { border: 1px solid var(--line); background: var(--p1); border-radius: var(--r); padding: 16px;
 }
+
+/* Public demo (DEMO_MODE) notice above the page content. */
+.demo-banner {
+  padding: 8px 20px;
+  font-size: 12.5px;
+  background: var(--p1);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-muted);
+}
+.demo-banner a {
+  color: var(--accent);
+  font-weight: 600;
+}

@@ -455,6 +455,7 @@ export const api = {
       is_guest?: boolean;
       allowed_email_domains?: string[];
       writable_repos?: string[];
+      demo?: boolean;
     }>("/api/me"),
   // Public: the email-domain rule, readable before sign-in.
   authConfig: () => get<{ allowed_email_domains: string[] }>("/api/auth/config"),
