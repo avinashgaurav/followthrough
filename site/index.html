@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark" />
+<title>Followthrough: close the loop on every client promise</title>
+<meta name="description" content="Open-source tool that turns recorded client meetings into tracked commitments, every one cited to the client's exact words, and closes the loop when they ship." />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Followthrough: close the loop on every client promise" />
+<meta property="og:description" content="Sales promised it. Engineering shipped it. Nobody told the client. Followthrough tracks every ask from said to shipped to told." />
+<meta property="og:image" content="og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="og.png" />
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --canvas: #0A0B0D; --p1: #101214; --p2: #16181B; --line: #24272C; --line-soft: #1A1D21;
+    --ink: #F6F7F8; --ink-muted: #8A8F98; --ink-subtle: #7B8089;
+    --paper: #FAF9F5; --paper-line: #E6DFD3; --paper-ink: #1A1916; --paper-body: #3D3A34; --paper-muted: #6C685F;
+    --signal: #F4A521; --signal-hi: #FFC24A; --signal-ink: #1A1206; --signal-line: #5A3F12; --signal-wash: rgba(244,165,33,0.12);
+    --serif: "Newsreader", Georgia, serif; --font: "Inter", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, monospace;
+    --r: 2px; --r-paper: 8px; --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--canvas); color: var(--ink); font: 400 16px/1.55 var(--font); -webkit-font-smoothing: antialiased; }
+  a { color: inherit; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+  .eyebrow { font: 500 11px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-subtle); }
+  .mono { font-family: var(--mono); }
+
+  /* nav */
+  nav { border-bottom: 1px solid var(--line); }
+  nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; text-decoration: none; }
+  .mark { position: relative; width: 18px; height: 18px; }
+  .mark::before { content: ""; position: absolute; left: 8px; top: 0; width: 2px; height: 18px; background: var(--line); }
+  .mark::after { content: ""; position: absolute; left: 5px; top: 5px; width: 8px; height: 8px; border-radius: 50%; background: var(--signal); box-shadow: 0 0 10px var(--signal); }
+  nav .links { display: flex; gap: 22px; font-size: 14px; color: var(--ink-muted); }
+  nav .links a { text-decoration: none; }
+  nav .links a:hover { color: var(--ink); }
+
+  /* buttons */
+  .btn { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px; border-radius: var(--r); font: 600 15px/1 var(--font); text-decoration: none; border: 1px solid var(--line); transition: border-color 120ms var(--ease), background 120ms var(--ease); }
+  .btn:hover { border-color: var(--ink-subtle); }
+  .btn.primary { background: var(--signal); color: var(--signal-ink); border-color: var(--signal); }
+  .btn.primary:hover { background: var(--signal-hi); }
+  .btn:focus-visible { outline: 2px solid var(--signal-hi); outline-offset: 2px; }
+
+  /* hero */
+  .hero { padding-top: 88px; padding-bottom: 72px; display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px; align-items: center; }
+  h1 { font: 500 clamp(36px, 5.2vw, 58px)/1.08 var(--serif); letter-spacing: -0.01em; margin: 18px 0 20px; }
+  h1 .told { color: var(--signal); }
+  .lede { font-size: 18px; color: var(--ink-muted); max-width: 520px; margin: 0 0 30px; }
+  .ctas { display: flex; flex-wrap: wrap; gap: 12px; }
+  .fine { margin-top: 16px; font-size: 13px; color: var(--ink-subtle); }
+
+  /* the spine */
+  .spine { position: relative; padding: 4px 0 4px 34px; }
+  .spine::before { content: ""; position: absolute; left: 7px; top: 10px; bottom: 10px; width: 1px; background: var(--line); }
+  .tick { position: relative; padding: 0 0 22px; opacity: 0; transform: translateY(8px); animation: in 520ms var(--ease) forwards; animation-delay: calc(var(--i) * 90ms + 150ms); }
+  .tick::before { content: ""; position: absolute; left: -31px; top: 6px; width: 9px; height: 9px; border-radius: 50%; background: var(--canvas); border: 1px solid var(--ink-subtle); }
+  .tick.done::before { background: var(--ink); border-color: var(--ink); }
+  .tick.now::before { background: var(--signal); border-color: var(--signal); box-shadow: 0 0 0 4px var(--signal-wash), 0 0 14px var(--signal); }
+  .tick .meta { display: flex; justify-content: space-between; gap: 12px; font: 500 11px/1.4 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-subtle); }
+  .tick.now .meta .step { color: var(--signal); }
+  .tick .what { font-size: 14.5px; margin-top: 4px; }
+  .quote { margin-top: 10px; background: var(--paper); color: var(--paper-ink); border-radius: var(--r-paper); padding: 16px 18px; border: 1px solid var(--paper-line); }
+  .quote q { font: 400 19px/1.4 var(--serif); quotes: "\201C" "\201D"; }
+  .quote .by { display: block; margin-top: 8px; font: 500 11px/1.4 var(--mono); color: var(--paper-muted); }
+  .illus { font: 500 10.5px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-subtle); margin-top: 6px; }
+  @keyframes in { to { opacity: 1; transform: none; } }
+
+  /* sections */
+  section { border-top: 1px solid var(--line); padding: 80px 0; }
+  h2 { font: 500 clamp(28px, 3.4vw, 38px)/1.15 var(--serif); margin: 14px 0 14px; max-width: 760px; }
+  .sub { color: var(--ink-muted); max-width: 640px; margin: 0; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); margin-top: 40px; }
+  .cell { background: var(--canvas); padding: 26px 24px 28px; }
+  .cell h3 { font-size: 16px; font-weight: 600; margin: 12px 0 8px; }
+  .cell p { margin: 0; color: var(--ink-muted); font-size: 14.5px; }
+  .vs { margin-top: 14px; font: 500 11.5px/1.5 var(--mono); color: var(--ink-subtle); }
+
+  /* pipeline */
+  .pipe { display: flex; flex-wrap: wrap; gap: 0; margin-top: 36px; border: 1px solid var(--line); }
+  .pipe div { flex: 1 1 120px; padding: 16px 14px; border-right: 1px solid var(--line); font-size: 14px; }
+  .pipe div:last-child { border-right: 0; }
+  .pipe .n { display: block; font: 500 11px/1 var(--mono); color: var(--ink-subtle); margin-bottom: 8px; }
+  .pipe .ai .n { color: var(--signal); }
+  .pipe .who { display: block; margin-top: 6px; font: 500 11px/1.3 var(--mono); color: var(--ink-subtle); }
+
+  /* share page mock */
+  .share { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 56px; align-items: center; }
+  .page { background: var(--paper); color: var(--paper-ink); border-radius: var(--r-paper); padding: 28px 28px 22px; border: 1px solid var(--paper-line); }
+  .page .k { font: 500 10.5px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--paper-muted); }
+  .page h4 { font: 500 26px/1.2 var(--serif); margin: 10px 0 4px; }
+  .page .med { font-size: 14px; color: var(--paper-body); margin-bottom: 18px; }
+  .row { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; border-top: 1px solid var(--paper-line); font-size: 15px; }
+  .row .d { font: 500 12px/1.6 var(--mono); color: var(--paper-muted); white-space: nowrap; }
+  .row .t::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--paper-ink); margin-right: 10px; vertical-align: 2px; }
+  .row.flight .t { color: var(--paper-muted); }
+  .row.flight .t::before { background: transparent; border: 1px solid var(--paper-muted); }
+
+  /* self-host */
+  pre { margin: 28px 0 0; background: var(--p1); border: 1px solid var(--line); border-radius: var(--r); padding: 20px 22px; overflow-x: auto; font: 400 13.5px/1.7 var(--mono); color: var(--ink); }
+  pre .c { color: var(--ink-subtle); }
+  .facts { display: flex; flex-wrap: wrap; gap: 10px 26px; margin-top: 22px; font: 500 12px/1.4 var(--mono); color: var(--ink-muted); }
+  .facts span::before { content: "| "; color: var(--line); }
+  .facts span:first-child::before { content: ""; }
+
+  footer { border-top: 1px solid var(--line); padding: 28px 0 40px; font-size: 13px; color: var(--ink-subtle); }
+  footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+
+  @media (max-width: 860px) {
+    .hero, .share { grid-template-columns: 1fr; gap: 40px; }
+    .hero { padding-top: 56px; padding-bottom: 48px; }
+    .grid3 { grid-template-columns: 1fr; }
+    section { padding: 60px 0; }
+    nav .links .hide-sm { display: none; }
+  }
+  @media (max-width: 480px) {
+    .wrap { padding-left: 16px; padding-right: 16px; }
+    .btn { width: 100%; justify-content: center; }
+    .pipe div { flex-basis: 50%; border-bottom: 1px solid var(--line); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tick { animation: none; opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#"><span class="mark" aria-hidden="true"></span>Followthrough</a>
+    <div class="links">
+      <a class="hide-sm" href="#how">How it works</a>
+      <a class="hide-sm" href="#self-host">Self-host</a>
+      <a href="https://github.com/avinashgaurav/followthrough">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<header class="wrap hero">
+  <div>
+    <div class="eyebrow">Open source &middot; Self-hosted &middot; MIT</div>
+    <h1>Sales promised it. Engineering shipped it. <span class="told">Nobody told the client.</span></h1>
+    <p class="lede">Followthrough turns recorded client meetings into tracked commitments, each one cited to the client's exact words, and closes the loop when they ship.</p>
+    <div class="ctas">
+      <a class="btn primary" data-demo href="#">Try the live demo</a>
+      <a class="btn" href="https://github.com/avinashgaurav/followthrough">Star on GitHub</a>
+    </div>
+    <p class="fine">No signup for the demo. Fictional clients, real AI output.</p>
+  </div>
+
+  <div class="spine" aria-label="One client ask, from said to told">
+    <div class="tick done" style="--i:0">
+      <div class="meta"><span class="step">Said</span><span>Mar 03 &middot; 00:01:12</span></div>
+      <div class="quote"><q>If they could see the receipt image right in the approval notification, I think we'd cut two days off close.</q><span class="by">Jordan &middot; Acme Corp &middot; month-end check-in</span></div>
+    </div>
+    <div class="tick done" style="--i:1">
+      <div class="meta"><span class="step">Routed</span><span>Mar 03</span></div>
+      <div class="what">Feature request, product track, assigned to Maya</div>
+    </div>
+    <div class="tick done" style="--i:2">
+      <div class="meta"><span class="step">Shipped</span><span>Mar 21 &middot; &Delta;18d</span></div>
+      <div class="what">Matched to release v2.4.0 with changelog evidence</div>
+    </div>
+    <div class="tick now" style="--i:3">
+      <div class="meta"><span class="step">Client told</span><span>Now</span></div>
+      <div class="what">Follow-up drafted in your words, quoting theirs. You hit send.</div>
+    </div>
+    <div class="illus">Illustration with a fictional client</div>
+  </div>
+</header>
+
+<section id="why">
+  <div class="wrap">
+    <div class="eyebrow">Why it's different</div>
+    <h2>Meeting summarizers give you notes. Followthrough gives you a ledger of promises.</h2>
+    <div class="grid3">
+      <div class="cell">
+        <div class="eyebrow">01 &middot; Citation gate</div>
+        <h3>No quote, no insight</h3>
+        <p>Every extracted ask must carry a verbatim quote that is checked against the transcript in code. Hallucinated takeaways never reach your queue.</p>
+        <div class="vs">vs. "the client seemed interested in..."</div>
+      </div>
+      <div class="cell">
+        <div class="eyebrow">02 &middot; Human gate</div>
+        <h3>The AI drafts, people decide</h3>
+        <p>Nothing reaches a client without a person confirming it. No auto-sent emails, no auto-filed tickets.</p>
+        <div class="vs">vs. bots that email your customers</div>
+      </div>
+      <div class="cell">
+        <div class="eyebrow">03 &middot; Event log</div>
+        <h3>Every step is timestamped</h3>
+        <p>An append-only log records each move, so you can measure how fast an ask travels from said to shipped to told, per client and per person.</p>
+        <div class="vs">vs. a summary you read once and lose</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <div class="eyebrow">How it works</div>
+    <h2>One pipeline, from the call to the client's inbox.</h2>
+    <p class="sub">Paste a transcript or upload audio. The AI finds the asks, complaints and commitments; your team routes, ships and closes them.</p>
+    <div class="pipe">
+      <div class="ai"><span class="n">01 &middot; AI</span>Found<span class="who">asks with quotes</span></div>
+      <div><span class="n">02</span>Routed<span class="who">track + owner</span></div>
+      <div><span class="n">03</span>Locked<span class="who">final wording</span></div>
+      <div><span class="n">04</span>Ticket raised<span class="who">draft-first</span></div>
+      <div class="ai"><span class="n">05 &middot; AI</span>Shipped<span class="who">changelog match</span></div>
+      <div class="ai"><span class="n">06 &middot; AI</span>Client told<span class="who">email drafted</span></div>
+      <div><span class="n">07</span>Closed<span class="who">loop measured</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="share">
+  <div class="wrap share">
+    <div>
+      <div class="eyebrow">The part clients see</div>
+      <h2>Send every client a page that says: you asked, we shipped.</h2>
+      <p class="sub">One link per client lists what they asked for, what shipped, and how long it took. No login, revocable any time. It is the renewal conversation, written for you.</p>
+    </div>
+    <div class="page" aria-label="Example client share page">
+      <div class="k">Acme Corp &middot; you asked, we shipped</div>
+      <h4>2 of your requests shipped</h4>
+      <div class="med">Median time from ask to shipped: 18 days</div>
+      <div class="row"><span class="t">NetSuite export keeps blank cost centers</span><span class="d">12 days</span></div>
+      <div class="row"><span class="t">Receipt preview in mobile approvals</span><span class="d">18 days</span></div>
+      <div class="row flight"><span class="t">Time-saved report for your CFO</span><span class="d">in progress</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="self-host">
+  <div class="wrap">
+    <div class="eyebrow">Self-host in minutes</div>
+    <h2>Your meetings stay on your server.</h2>
+    <p class="sub">One Bun process and a SQLite file. Bring your own Claude key; audio can be transcribed locally with whisper.cpp.</p>
+<pre><span class="c"># needs Bun 1.3+</span>
+git clone https://github.com/avinashgaurav/followthrough.git
+cd followthrough && bun install
+echo 'ANTHROPIC_API_KEY=sk-ant-...' >> .env
+echo 'PRODUCT_NAME=Acme' >> .env
+bun run build:web && bun run start   <span class="c"># http://localhost:4500</span></pre>
+    <div class="facts"><span>MIT license</span><span>Bun + TypeScript</span><span>SQLite, append-only events</span><span>Claude via Anthropic or OpenRouter</span><span>Chrome recorder extension</span></div>
+    <div class="ctas" style="margin-top:30px">
+      <a class="btn primary" href="https://github.com/avinashgaurav/followthrough">Get it on GitHub</a>
+      <a class="btn" data-demo href="#">Try the live demo</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>Followthrough &middot; MIT &middot; built by <a href="https://github.com/avinashgaurav">@avinashgaurav</a></span>
+    <span>All companies and people on this page are fictional.</span>
+  </div>
+</footer>
+
+<script>
+  // Set once the demo is hosted. Empty → the demo buttons are hidden.
+  var DEMO_URL = "";
+  document.querySelectorAll("[data-demo]").forEach(function (a) {
+    if (DEMO_URL) a.href = DEMO_URL;
+    else a.style.display = "none";
+  });
+  if (!DEMO_URL) document.querySelector(".fine").style.display = "none";
+</script>
+</body>
+</html>
