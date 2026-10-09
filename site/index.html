@@ -50,7 +50,8 @@
   .btn:hover { border-color: var(--ink-subtle); }
   .btn.primary { background: var(--signal); color: var(--signal-ink); border-color: var(--signal); }
   .btn.primary:hover { background: var(--signal-hi); }
-  .btn:focus-visible { outline: 2px solid var(--signal-hi); outline-offset: 2px; }
+  .btn:focus-visible, a:focus-visible { outline: 2px solid var(--signal-hi); outline-offset: 2px; }
+  [hidden] { display: none !important; }
 
   /* hero */
   .hero { padding-top: 88px; padding-bottom: 72px; display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px; align-items: center; }
@@ -61,7 +62,7 @@
   .fine { margin-top: 16px; font-size: 13px; color: var(--ink-subtle); }
 
   /* the spine */
-  .spine { position: relative; padding: 4px 0 4px 34px; }
+  .spine { position: relative; margin: 0; padding: 4px 0 4px 34px; }
   .spine::before { content: ""; position: absolute; left: 7px; top: 10px; bottom: 10px; width: 1px; background: var(--line); }
   .tick { position: relative; padding: 0 0 22px; opacity: 0; transform: translateY(8px); animation: in 520ms var(--ease) forwards; animation-delay: calc(var(--i) * 90ms + 150ms); }
   .tick::before { content: ""; position: absolute; left: -31px; top: 6px; width: 9px; height: 9px; border-radius: 50%; background: var(--canvas); border: 1px solid var(--ink-subtle); }
@@ -73,7 +74,7 @@
   .quote { margin-top: 10px; background: var(--paper); color: var(--paper-ink); border-radius: var(--r-paper); padding: 16px 18px; border: 1px solid var(--paper-line); }
   .quote q { font: 400 19px/1.4 var(--serif); quotes: "\201C" "\201D"; }
   .quote .by { display: block; margin-top: 8px; font: 500 11px/1.4 var(--mono); color: var(--paper-muted); }
-  .illus { font: 500 10.5px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-subtle); margin-top: 6px; }
+  .illus { font: 500 12px/1.3 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-subtle); margin-top: 6px; }
   @keyframes in { to { opacity: 1; transform: none; } }
 
   /* sections */
@@ -98,7 +99,8 @@
   .share { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 56px; align-items: center; }
   .page { background: var(--paper); color: var(--paper-ink); border-radius: var(--r-paper); padding: 28px 28px 22px; border: 1px solid var(--paper-line); }
   .page .k { font: 500 10.5px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--paper-muted); }
-  .page h4 { font: 500 26px/1.2 var(--serif); margin: 10px 0 4px; }
+  .page-wrap { margin: 0; }
+  .page .ph { font: 500 26px/1.2 var(--serif); margin: 10px 0 4px; }
   .page .med { font-size: 14px; color: var(--paper-body); margin-bottom: 18px; }
   .row { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; border-top: 1px solid var(--paper-line); font-size: 15px; }
   .row .d { font: 500 12px/1.6 var(--mono); color: var(--paper-muted); white-space: nowrap; }
@@ -110,8 +112,8 @@
   pre { margin: 28px 0 0; background: var(--p1); border: 1px solid var(--line); border-radius: var(--r); padding: 20px 22px; overflow-x: auto; font: 400 13.5px/1.7 var(--mono); color: var(--ink); }
   pre .c { color: var(--ink-subtle); }
   .facts { display: flex; flex-wrap: wrap; gap: 10px 26px; margin-top: 22px; font: 500 12px/1.4 var(--mono); color: var(--ink-muted); }
-  .facts span::before { content: "| "; color: var(--line); }
-  .facts span:first-child::before { content: ""; }
+  .facts span { padding-left: 14px; border-left: 1px solid var(--ink-subtle); }
+  .facts span:first-child { padding-left: 0; border-left: 0; }
 
   footer { border-top: 1px solid var(--line); padding: 28px 0 40px; font-size: 13px; color: var(--ink-subtle); }
   footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
@@ -127,6 +129,8 @@
     .wrap { padding-left: 16px; padding-right: 16px; }
     .btn { width: 100%; justify-content: center; }
     .pipe div { flex-basis: 50%; border-bottom: 1px solid var(--line); }
+    .pipe div:nth-child(even) { border-right: 0; }
+    .pipe div:last-child { flex-basis: 100%; border-bottom: 0; }
   }
   @media (prefers-reduced-motion: reduce) {
     .tick { animation: none; opacity: 1; transform: none; }
@@ -145,19 +149,20 @@
   </div>
 </nav>
 
+<main>
 <header class="wrap hero">
   <div>
     <div class="eyebrow">Open source &middot; Self-hosted &middot; MIT</div>
     <h1>Sales promised it. Engineering shipped it. <span class="told">Nobody told the client.</span></h1>
     <p class="lede">Followthrough turns recorded client meetings into tracked commitments, each one cited to the client's exact words, and closes the loop when they ship.</p>
     <div class="ctas">
-      <a class="btn primary" data-demo href="#">Try the live demo</a>
-      <a class="btn" href="https://github.com/avinashgaurav/followthrough">Star on GitHub</a>
+      <a class="btn primary" data-demo hidden href="#">Try the live demo</a>
+      <a class="btn primary" id="hero-gh" href="https://github.com/avinashgaurav/followthrough">Star on GitHub</a>
     </div>
-    <p class="fine">No signup for the demo. Fictional clients, real AI output.</p>
+    <p class="fine" hidden>No signup for the demo. Fictional clients, real AI output.</p>
   </div>
 
-  <div class="spine" aria-label="One client ask, from said to told">
+  <figure class="spine" role="img" aria-label="One client ask moving from said, to routed, to shipped, to client told">
     <div class="tick done" style="--i:0">
       <div class="meta"><span class="step">Said</span><span>Mar 03 &middot; 00:01:12</span></div>
       <div class="quote"><q>If they could see the receipt image right in the approval notification, I think we'd cut two days off close.</q><span class="by">Jordan &middot; Acme Corp &middot; month-end check-in</span></div>
@@ -174,8 +179,8 @@
       <div class="meta"><span class="step">Client told</span><span>Now</span></div>
       <div class="what">Follow-up drafted in your words, quoting theirs. You hit send.</div>
     </div>
-    <div class="illus">Illustration with a fictional client</div>
-  </div>
+    <figcaption class="illus">Illustration with a fictional client</figcaption>
+  </figure>
 </header>
 
 <section id="why">
@@ -192,7 +197,7 @@
       <div class="cell">
         <div class="eyebrow">02 &middot; Human gate</div>
         <h3>The AI drafts, people decide</h3>
-        <p>Nothing reaches a client without a person confirming it. No auto-sent emails, no auto-filed tickets.</p>
+        <p>Nothing reaches a client without a person confirming it. No auto-sent emails, and no ticket is filed until a person clicks.</p>
         <div class="vs">vs. bots that email your customers</div>
       </div>
       <div class="cell">
@@ -229,22 +234,25 @@
       <h2>Send every client a page that says: you asked, we shipped.</h2>
       <p class="sub">One link per client lists what they asked for, what shipped, and how long it took. No login, revocable any time. It is the renewal conversation, written for you.</p>
     </div>
-    <div class="page" aria-label="Example client share page">
+    <figure class="page-wrap">
+    <div class="page">
       <div class="k">Acme Corp &middot; you asked, we shipped</div>
-      <h4>2 of your requests shipped</h4>
-      <div class="med">Median time from ask to shipped: 18 days</div>
+      <h3 class="ph">2 of your requests shipped</h3>
+      <div class="med">Median time from ask to shipped: 15 days</div>
       <div class="row"><span class="t">NetSuite export keeps blank cost centers</span><span class="d">12 days</span></div>
       <div class="row"><span class="t">Receipt preview in mobile approvals</span><span class="d">18 days</span></div>
       <div class="row flight"><span class="t">Time-saved report for your CFO</span><span class="d">in progress</span></div>
     </div>
+    <figcaption class="illus">Example page with a fictional client</figcaption>
+    </figure>
   </div>
 </section>
 
 <section id="self-host">
   <div class="wrap">
     <div class="eyebrow">Self-host in minutes</div>
-    <h2>Your meetings stay on your server.</h2>
-    <p class="sub">One Bun process and a SQLite file. Bring your own Claude key; audio can be transcribed locally with whisper.cpp.</p>
+    <h2>Your data stays on your server.</h2>
+    <p class="sub">One Bun process and a SQLite file. Audio can be transcribed locally with whisper.cpp; only transcript text goes to the Claude key you bring.</p>
 <pre><span class="c"># needs Bun 1.3+</span>
 git clone https://github.com/avinashgaurav/followthrough.git
 cd followthrough && bun install
@@ -254,10 +262,11 @@ bun run build:web && bun run start   <span class="c"># http://localhost:4500</sp
     <div class="facts"><span>MIT license</span><span>Bun + TypeScript</span><span>SQLite, append-only events</span><span>Claude via Anthropic or OpenRouter</span><span>Chrome recorder extension</span></div>
     <div class="ctas" style="margin-top:30px">
       <a class="btn primary" href="https://github.com/avinashgaurav/followthrough">Get it on GitHub</a>
-      <a class="btn" data-demo href="#">Try the live demo</a>
+      <a class="btn" data-demo hidden href="#">Try the live demo</a>
     </div>
   </div>
 </section>
+</main>
 
 <footer>
   <div class="wrap">
@@ -267,13 +276,16 @@ bun run build:web && bun run start   <span class="c"># http://localhost:4500</sp
 </footer>
 
 <script>
-  // Set once the demo is hosted. Empty → the demo buttons are hidden.
+  // Set once the demo is hosted. Empty: demo buttons stay hidden (also with JS off).
   var DEMO_URL = "";
-  document.querySelectorAll("[data-demo]").forEach(function (a) {
-    if (DEMO_URL) a.href = DEMO_URL;
-    else a.style.display = "none";
-  });
-  if (!DEMO_URL) document.querySelector(".fine").style.display = "none";
+  if (DEMO_URL) {
+    document.querySelectorAll("[data-demo], .fine").forEach(function (el) {
+      if (el.hasAttribute("data-demo")) el.href = DEMO_URL;
+      el.hidden = false;
+    });
+    // The demo becomes the hero's primary action; GitHub drops to secondary.
+    document.getElementById("hero-gh").classList.remove("primary");
+  }
 </script>
 </body>
 </html>
