@@ -22,6 +22,8 @@ COPY --from=build /app /app
 # Render/Railway inject PORT; the server reads env.PORT (defaults to 4500).
 EXPOSE 4500
 
-# Boot: seed the admin once (no-op if the user already exists; the one-time
-# login code is printed to the container logs on first boot), then serve.
-CMD ["sh", "-c", "bun run scripts/seed.ts && bun run src/server.ts || bun run src/server.ts"]
+# Boot: with DEMO_MODE on, seed the fictional demo data into an empty database
+# first (it swaps in a whole new database file). Then seed the admin once
+# (no-op if the user already exists; the one-time login code is printed to the
+# container logs on first boot). Seed failures never block the server.
+CMD ["sh", "-c", "bun run scripts/seed-demo.ts --if-demo; bun run scripts/seed.ts; exec bun run src/server.ts"]
