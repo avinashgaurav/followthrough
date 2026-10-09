@@ -1,0 +1,12 @@
+Speaker 0 (Maya, Tallyhall): Thanks for making time, Jordan. Last call you mentioned month-end close was still painful. Where are you now?
+Speaker 1 (Jordan, Acme): Honestly, better, but approvals are the bottleneck. Our regional managers approve from their phones and the approval screen just shows a total. They can't see the receipt without opening a laptop, so they wait until Monday.
+Speaker 0 (Maya, Tallyhall): So the receipt preview on mobile is the gap.
+Speaker 1 (Jordan, Acme): Exactly. If they could see the receipt image right in the approval notification, I think we'd cut two days off close. That's the number my CFO cares about.
+Speaker 2 (Priya, Acme): Can I add one thing? The CSV export to NetSuite drops the cost center column when it's empty, and then the import fails for the whole file. We fix it by hand every month.
+Speaker 0 (Maya, Tallyhall): That's a bug, not a feature request. I'll get engineering on it this week.
+Speaker 2 (Priya, Acme): Please. It's maybe forty minutes every close, and it's the kind of thing that makes our controller ask why we're paying for this.
+Speaker 1 (Jordan, Acme): And for context, we're up for renewal in March. I'm not shopping around, but our CFO asked me to show the ROI this time, so anything you can give me on time saved would help me make the case.
+Speaker 0 (Maya, Tallyhall): Understood. I'll send you a time-saved report from your own data before the end of the month.
+Speaker 1 (Jordan, Acme): Perfect. And I'll get you the list of the twelve regional managers so you can enable mobile approvals for them.
+Speaker 0 (Maya, Tallyhall): Great. So on our side: the NetSuite export fix, the mobile receipt preview goes to product, and the ROI report from me. On yours, the manager list.
+Speaker 1 (Jordan, Acme): That's it. Thanks Maya.

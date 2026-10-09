@@ -11,6 +11,7 @@
     "test": "bun test",
     "evals": "bun run evals/run-evals.ts",
     "seed": "bun run scripts/seed.ts",
+    "seed:demo": "bun run scripts/seed-demo.ts",
     "backup": "bash scripts/backup.sh"
   },
   "dependencies": {

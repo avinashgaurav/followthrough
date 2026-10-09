@@ -1,0 +1,11 @@
+Speaker 0 (Maya, Tallyhall): Bill, thanks for joining. How's the first month going?
+Speaker 1 (Bill, Initech): Mostly good. The team likes it. Two things. First, the Slack notifications are too noisy. Every single expense pings the approver. People are muting the channel, which defeats the point.
+Speaker 0 (Maya, Tallyhall): Would a daily digest work better?
+Speaker 1 (Bill, Initech): A daily digest with anything over five hundred dollars still pinging right away. That would be ideal.
+Speaker 0 (Maya, Tallyhall): Got it. And the second thing?
+Speaker 1 (Bill, Initech): Mileage. We reimburse mileage and right now people type the distance by hand. Some of the numbers are creative, let's say. If you could calculate it from start and end address, finance would love you.
+Speaker 2 (Lena, Initech): From the finance side, the NetSuite export also broke for us twice when a cost center was blank. Same error both times.
+Speaker 0 (Maya, Tallyhall): That one is known, we're fixing it now. I'll tell you as soon as it ships.
+Speaker 2 (Lena, Initech): Thanks. And can you send me the setup guide for the approval rules? I want to add a second approver for anything over five thousand.
+Speaker 0 (Maya, Tallyhall): I'll send it today.
+Speaker 1 (Bill, Initech): Great. We'll do a proper review at the ninety-day mark.

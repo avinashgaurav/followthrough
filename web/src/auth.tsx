@@ -14,6 +14,8 @@ interface AuthState {
   allowedDomains: string[];
   /** WRITABLE_REPOS from the server; empty → direct GitHub creation is off. */
   writableRepos: string[];
+  /** DEMO_MODE on the server: read-only public demo. */
+  demo: boolean;
   setUser: (u: User | null) => void;
   refresh: () => Promise<void>;
 }
@@ -25,6 +27,7 @@ const AuthCtx = createContext<AuthState>({
   requireLogin: false,
   allowedDomains: [],
   writableRepos: [],
+  demo: false,
   setUser: () => undefined,
   refresh: async () => undefined,
 });
@@ -40,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [requireLogin, setRequireLogin] = useState(false);
   const [allowedDomains, setAllowedDomains] = useState<string[]>([]);
   const [writableRepos, setWritableRepos] = useState<string[]>([]);
+  const [demo, setDemo] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -49,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setRequireLogin(!!r.require_login);
       setAllowedDomains(r.allowed_email_domains ?? []);
       setWritableRepos(r.writable_repos ?? []);
+      setDemo(!!r.demo);
     } catch (e) {
       if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
         setUser(null);
@@ -67,8 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const value = useMemo(
-    () => ({ user, loading, isGuest, requireLogin, allowedDomains, writableRepos, setUser, refresh }),
-    [user, loading, isGuest, requireLogin, allowedDomains, writableRepos, refresh],
+    () => ({ user, loading, isGuest, requireLogin, allowedDomains, writableRepos, demo, setUser, refresh }),
+    [user, loading, isGuest, requireLogin, allowedDomains, writableRepos, demo, refresh],
   );
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 }

@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
-import { env } from "../config.ts";
+import { env, llmDailyBudgetUsd } from "../config.ts";
 
 /**
  * LLM layer (SPEC.md sections 5, 10): Anthropic direct, single provider for
@@ -52,6 +52,66 @@ function costUsd(model: string, tokensIn: number, tokensOut: number): number {
 }
 
 export class LLMOutputError extends Error {}
+
+/** Thrown before any provider call once the daily LLM_DAILY_BUDGET_USD is spent. */
+export class LLMBudgetError extends Error {}
+
+/**
+ * Hard daily spend cap around any LLM. Checks before each call and records the
+ * reported cost after it, so calls already in flight can overshoot by their own
+ * cost. Failed calls (and inner retries) are not counted. In-memory per
+ * process: a restart resets the day's tally.
+ */
+export class BudgetedLLM implements LLM {
+  private day = "";
+  private spent = 0;
+
+  constructor(
+    private inner: LLM,
+    private capUsd: number,
+    private now: () => Date = () => new Date(),
+  ) {}
+
+  spentToday(): number {
+    this.roll();
+    return this.spent;
+  }
+
+  private roll(): void {
+    const today = this.now().toISOString().slice(0, 10);
+    if (today !== this.day) {
+      this.day = today;
+      this.spent = 0;
+    }
+  }
+
+  /** Unknown-model pricing reports $0; charge a conservative rate instead so the cap still trips. */
+  private charge(r: LLMUsage): void {
+    const tokens = r.tokensIn + r.tokensOut;
+    this.spent += r.costUsd > 0 || tokens === 0 ? r.costUsd : (r.tokensIn * 15 + r.tokensOut * 75) / 1_000_000;
+  }
+
+  private check(): void {
+    this.roll();
+    if (this.spent >= this.capUsd) {
+      throw new LLMBudgetError("Today's AI budget is used up. Try again tomorrow.");
+    }
+  }
+
+  async complete(opts: CompleteOptions): Promise<{ text: string } & LLMUsage> {
+    this.check();
+    const r = await this.inner.complete(opts);
+    this.charge(r);
+    return r;
+  }
+
+  async completeJSON<T>(opts: CompleteJSONOptions<T>): Promise<{ data: T } & LLMUsage> {
+    this.check();
+    const r = await this.inner.completeJSON(opts);
+    this.charge(r);
+    return r;
+  }
+}
 
 class AnthropicLLM implements LLM {
   private client: Anthropic;
@@ -275,5 +335,7 @@ export function getLLM(): LLM {
     console.warn("No LLM key set; using MockLLM (dev only)");
     instance = new MockLLM();
   }
+  const cap = llmDailyBudgetUsd();
+  if (cap) instance = new BudgetedLLM(instance, cap);
   return instance;
 }
