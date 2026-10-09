@@ -14,7 +14,8 @@ import {
   isGuestUser,
   GUEST_USER_ID,
 } from "./auth.ts";
-import { allowedEmailDomains, writableRepos } from "./config.ts";
+import { allowedEmailDomains, demoMode, writableRepos } from "./config.ts";
+import { clientIp } from "./demo.ts";
 import { authRequired, setAuthRequired } from "./settings.ts";
 import { appendEvent } from "./events.ts";
 
@@ -36,10 +37,7 @@ route("POST", "/api/auth/login", "public", async (req) => {
   if (!body.success) return json({ error: "email and code required" }, 400);
   // Behind Cloudflare/most proxies, x-forwarded-for is client-controlled; prefer
   // the proxy-validated header and fall back to the first XFF hop.
-  const ip =
-    req.headers.get("cf-connecting-ip") ||
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    null;
+  const ip = clientIp(req);
   const result = await login(db, body.data.email, body.data.code, ip, req.headers.get("user-agent"));
   if (!result.ok) {
     const status = result.reason === "locked_out" ? 429 : 401;
@@ -70,6 +68,7 @@ route("GET", "/api/me", "user", (_req, user) =>
     is_guest: isGuestUser(user),
     allowed_email_domains: allowedEmailDomains(),
     writable_repos: writableRepos(),
+    demo: demoMode(),
   }),
 );
 

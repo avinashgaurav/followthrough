@@ -28,6 +28,12 @@ const EnvSchema = z.object({
   PRODUCT_NAME: z.string().optional(),
   PRODUCT_DESCRIPTION: z.string().optional(),
   DIGEST_WEBHOOK_URL: z.string().optional(),
+  // Public read-only demo: blocks writes (except Ask), hides team/calendar data,
+  // rate-limits Ask per IP, and turns off background jobs.
+  DEMO_MODE: z.string().optional(),
+  DEMO_ASK_PER_HOUR: z.coerce.number().int().positive().default(10),
+  // Hard daily cap on LLM spend (USD, UTC day). Unset → no cap.
+  LLM_DAILY_BUDGET_USD: z.coerce.number().positive().optional(),
 });
 
 export const env = EnvSchema.parse(process.env);
@@ -37,6 +43,10 @@ function csv(value: string | undefined): string[] {
     .split(",")
     .map((v) => v.trim().toLowerCase())
     .filter(Boolean);
+}
+
+export function demoMode(): boolean {
+  return ["1", "true", "yes", "on"].includes((env.DEMO_MODE ?? "").trim().toLowerCase());
 }
 
 /** Who the AI is working for, e.g. "Acme, a payroll platform for SMBs". */

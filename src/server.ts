@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { existsSync } from "node:fs";
-import { env, allowedEmailDomains } from "./config.ts";
+import { env, allowedEmailDomains, demoMode } from "./config.ts";
 import { getDb, nowIso } from "./db.ts";
 import { route, json, dispatch } from "./router.ts";
 
@@ -53,10 +53,13 @@ async function serveStatic(pathname: string): Promise<Response> {
 }
 
 if (import.meta.main) {
-  startDigestScheduler();
-  startReleasePoller();
-  startWatchFolder();
-  startDailyNudge(getDb);
+  // The public demo is read-only synthetic data: no polling, ingest or outbound nudges.
+  if (!demoMode()) {
+    startDigestScheduler();
+    startReleasePoller();
+    startWatchFolder();
+    startDailyNudge(getDb);
+  }
   const sweepStale = () => {
     try {
       markStaleDrafts(getDb());
@@ -86,6 +89,10 @@ if (import.meta.main) {
     console.warn(
       "WARNING: ACCESS_PASSWORD is set but ALLOWED_EMAIL_DOMAINS is empty: anyone with the password can sign in with any email. Set ALLOWED_EMAIL_DOMAINS.",
     );
+  }
+  if (demoMode()) {
+    console.log(`DEMO_MODE on: read-only, Ask limited to ${env.DEMO_ASK_PER_HOUR}/hour per IP`);
+    if (!env.LLM_DAILY_BUDGET_USD) console.warn("WARNING: DEMO_MODE without LLM_DAILY_BUDGET_USD: AI spend is uncapped.");
   }
   if (!env.PRODUCT_NAME) {
     console.warn("PRODUCT_NAME is not set: AI output will refer to \"our company\". Set it in .env for sharper insights.");

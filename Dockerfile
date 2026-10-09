@@ -23,5 +23,7 @@ COPY --from=build /app /app
 EXPOSE 4500
 
 # Boot: seed the admin once (no-op if the user already exists; the one-time
-# login code is printed to the container logs on first boot), then serve.
-CMD ["sh", "-c", "bun run scripts/seed.ts && bun run src/server.ts || bun run src/server.ts"]
+# login code is printed to the container logs on first boot). With DEMO_MODE
+# on, also seed the fictional demo data on an empty database. Seed failures
+# never block the server.
+CMD ["sh", "-c", "bun run scripts/seed.ts; bun run scripts/seed-demo.ts --if-demo; exec bun run src/server.ts"]

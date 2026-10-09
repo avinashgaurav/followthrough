@@ -24,6 +24,8 @@ import {
 } from "./service.ts";
 import { rebuildFts, searchAll } from "./search.ts";
 import { askMemory } from "./ask.ts";
+import { demoMode, env } from "../config.ts";
+import { clientIp } from "../demo.ts";
 
 function actorOf(user: AuthedUser | null): { id: string; role: "admin" | "member" } {
   // the router enforces auth for "user"/"admin" routes; this narrows the type
@@ -174,18 +176,20 @@ const AskSchema = z.object({
 
 // Lightweight per-user rate limit: the ask endpoint calls the LLM on every hit,
 // so cap it to keep a runaway client (or a loop) from draining the API budget.
+// In DEMO_MODE every visitor is the same guest, so the key is the client IP and
+// the cap is DEMO_ASK_PER_HOUR instead.
 const ASK_LIMIT = 30;
 const ASK_WINDOW_MS = 60 * 60 * 1000;
 const askHits = new Map<string, number[]>();
-function askRateLimited(userId: string): boolean {
+function askRateLimited(key: string, limit = ASK_LIMIT): boolean {
   const now = Date.now();
-  const recent = (askHits.get(userId) ?? []).filter((t) => now - t < ASK_WINDOW_MS);
-  if (recent.length >= ASK_LIMIT) {
-    askHits.set(userId, recent);
+  const recent = (askHits.get(key) ?? []).filter((t) => now - t < ASK_WINDOW_MS);
+  if (recent.length >= limit) {
+    askHits.set(key, recent);
     return true;
   }
   recent.push(now);
-  askHits.set(userId, recent);
+  askHits.set(key, recent);
   return false;
 }
 
@@ -201,7 +205,10 @@ route("POST", "/api/ask", "user", async (req, user) => {
   if (!parsed.success) return invalid(parsed.error.issues);
   const actor = actorOf(user);
   pruneAskHits(Date.now());
-  if (askRateLimited(actor.id)) {
+  const limited = demoMode()
+    ? askRateLimited(`ip:${clientIp(req) ?? "unknown"}`, env.DEMO_ASK_PER_HOUR)
+    : askRateLimited(actor.id);
+  if (limited) {
     return json({ error: "Too many questions in a short window. Wait a bit and try again." }, 429);
   }
   const result = await askMemory(getDb(), parsed.data.question, { client_id: parsed.data.client_id }, actor);

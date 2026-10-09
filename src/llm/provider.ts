@@ -53,6 +53,59 @@ function costUsd(model: string, tokensIn: number, tokensOut: number): number {
 
 export class LLMOutputError extends Error {}
 
+/** Thrown before any provider call once the daily LLM_DAILY_BUDGET_USD is spent. */
+export class LLMBudgetError extends Error {}
+
+/**
+ * Hard daily spend cap around any LLM. Checks before each call and records the
+ * reported cost after it, so one in-flight call can overshoot by its own cost.
+ * In-memory per process: a restart resets the day's tally.
+ */
+export class BudgetedLLM implements LLM {
+  private day = "";
+  private spent = 0;
+
+  constructor(
+    private inner: LLM,
+    private capUsd: number,
+    private now: () => Date = () => new Date(),
+  ) {}
+
+  spentToday(): number {
+    this.roll();
+    return this.spent;
+  }
+
+  private roll(): void {
+    const today = this.now().toISOString().slice(0, 10);
+    if (today !== this.day) {
+      this.day = today;
+      this.spent = 0;
+    }
+  }
+
+  private check(): void {
+    this.roll();
+    if (this.spent >= this.capUsd) {
+      throw new LLMBudgetError("Today's AI budget is used up. Try again tomorrow.");
+    }
+  }
+
+  async complete(opts: CompleteOptions): Promise<{ text: string } & LLMUsage> {
+    this.check();
+    const r = await this.inner.complete(opts);
+    this.spent += r.costUsd;
+    return r;
+  }
+
+  async completeJSON<T>(opts: CompleteJSONOptions<T>): Promise<{ data: T } & LLMUsage> {
+    this.check();
+    const r = await this.inner.completeJSON(opts);
+    this.spent += r.costUsd;
+    return r;
+  }
+}
+
 class AnthropicLLM implements LLM {
   private client: Anthropic;
 
@@ -275,5 +328,6 @@ export function getLLM(): LLM {
     console.warn("No LLM key set; using MockLLM (dev only)");
     instance = new MockLLM();
   }
+  if (env.LLM_DAILY_BUDGET_USD) instance = new BudgetedLLM(instance, env.LLM_DAILY_BUDGET_USD);
   return instance;
 }
