@@ -205,8 +205,11 @@ route("POST", "/api/ask", "user", async (req, user) => {
   if (!parsed.success) return invalid(parsed.error.issues);
   const actor = actorOf(user);
   pruneAskHits(Date.now());
+  // Demo: per-IP first, then a global cap so total spend is bounded even if
+  // IPs are unknown or rotated.
   const limited = demoMode()
-    ? askRateLimited(`ip:${clientIp(req) ?? "unknown"}`, env.DEMO_ASK_PER_HOUR)
+    ? askRateLimited(`ip:${clientIp(req) ?? "unknown"}`, env.DEMO_ASK_PER_HOUR) ||
+      askRateLimited("demo:global", env.DEMO_ASK_GLOBAL_PER_HOUR)
     : askRateLimited(actor.id);
   if (limited) {
     return json({ error: "Too many questions in a short window. Wait a bit and try again." }, 429);

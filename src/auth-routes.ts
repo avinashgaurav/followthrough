@@ -35,8 +35,7 @@ route("POST", "/api/auth/login", "public", async (req) => {
   const db = getDb();
   const body = LoginSchema.safeParse(await req.json().catch(() => null));
   if (!body.success) return json({ error: "email and code required" }, 400);
-  // Behind Cloudflare/most proxies, x-forwarded-for is client-controlled; prefer
-  // the proxy-validated header and fall back to the first XFF hop.
+  // Proxy-appended XFF entry per TRUSTED_PROXY_HOPS (see clientIp).
   const ip = clientIp(req);
   const result = await login(db, body.data.email, body.data.code, ip, req.headers.get("user-agent"));
   if (!result.ok) {

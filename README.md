@@ -125,7 +125,10 @@ bun run backup
 | `DEEPGRAM_KEYTERMS` | comma-separated terms to boost Deepgram accuracy (names, jargon) |
 | `DEMO_MODE` | `true` = public read-only demo: writes and login off, team and calendar hidden, Ask rate-limited per IP, background jobs off |
 | `DEMO_ASK_PER_HOUR` | Ask questions per visitor IP per hour in demo mode (default `10`) |
-| `LLM_DAILY_BUDGET_USD` | hard daily cap on AI spend; once reached, AI calls return 503 until the next UTC day (resets on restart) |
+| `DEMO_ASK_GLOBAL_PER_HOUR` | Ask questions per hour across all visitors in demo mode (default `200`) |
+| `LLM_DAILY_BUDGET_USD` | hard daily cap on AI spend; once reached, AI calls return 503 until the next UTC day (resets on restart). Demo mode defaults to `5` |
+| `TRUSTED_PROXY_HOPS` | proxies in front of the server that append to `X-Forwarded-For` (default `1`, right for Railway/Render/Fly; `0` ignores XFF). Drives login lockout and demo rate limits |
+| `TRUST_CF_CONNECTING_IP` | `true` only when the server is reachable solely through Cloudflare |
 | `ACCESS_PASSWORD` | optional shared team password: any allowed-domain email + this signs in as a member. **Set `ALLOWED_EMAIL_DOMAINS` too**, or the password alone admits any email |
 
 </details>
@@ -140,7 +143,7 @@ bun run backup
 DEMO_MODE=true LLM_DAILY_BUDGET_USD=5 PRODUCT_NAME=Tallyhall bun run seed:demo && bun run start
 ```
 
-Seeding makes real LLM calls once. Always set `LLM_DAILY_BUDGET_USD` on a public instance.
+Seeding makes real LLM calls once and is all-or-nothing: a failure leaves the database untouched and the next boot retries. Mount a persistent volume at `DATA_DIR`, or every redeploy re-seeds (and re-spends). Demo mode caps AI spend at $5/day unless `LLM_DAILY_BUDGET_USD` says otherwise.
 
 ---
 

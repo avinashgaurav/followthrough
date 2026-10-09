@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { existsSync } from "node:fs";
-import { env, allowedEmailDomains, demoMode } from "./config.ts";
+import { env, allowedEmailDomains, demoMode, llmDailyBudgetUsd } from "./config.ts";
 import { getDb, nowIso } from "./db.ts";
 import { route, json, dispatch } from "./router.ts";
 
@@ -91,10 +91,11 @@ if (import.meta.main) {
     );
   }
   if (demoMode()) {
-    console.log(`DEMO_MODE on: read-only, Ask limited to ${env.DEMO_ASK_PER_HOUR}/hour per IP`);
-    if (!env.LLM_DAILY_BUDGET_USD) console.warn("WARNING: DEMO_MODE without LLM_DAILY_BUDGET_USD: AI spend is uncapped.");
+    console.log(
+      `DEMO_MODE on: read-only; Ask ${env.DEMO_ASK_PER_HOUR}/hour per IP, ${env.DEMO_ASK_GLOBAL_PER_HOUR}/hour total; AI budget $${llmDailyBudgetUsd()}/day`,
+    );
   }
-  if (!env.PRODUCT_NAME) {
+  if (!env.PRODUCT_NAME && !demoMode()) {
     console.warn("PRODUCT_NAME is not set: AI output will refer to \"our company\". Set it in .env for sharper insights.");
   }
 }

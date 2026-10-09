@@ -1,4 +1,4 @@
-import { demoMode } from "./config.ts";
+import { demoMode, env, trustCfConnectingIp } from "./config.ts";
 
 /**
  * Public demo guard (DEMO_MODE). The demo runs open-access on synthetic data,
@@ -18,11 +18,22 @@ export function demoBlocks(method: string, pathname: string): boolean {
   return !WRITE_ALLOW.some((p) => p.test(pathname));
 }
 
-/** Client IP behind Cloudflare or a typical proxy; null when unknown. */
+/**
+ * Client IP as seen by the nearest TRUSTED proxy; null when unknown.
+ * Proxies append to X-Forwarded-For, so only the rightmost TRUSTED_PROXY_HOPS
+ * entries are trustworthy; anything to their left is client-supplied.
+ * cf-connecting-ip is honored only when TRUST_CF_CONNECTING_IP is on.
+ */
 export function clientIp(req: Request): string | null {
-  return (
-    req.headers.get("cf-connecting-ip") ||
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    null
-  );
+  if (trustCfConnectingIp()) {
+    const cf = req.headers.get("cf-connecting-ip")?.trim();
+    if (cf) return cf;
+  }
+  const hops = env.TRUSTED_PROXY_HOPS;
+  if (hops === 0) return null;
+  const chain = (req.headers.get("x-forwarded-for") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return chain.length >= hops ? chain[chain.length - hops]! : null;
 }

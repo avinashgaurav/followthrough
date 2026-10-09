@@ -32,8 +32,17 @@ const EnvSchema = z.object({
   // rate-limits Ask per IP, and turns off background jobs.
   DEMO_MODE: z.string().optional(),
   DEMO_ASK_PER_HOUR: z.coerce.number().int().positive().default(10),
-  // Hard daily cap on LLM spend (USD, UTC day). Unset → no cap.
+  // Ask questions per hour across ALL visitors in demo mode.
+  DEMO_ASK_GLOBAL_PER_HOUR: z.coerce.number().int().positive().default(200),
+  // Hard daily cap on LLM spend (USD, UTC day). Unset → no cap, except
+  // DEMO_MODE, which defaults to DEMO_DEFAULT_BUDGET_USD.
   LLM_DAILY_BUDGET_USD: z.coerce.number().positive().optional(),
+  // How many reverse proxies append to X-Forwarded-For in front of this server.
+  // The client IP is the entry that many hops from the RIGHT (entries further
+  // left are client-supplied and spoofable). 0 → ignore XFF entirely.
+  TRUSTED_PROXY_HOPS: z.coerce.number().int().min(0).default(1),
+  // Trust cf-connecting-ip only when the server is reachable solely via Cloudflare.
+  TRUST_CF_CONNECTING_IP: z.string().optional(),
 });
 
 export const env = EnvSchema.parse(process.env);
@@ -45,14 +54,32 @@ function csv(value: string | undefined): string[] {
     .filter(Boolean);
 }
 
+function flag(value: string | undefined): boolean {
+  return ["1", "true", "yes", "on"].includes((value ?? "").trim().toLowerCase());
+}
+
 export function demoMode(): boolean {
-  return ["1", "true", "yes", "on"].includes((env.DEMO_MODE ?? "").trim().toLowerCase());
+  return flag(env.DEMO_MODE);
+}
+
+export function trustCfConnectingIp(): boolean {
+  return flag(env.TRUST_CF_CONNECTING_IP);
+}
+
+/** A public demo always has a spend cap, even when none is configured. */
+export const DEMO_DEFAULT_BUDGET_USD = 5;
+
+export function llmDailyBudgetUsd(): number | undefined {
+  return env.LLM_DAILY_BUDGET_USD ?? (demoMode() ? DEMO_DEFAULT_BUDGET_USD : undefined);
 }
 
 /** Who the AI is working for, e.g. "Acme, a payroll platform for SMBs". */
 export function productLabel(): string {
-  const name = env.PRODUCT_NAME?.trim() || "our company";
-  const desc = env.PRODUCT_DESCRIPTION?.trim();
+  // The demo's fictional transcripts are about Tallyhall; keep the AI on-story.
+  const name = env.PRODUCT_NAME?.trim() || (demoMode() ? "Tallyhall" : "our company");
+  const desc =
+    env.PRODUCT_DESCRIPTION?.trim() ||
+    (demoMode() && !env.PRODUCT_NAME ? "an expense management platform for mid-size companies" : undefined);
   return desc ? `${name}, ${desc}` : name;
 }
 

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { env } from "./config.ts";
+import { DEMO_DEFAULT_BUDGET_USD, env, llmDailyBudgetUsd } from "./config.ts";
 import { clientIp, demoBlocks } from "./demo.ts";
 import { BudgetedLLM, LLMBudgetError, type LLM } from "./llm/provider.ts";
 
@@ -41,11 +41,39 @@ describe("demoBlocks", () => {
 });
 
 describe("clientIp", () => {
-  test("prefers cf-connecting-ip, then first XFF hop", () => {
-    const h = (headers: Record<string, string>) => new Request("http://x/", { headers });
-    expect(clientIp(h({ "cf-connecting-ip": "1.1.1.1", "x-forwarded-for": "2.2.2.2" }))).toBe("1.1.1.1");
-    expect(clientIp(h({ "x-forwarded-for": "3.3.3.3, 10.0.0.1" }))).toBe("3.3.3.3");
+  const h = (headers: Record<string, string>) => new Request("http://x/", { headers });
+  const savedHops = env.TRUSTED_PROXY_HOPS;
+  const savedCf = env.TRUST_CF_CONNECTING_IP;
+  afterEach(() => {
+    env.TRUSTED_PROXY_HOPS = savedHops;
+    env.TRUST_CF_CONNECTING_IP = savedCf;
+  });
+
+  test("one trusted proxy: the rightmost XFF entry, so a spoofed left entry is ignored", () => {
+    env.TRUSTED_PROXY_HOPS = 1;
+    expect(clientIp(h({ "x-forwarded-for": "6.6.6.6, 3.3.3.3" }))).toBe("3.3.3.3");
+    expect(clientIp(h({ "x-forwarded-for": "3.3.3.3" }))).toBe("3.3.3.3");
     expect(clientIp(h({}))).toBeNull();
+  });
+
+  test("two trusted proxies: second from the right", () => {
+    env.TRUSTED_PROXY_HOPS = 2;
+    expect(clientIp(h({ "x-forwarded-for": "6.6.6.6, 3.3.3.3, 10.0.0.1" }))).toBe("3.3.3.3");
+    expect(clientIp(h({ "x-forwarded-for": "10.0.0.1" }))).toBeNull();
+  });
+
+  test("hops 0 ignores XFF entirely", () => {
+    env.TRUSTED_PROXY_HOPS = 0;
+    expect(clientIp(h({ "x-forwarded-for": "3.3.3.3" }))).toBeNull();
+  });
+
+  test("cf-connecting-ip only when explicitly trusted", () => {
+    env.TRUSTED_PROXY_HOPS = 1;
+    const req = () => h({ "cf-connecting-ip": "1.1.1.1", "x-forwarded-for": "2.2.2.2" });
+    env.TRUST_CF_CONNECTING_IP = undefined;
+    expect(clientIp(req())).toBe("2.2.2.2");
+    env.TRUST_CF_CONNECTING_IP = "true";
+    expect(clientIp(req())).toBe("1.1.1.1");
   });
 });
 
@@ -85,5 +113,37 @@ describe("BudgetedLLM", () => {
     now = new Date("2026-10-10T00:01:00Z");
     await b.complete({ prompt: "c" });
     expect(inner.calls).toBe(2);
+  });
+
+  test("unknown-model pricing ($0 reported) is charged conservatively so the cap still trips", async () => {
+    const inner: LLM = {
+      async complete() {
+        return { text: "ok", model: "mystery", tokensIn: 100_000, tokensOut: 10_000, costUsd: 0 };
+      },
+      async completeJSON<T>() {
+        return { data: {} as T, model: "mystery", tokensIn: 0, tokensOut: 0, costUsd: 0 };
+      },
+    };
+    const b = new BudgetedLLM(inner, 1);
+    await b.complete({ prompt: "a" }); // 100k*$15/M + 10k*$75/M = $2.25
+    expect(b.spentToday()).toBeCloseTo(2.25);
+    await expect(b.complete({ prompt: "b" })).rejects.toBeInstanceOf(LLMBudgetError);
+  });
+});
+
+describe("llmDailyBudgetUsd", () => {
+  test("demo mode always has a cap; explicit value wins; off otherwise", () => {
+    const savedBudget = env.LLM_DAILY_BUDGET_USD;
+    try {
+      env.LLM_DAILY_BUDGET_USD = undefined;
+      env.DEMO_MODE = undefined;
+      expect(llmDailyBudgetUsd()).toBeUndefined();
+      env.DEMO_MODE = "true";
+      expect(llmDailyBudgetUsd()).toBe(DEMO_DEFAULT_BUDGET_USD);
+      env.LLM_DAILY_BUDGET_USD = 20;
+      expect(llmDailyBudgetUsd()).toBe(20);
+    } finally {
+      env.LLM_DAILY_BUDGET_USD = savedBudget;
+    }
   });
 });
