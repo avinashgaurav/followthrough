@@ -104,7 +104,7 @@ if (import.meta.main) {
 
   if (!transcriptPath) {
     console.error("Usage: bun run evals/draft-golden.ts <path-to-raw-transcript.txt> [client-name] [--force] [--no-verify]");
-    console.error("Example: bun run evals/draft-golden.ts evals/golden/raw/01-northwind-traders.txt \"NorthwindTraders\"");
+    console.error("Example: bun run evals/draft-golden.ts demo/initech.txt \"Initech\"");
     process.exit(1);
   }
 

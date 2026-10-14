@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Score the extraction prompts against the founder-corrected golden set
+ * Score the extraction prompts against the hand-labeled golden set
  * (SPEC.md section 5).
  *
  *   bun run evals/run-evals.ts [--only <name>] [--no-verify]

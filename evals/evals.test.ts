@@ -304,7 +304,7 @@ describe("run-evals (end to end with a fake judge)", () => {
 describe("slugify", () => {
   test("normalizes names to file-safe slugs", () => {
     expect(slugify("Vandelay Imports Ltd.")).toBe("vandelay-imports-ltd");
-    expect(slugify("01-NorthwindTraders")).toBe("01-northwind-traders");
+    expect(slugify("01-Northwind")).toBe("01-northwind");
     expect(slugify("***")).toBe("case");
   });
 });

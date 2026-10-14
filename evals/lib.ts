@@ -4,7 +4,7 @@
  * without ever touching the app database.
  *
  * Used by draft-golden.ts (drafts a case for founder correction) and
- * run-evals.ts (scores predicted vs founder-corrected expected output).
+ * run-evals.ts (scores predicted vs hand-labeled expected output).
  */
 
 import { basename, isAbsolute, join, relative, resolve } from "node:path";
@@ -68,7 +68,7 @@ export function slugify(name: string): string {
   return slug === "" ? "case" : slug;
 }
 
-/** Derive a presentable client name from a transcript filename, e.g. "01-NorthwindTraders.txt" -> "NorthwindTraders". */
+/** Derive a presentable client name from a transcript filename, e.g. "01-northwind-traders.txt" -> "Northwind Traders". */
 export function clientNameFromFile(path: string): string {
   const base = basename(path).replace(/\.[^.]*$/, "");
   const words = base
