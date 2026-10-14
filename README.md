@@ -18,12 +18,25 @@
 
 A salesperson promises a customer a feature on a call. Three weeks later it ships. Nobody tells the customer. The relationship quietly erodes. **Followthrough closes that loop.**
 
-You feed it a meeting — transcript or audio. It extracts the real asks, complaints, and between-the-lines signals, each anchored to the client's exact words. A human reviews and polishes each one, routes it to a track, and moves it down a pipeline: ticket raised → proof it shipped → client told. Every transition is an event on an append-only log, so you can measure exactly how fast an ask travels from *said* to *shipped* to *told* — per client, per theme, per person.
+You feed it a meeting: transcript or audio. It extracts the real asks, complaints, and between-the-lines signals, each anchored to the client's exact words. A human reviews and polishes each one, routes it to a track, and moves it down a pipeline: ticket raised → proof it shipped → client told. Every transition is an event on an append-only log, so you can measure exactly how fast an ask travels from *said* to *shipped* to *told*, per client, per theme, per person.
 
 > **The AI drafts; people decide.** Nothing reaches a client without a human confirming it. Every extracted insight must cite a verbatim quote from the transcript, or it doesn't exist.
 
 > [!NOTE]
-> The bundled sample meetings under `demo/` and `evals/golden/` are **fictional transcripts written by hand**. Every company, person, and product name in them (Tallyhall, Acme, Northwind, Hooli, and so on) is made up.
+> All bundled data is **fictional**: the demo meetings in `demo/`, the eval transcripts and answer keys in `evals/golden/` (written by hand), and the release-note fixtures in `src/releases/fixtures/`. They are set around a made-up expense-software company, **Tallyhall**, and its made-up clients (Acme, Globex, Initech, Northwind Traders, Hooli, Vandelay Imports, Umbrella Freight). No real customer meetings are in this repo.
+
+Product brief (user, problem, metrics, cost per meeting): [docs/PRD.md](docs/PRD.md).
+
+---
+
+## Why AI here, why code there
+
+| Step | Done by | Why |
+|---|---|---|
+| Pull asks, complaints and commitments out of a transcript; verify them; draft tickets, emails and the meeting brief | Model (`src/extract/`, `src/emails/`, `src/tickets/`) | Reading intent and subtext from speech is a language task. |
+| Keep an item only if its quote appears word for word in the transcript | Code (`buildQuoteMatcher` in `src/extract/segment.ts`) | Whether a quote exists is a fact to check, not a judgment. No quote, no item. |
+| Triage, reword, route and finalize; confirm a release really shipped an ask | A person (Review and Confirm shipped screens) | The client relationship is on the line, so a human signs off every outward step. |
+| Pipeline state, allowed transitions, and every turnaround time | Code (`src/events.ts`, `schema.sql`, `src/metrics/queries.ts`) | Timings must be exact and auditable, so they come from an append-only event log. |
 
 ---
 
@@ -54,7 +67,7 @@ The "Transcript Spine" UI: cinematic dark chrome, a single signal-amber accent, 
 |:---:|:---:|
 | ![Settings access](docs/screenshots/settings.png) | ![Login screen](docs/screenshots/login.png) |
 
-> Screenshots use synthetic demo data (fictional clients Acme / Globex / Initech). The bundled sample data is empty out of the box.
+> Screenshots use the fictional demo data (clients Acme, Globex and Initech). A fresh install starts with an empty database; `bun run seed:demo` loads the demo.
 
 ---
 
@@ -63,11 +76,11 @@ The "Transcript Spine" UI: cinematic dark chrome, a single signal-amber accent, 
 | Most "meeting summarizers" | Followthrough |
 |---|---|
 | One-shot "summarize this call" → mush | Multi-pass, typed extraction with an independent verifier |
-| Hallucinated takeaways | **Citation gate**: no verbatim quote, no insight — enforced programmatically |
+| Hallucinated takeaways | **Citation gate**: no verbatim quote, no insight, enforced in code |
 | A summary you read once and lose | A pipeline that tracks each ask until the client is told |
 | Auto-sends / auto-files | Human gate at every outward step; AI never contacts a client |
 | Timestamps maintained by hand | Append-only event log is the single source of truth |
-| Black-box "AI quality" | An eval flywheel that scores recall, precision & citation validity on every prompt change |
+| Black-box "AI quality" | An eval harness (`bun run evals`) that scores recall, precision & citation validity, run by hand after a prompt change |
 
 ---
 
@@ -95,13 +108,13 @@ bun run build:web
 bun run start            # http://localhost:4500
 ```
 
-The app serves on `http://localhost:4500` by default (set `PORT` to change it). **It's open by default** — no login required, and every visitor is an admin. Fine on your laptop; **turn on Require login before exposing it to the internet.** When you're ready to lock it down, go to **Settings → Access**, add a teammate (you get a one-time login code), then turn **Require login** on. Login is email + code. Any email can hold an account unless you set `ALLOWED_EMAIL_DOMAINS` (e.g. `acme.com`). You can also seed a first admin from the CLI with `bun run seed`.
+The app serves on `http://localhost:4500` by default (set `PORT` to change it). **It's open by default**: no login required, and every visitor is an admin. Fine on your laptop; **turn on Require login before exposing it to the internet.** When you're ready to lock it down, go to **Settings → Access**, add a teammate (you get a one-time login code), then turn **Require login** on. Login is email + code. Any email can hold an account unless you set `ALLOWED_EMAIL_DOMAINS` (e.g. `acme.com`). You can also seed a first admin from the CLI with `bun run seed`.
 
 <details>
 <summary><b>Optional setup</b> (local transcription, backups, env vars)</summary>
 
 ```bash
-# Local transcription for audio-only uploads — open source, no API key, audio never leaves your machine
+# Local transcription for audio-only uploads: open source, no API key, audio never leaves your machine
 bash scripts/setup-whisper.sh
 
 # Nightly backups (SQLite snapshot + blob sync; restore notes in scripts/RESTORE.md)
@@ -111,6 +124,8 @@ bun run backup
 | Env var | Purpose |
 |---|---|
 | `PORT` | server port (default `4500`) |
+| `DATA_DIR` | where the SQLite database and blobs live (default `./data`) |
+| `LLM_MODEL` | Anthropic model id (default `claude-opus-4-8`); `OPENROUTER_MODEL` is the OpenRouter equivalent (default `anthropic/claude-opus-4.8`) |
 | `PRODUCT_NAME` | your company or product; the AI frames every insight and email around it (e.g. `Acme`) |
 | `PRODUCT_DESCRIPTION` | one line on what you sell (e.g. `a payroll platform for SMBs`) |
 | `ALLOWED_EMAIL_DOMAINS` | comma-separated domains allowed to hold accounts (e.g. `acme.com,acme.io`); unset = any email |
@@ -147,21 +162,21 @@ Seeding makes real LLM calls once and is all-or-nothing: a failure leaves the da
 
 ---
 
-## How you use it — the tabs
+## How you use it: the tabs
 
 The sidebar *is* the pipeline, top to bottom. Press `?` for shortcuts, `Cmd/Ctrl-K` for the command palette.
 
 | Tab | What it's for |
 |---|---|
-| **Home** | The "what needs you right now" dashboard — the pipeline at a glance (found → routed → shipped → client told), recent meetings, and a jump straight into the queue. |
-| **Capture** | Get a meeting in — from your calendar or manually. Type-ahead the client, confirm consent, paste a transcript or upload audio, then extract. |
+| **Home** | The "what needs you right now" dashboard: the pipeline at a glance (found → routed → shipped → client told), recent meetings, and a jump straight into the queue. |
+| **Capture** | Get a meeting in, from your calendar or manually. Type-ahead the client, confirm consent, paste a transcript or upload audio, then extract. |
 | **Review** | The split-pane triage screen. Queue grouped by what needs you (*New from AI*, *Needs final wording*, *Ready for a ticket*, *Confirm it shipped?*, *Tell the client*). Polish, route, finalize. Brief-first: triage or reject many insights from one meeting in a single pass. `j`/`k` to move, `Enter` to open. |
-| **Ask** | Ask a plain-English question and get an answer pulled **only** from your own meetings and insights, every claim cited back to the exact insight or transcript so you can verify it. No data leaves the pipeline. |
-| **Insights** | Everything ever learned — filterable and searchable across transcripts and quotes. |
+| **Ask** | Ask a plain-English question and get an answer drawn **only** from your own meetings and insights, every claim cited back to the exact insight or transcript so you can verify it. Search finds the sources in your own database; the model only writes the answer from them. |
+| **Library** | Everything ever learned, filterable and searchable across transcripts and quotes. |
 | **Clients** | Per client: meeting timeline, every open ask, the promise ledger, a one-click pre-call brief, CSV export for your CRM, and a shareable client-facing "you asked, we shipped" page. |
-| **Meeting** | A single meeting's full readout — transcript, the brief, and every insight it produced, each attributed to a side (client vs us) with sentiment and intent. |
-| **Proof** | When a release ships, the system proposes which client asks it closes — with changelog evidence and a confidence score. Confirm to mark *shipped* and unlock the client email. |
-| **Numbers** *(admin)* | Turnaround times per stage, the funnel, what's stuck, demand by theme, per-person throughput, per-client closed-loop rate, AI quality. Every metric has a plain-words tooltip. |
+| *Meeting page* | Opened from any meeting row (not a sidebar tab). A single meeting's full readout: transcript, the brief, and every insight it produced, each attributed to a side (client vs us) with sentiment and intent. |
+| **Confirm shipped** | When a release ships, the system proposes which client asks it closes, with changelog evidence and a confidence score. Confirm to mark *shipped* and unlock the client email. |
+| **Speed** *(admin)* | Turnaround times per stage, the funnel, what's stuck, demand by theme, per-person throughput, per-client closed-loop rate, AI quality. Every metric has a plain-words tooltip. |
 | **Settings** *(admin)* | Access mode (open vs login-required), teammates, calendar feed, release polling, digest preview, rebuild search, and system health. |
 
 ---
@@ -170,14 +185,14 @@ The sidebar *is* the pipeline, top to bottom. Press `?` for shortcuts, `Cmd/Ctrl
 
 One-shot summarization produces mush. The pipeline is multi-pass and verified (`src/extract/`):
 
-1. **Clean & chunk** the transcript — handles hour-long calls; mixed English/Hindi quotes preserved verbatim.
-2. **Typed extraction** — each item has a specific type (feature request, complaint, key insight, our action, their commitment) and captures the subtext: fears, internal politics, ROI pressure, frustration with incumbents. Each item is also attributed — **side** (client vs us, inferred from speaker labels + the attendee list), **sentiment**, and the client's underlying **intent**. The pass is deliberately selective: only decision-grade items, no small talk or restated points.
-3. **Citation gate** — every item must carry a verbatim quote *programmatically verified to exist in the transcript*. No quote, no insight. This structurally kills hallucinations.
-4. **Verifier pass** — an independent LLM judge drops items whose quote doesn't support the claim, or whose type is wrong.
-5. **Dedup / merge** — a repeat ask attaches as a new mention on the existing insight (the "requested by N clients" signal) instead of a duplicate.
-6. **Meeting brief** — a chief-of-staff synthesis: key readings, between the lines, lessons, action items grouped by owner team.
+1. **Clean & chunk** the transcript into 12,000-character windows with 1,000 characters of overlap, so long calls fit; mixed English/Hindi quotes preserved verbatim.
+2. **Typed extraction**: each item has a specific type (feature request, complaint, key insight, our action, their commitment) and captures the subtext: fears, internal politics, ROI pressure, frustration with incumbents. Each item is also attributed: **side** (client vs us, inferred from speaker labels + the attendee list), **sentiment**, and the client's underlying **intent**. The pass is deliberately selective: only decision-grade items, no small talk or restated points.
+3. **Citation gate**: every item must carry a verbatim quote *checked in code to exist in the transcript*. No quote, no insight. This removes invented quotes by construction; the verifier deals with weak readings of real quotes.
+4. **Verifier pass**: an independent LLM judge drops items whose quote doesn't support the claim, or whose type is wrong.
+5. **Dedup / merge**: a repeat ask attaches as a new mention on the existing insight (the "requested by N clients" signal) instead of a duplicate.
+6. **Meeting brief**: a chief-of-staff synthesis: key readings, between the lines, lessons, action items grouped by owner team.
 
-**The eval flywheel:** every human edit and discard during Review is captured. `evals/` drafts golden cases from your transcripts and scores recall, precision, citation validity, and type accuracy on every prompt change. See [`evals/README.md`](evals/README.md).
+**The eval flywheel:** every human edit and discard during Review is captured. `evals/` drafts golden cases from your transcripts and scores recall, precision, citation validity, and type accuracy when you run `bun run evals` after a prompt change (it needs an LLM key, so CI does not run it). See [`evals/README.md`](evals/README.md).
 
 ---
 
@@ -185,11 +200,11 @@ One-shot summarization produces mush. The pipeline is multi-pass and verified (`
 
 One runtime, one source of truth.
 
-- **Bun + TypeScript** end to end — `Bun.serve` HTTP server, `bun:sqlite` database (WAL).
+- **Bun + TypeScript** end to end: `Bun.serve` HTTP server, `bun:sqlite` database (WAL).
 - **React + Vite** SPA in `web/`, served from `web/dist` by the same server. Dark-only, single-accent, `Cmd-K` command palette, vim-style keyboard nav.
-- **The event log is the source of truth.** `events` is an append-only table (enforced by triggers); an insight's state is a *cache* rebuilt from it. Every turnaround-time metric is a query over the log — never a hand-maintained timestamp column. See `schema.sql` and `src/events.ts`.
-- **LLM** — Anthropic direct (or OpenRouter pinned to Claude, retention denied). Structured outputs via Zod schemas. `src/llm/provider.ts`.
-- **Storage** — metadata and transcripts in SQLite; audio/screenshots/CSVs as content-addressed blobs behind `media_assets` (local disk now, S3-ready).
+- **The event log is the source of truth.** `events` is an append-only table (enforced by triggers); an insight's state is a *cache* written in the same transaction as its event. Every turnaround-time metric is a query over the log, never a hand-maintained timestamp column. See `schema.sql` and `src/events.ts`.
+- **LLM**: Anthropic direct (or OpenRouter pinned to Claude, retention denied). Structured outputs via Zod schemas, adaptive thinking, and a per-call cost log. Default model `claude-opus-4-8`. `src/llm/provider.ts`.
+- **Storage**: metadata and transcripts in SQLite; audio/screenshots/CSVs as content-addressed blobs behind `media_assets` (local disk now, S3-ready).
 
 <details>
 <summary><b>Module map</b> (<code>src/</code>)</summary>
@@ -207,7 +222,7 @@ One runtime, one source of truth.
 | `metrics`, `exports`, `digest` | admin dashboard, CSV export, weekly digest |
 | `notify` | fire-and-forget Slack / Google Chat nudges (extraction + daily summary) |
 | `calendar` | read-only iCal intake for capture prefill (with SSRF guard) |
-| `stt` | transcription — local whisper.cpp, or Deepgram cloud STT when a key is set |
+| `stt` | transcription: local whisper.cpp, or Deepgram cloud STT when a key is set |
 | `watchfolder`, `retention` | folder auto-ingest; consent/deletion purge |
 
 </details>
@@ -232,6 +247,8 @@ bun test               # 331 tests
 bunx tsc --noEmit      # typecheck
 bun run evals          # extraction quality scoring (needs an LLM key)
 ```
+
+CI (`.github/workflows/ci.yml`, on pushes to `main` and on pull requests) typechecks the server, web app and extension, runs the test suite, and builds the web app and extension. It does not run the LLM evals.
 
 The full product contract lives in [`SPEC.md`](SPEC.md). Design references are in [`design-reference/`](design-reference/).
 
