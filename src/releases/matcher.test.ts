@@ -38,8 +38,8 @@ describe("matchRelease", () => {
   });
   const technicalEntry = entry({
     section_type: "technical",
-    title: "Dual-write seam in the aggregator store",
-    body_md: "Writes go to MySQL and ClickHouse on every ingest.",
+    title: "Dual-write seam in the ledger store",
+    body_md: "Writes go to Postgres and the reporting store on every posted expense.",
   });
 
   test("verifies quotes, drops fabricated ones, applies gating caps, proposes only", async () => {

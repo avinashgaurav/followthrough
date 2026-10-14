@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Bun](https://img.shields.io/badge/Bun-1.3+-fbf0df?logo=bun&logoColor=black)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-319%20passing-brightgreen.svg)](#development)
+[![Tests](https://img.shields.io/badge/tests-331%20passing-brightgreen.svg)](#development)
 [![LLM: Claude](https://img.shields.io/badge/LLM-Claude-d97757.svg)](https://www.anthropic.com/)
 
 *Meeting → extract → review → ticket → shipped → client told → closed. Every step timestamped.*
@@ -23,7 +23,7 @@ You feed it a meeting — transcript or audio. It extracts the real asks, compla
 > **The AI drafts; people decide.** Nothing reaches a client without a human confirming it. Every extracted insight must cite a verbatim quote from the transcript, or it doesn't exist.
 
 > [!NOTE]
-> The bundled sample meetings under `evals/golden/` are **fully synthetic** — every company, person, and product name is fictional.
+> The bundled sample meetings under `demo/` and `evals/golden/` are **fictional transcripts written by hand**. Every company, person, and product name in them (Tallyhall, Acme, Northwind, Hooli, and so on) is made up.
 
 ---
 
@@ -228,7 +228,7 @@ One runtime, one source of truth.
 ```bash
 bun run dev            # server with --watch
 cd web && bun run dev  # vite dev server, proxies /api to :4500
-bun test               # 319 tests
+bun test               # 331 tests
 bunx tsc --noEmit      # typecheck
 bun run evals          # extraction quality scoring (needs an LLM key)
 ```

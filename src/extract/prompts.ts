@@ -7,7 +7,7 @@ import { productLabel } from "../config.ts";
  * Do not interpolate per-request data into them; bump PROMPT_VERSION on any edit.
  */
 
-export const PROMPT_VERSION = "v4";
+export const PROMPT_VERSION = "v5";
 
 export const ITEM_TYPES = [
   "feature_request",
@@ -80,7 +80,7 @@ Rules for every item:
 
 Calibration examples of the expected depth:
 - Weak (reject): title "Client wants better tagging", body "The client said tagging is important to them."
-- Strong: title "Tag-policy sync from AWS Organizations is the adoption gateway", body "Their cost allocation is blocked on tagging compliance, and they want the platform to read mandatory tag rules (Environment, Application, Owner) directly from their AWS Organization SCPs and Tag Policies instead of maintaining a second rulebook. Until tagging is solved they cannot trust any cost-attribution feature, so this single capability gates the rest of the product's value for them. Solving it would also create strong lock-in since their governance would then live in our platform."
+- Strong: title "Receipt preview in mobile approvals is the gate on their month-end close", body "Their regional managers approve from their phones, but the approval screen shows only a total, so they hold every approval until they are back at a laptop and close slips by about two days. Their CFO is judging the renewal on time saved at close, so this single capability carries the ROI case for the whole account. Solving it would also turn approvers into daily mobile users, which creates strong retention since the approval habit would then live in our product."
 
 Do NOT invent items. If unsure whether something qualifies, omit it. Chunks may overlap with neighbors; extract exactly what this chunk supports. Return an empty items list when nothing qualifies.`;
 

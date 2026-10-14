@@ -17,13 +17,13 @@ Followthrough is a meeting-intelligence-to-action tool. It turns recorded client
 
 ## 2. The pipeline (canonical)
 
-1. **Capture and upload.** Meeting recorded via the Tallyhall Chrome extension or any external tool (Meet, Zoom, Fireflies). Any logged-in user uploads audio and/or transcript. A watched ingest folder (local dir, optionally a read-only Google Drive folder) auto-picks up dropped recordings as pending meetings.
+1. **Capture and upload.** Meeting recorded via the bundled Chrome extension or any external tool (Meet, Zoom, Fireflies). Any logged-in user uploads audio and/or transcript. A watched ingest folder (local dir, optionally a read-only Google Drive folder) auto-picks up dropped recordings as pending meetings.
 2. **Transcription.** If only audio arrives: pluggable STT (Deepgram pre-recorded; mock provider for dev; manual transcript paste as a fallback when no STT key is configured). States: `uploaded -> transcribing -> transcribed | transcription_failed` with retry and a low-quality flag.
 3. **Extraction.** Multi-pass LLM pipeline (section 5) produces typed insights and action items with verbatim transcript citations.
 4. **Tag and route.** Track (engineering / marketing / product_polish / other), assignee, freeform tags. LLM proposes, human confirms.
 5. **Human finalization.** A person reviews against the quoted transcript evidence, polishes wording, finalizes. Nothing auto-proceeds past this gate. Reject and merge paths exist.
-6. **Ticketing (human-triggered only).** For engineering insights a person clicks "Raise ticket". The tool drafts the issue (with a hidden machine-readable insight-ID marker) and asks that person to choose: (a) create directly on GitHub in a repo they pick from the configured repo list, or (b) copy the text, create it by hand anywhere, then paste the issue URL back. **The tool never creates a GitHub issue on its own.** Hard org-safety allowlist: the Tallyhall org is blocked for writes in code until explicitly enabled by the admin.
-7. **Release watching and matching.** A read-only poller mirrors GitHub releases of `Tallyhall/Tallyhall`. Each new release is parsed into discrete entries and matched against open insights/tickets. Matches carry a 50/90/100 confidence score and sit as *proposed* until a human confirms. Confirmation creates completion evidence.
+6. **Ticketing (human-triggered only).** For engineering insights a person clicks "Raise ticket". The tool drafts the issue (with a hidden machine-readable insight-ID marker) and asks that person to choose: (a) create directly on GitHub in a repo they pick from the configured repo list, or (b) copy the text, create it by hand anywhere, then paste the issue URL back. **The tool never creates a GitHub issue on its own.** Hard org-safety allowlist: orgs listed in `BLOCKED_ORGS` (typically your own company's org) are blocked for writes in code until explicitly enabled by the admin.
+7. **Release watching and matching.** A read-only poller mirrors the GitHub releases of a configured repo (`RELEASE_REPO`). Each new release is parsed into discrete entries and matched against open insights/tickets. Matches carry a 50/90/100 confidence score and sit as *proposed* until a human confirms. Confirmation creates completion evidence.
 8. **Completion evidence (all tracks).** `shipped` requires one confirmed evidence record. Engineering: confirmed release match. Marketing: published-asset URL (system verifies it is live). Product-polish: release match when it shipped via code, else verified-in-product attestation with before/after screenshot. Manual attestation exists as the escape hatch.
 9. **Client follow-up.** On shipped, the assignee generates an email draft (quotes the client's own words back, cites the changelog entry or asset URL, fans out one draft per requesting client). Copy-to-clipboard is logged as an event; a separate explicit "I sent it" confirmation closes the loop. No Gmail API in v1.
 10. **Admin dashboard.** TAT per stage per track, funnel, WIP/aging, stuck items, per-person throughput, per-client closed-loop rate, theme demand, AI quality. All queries over the event log.
@@ -67,7 +67,7 @@ Pipeline per meeting:
 7. Re-extraction is additive and idempotent (extraction_runs provenance; never duplicates or resurrects finalized/rejected insights). Humans can manually add an insight the LLM missed; it enters the same state machine.
 
 Eval harness (in-repo, runs on every prompt change):
-- **Golden set**: 5-10 real transcripts with founder-corrected expected outputs in `evals/golden/`.
+- **Golden set**: 4 hand-written fictional transcripts (a normal call, a no-asks call that tests abstention, a Hinglish call, and a call containing a prompt-injection line) with author-labeled expected outputs in `evals/golden/`. Teams add their own cases with `evals/draft-golden.ts`.
 - Scored on recall (missed asks), precision (invented items), citation validity (exact check), type accuracy, owner accuracy. LLM-judge for fuzzy dimensions, exact checks where possible.
 - **The flywheel**: finalization is a labeling machine. Every human edit (draft vs final text), every discard with reason, is captured automatically. Discards become regression cases; edit distance and discard rate are the live quality gauges.
 
@@ -75,16 +75,16 @@ LLM policy: Anthropic API direct (no multi-vendor routing for client transcripts
 
 ## 6. Changelog matching and the confidence score
 
-- Poller (hourly) mirrors `Tallyhall/Tallyhall` releases read-only into a local table. Release cadence is ~1.2/day with patch bursts, so matching runs per release and TAT anchors to the FIRST release containing a change.
-- Parser: normalize body, split H2 sections (fuzzy header vocabulary), each H3 = one entry; technical-details blocks parsed separately; PR refs (#N) validated against real PRs before storing; gating/revert language detected ("flag-gated", "internal admin app", "shadow", "reverted by #N"). LLM fallback parser when deterministic parse yields zero entries. Golden-file tests pinned on real release bodies (v1.20.0, v1.19.2, the indented v1.18.0, single-entry v1.17.4, baseline v1.0.0).
-- Matching: LLM semantic match is the primary v1 path (ticket PR-ref matching mostly cannot fire until tickets live in the Tallyhall org; the insight-ID marker makes that future migration an exact join). Judge returns full/partial/none with verbatim evidence quotes, programmatically verified as substrings of the entry.
-- Confidence: 100 = human clicked confirm (the only way to 100). 90 = deterministic PR/tag evidence + judge agreement (post-migration path). 70-85 = strong semantic match. 50 = partial coverage (sub-requirement decomposition) or full match capped because the entry is flag-gated / internal-only / shadow-mode (Tallyhall demonstrably ships dark; a gated entry must never trigger a "your feature shipped" email). Reverts zero out their contribution.
+- Poller (hourly) mirrors the configured GitHub repo's releases read-only into a local table. Matching runs per release and TAT anchors to the FIRST release containing a change.
+- Parser: normalize body, split H2 sections (fuzzy header vocabulary), each H3 = one entry; technical-details blocks parsed separately; PR refs (#N) validated against real PRs before storing; gating/revert language detected ("flag-gated", "internal admin app", "shadow", "reverted by #N"). LLM fallback parser when deterministic parse yields zero entries. Golden-file tests use fictional release bodies that cover the format quirks (v1.20.0, v1.19.2, the indented v1.18.0, single-entry v1.17.4, baseline v1.0.0, the large mixed v1.16.0).
+- Matching: LLM semantic match is the primary v1 path (ticket PR-ref matching mostly cannot fire until tickets live in the product's own org; the insight-ID marker makes that future migration an exact join). Judge returns full/partial/none with verbatim evidence quotes, programmatically verified as substrings of the entry.
+- Confidence: 100 = human clicked confirm (the only way to 100). 90 = deterministic PR/tag evidence + judge agreement (post-migration path). 70-85 = strong semantic match. 50 = partial coverage (sub-requirement decomposition) or full match capped because the entry is flag-gated / internal-only / shadow-mode (products often ship dark; a gated entry must never trigger a "your feature shipped" email). Reverts zero out their contribution.
 - Every score displays its evidence chain: release tag, date, quoted entry, rationale. Proposed matches sit in the assignee's confirm queue.
 
 ## 7. Ticketing rules (org safety)
 
 - Draft-first, human-triggered, per-ticket choice (direct-create in a chosen repo, or copy + paste-back URL). No automatic creation, ever.
-- Config-level writable-repo allowlist enforced in code; Tallyhall org excluded until the admin flips it. The GitHub token for release reading is read-only scope.
+- Config-level writable-repo allowlist enforced in code; blocked orgs excluded until the admin flips it. The GitHub token for release reading is read-only scope.
 - Every draft embeds `<!-- followthrough:INS-<id> -->` plus a visible footer link. Stable internal IDs survive the eventual repo/org migration.
 - Stale state for "draft generated but never confirmed created".
 
@@ -151,7 +151,7 @@ Event taxonomy (~15 namespaced types: `meeting.uploaded`, `extraction.completed/
 
 ## 16. UI (DESIGN.md, product register)
 
-- Space Grotesk + JetBrains Mono; cream-tinted neutrals, never #000/#fff; square corners; orange accent <=10%; Tallyhall blue as the sub-brand anchor in eyebrows/accents; dark default with toggle.
+- Space Grotesk + JetBrains Mono; cream-tinted neutrals, never #000/#fff; square corners; orange accent <=10%; dark default with toggle.
 - Components per DESIGN.md sections 15-21: forms (mono uppercase labels, orange focus border), tables (mono headers, dashed row borders, tabular-nums right-aligned numerics), alerts/toasts, empty/loading/error states (skeletons, no shimmer; factual error copy), tabs/segmented controls, modals only for destructive confirms, dropdowns with the orange-square selected marker.
 - No em-dashes in any UI copy. No banned words. Mobile breakpoints tested at 375/768/1024/1440.
 
@@ -159,7 +159,7 @@ Event taxonomy (~15 namespaced types: `meeting.uploaded`, `extraction.completed/
 
 - Login rate-limiting + lockout; hashed codes; revocation; session expiry.
 - Server-side authz on every route; admin views enforced server-side.
-- GitHub: read-only token for releases; write allowlist excluding Tallyhall until enabled; tokens server-side only (never shipped to the browser or extension).
+- GitHub: read-only token for releases; write allowlist excluding blocked orgs until enabled; tokens server-side only (never shipped to the browser or extension).
 - Upload hardening: size caps, filename sanitization, content-type branching (no decoding audio as text).
 - Append-only audit log (the events table) for every state change.
 - TLS required at deployment; backups per section 9.
@@ -178,8 +178,8 @@ Event taxonomy (~15 namespaced types: `meeting.uploaded`, `extraction.completed/
 ## 19. Decisions log
 
 - All-in-v1 MVP (founder, 2026-06-10). No phasing of scope, only sequencing.
-- Tickets: human-triggered only; per-ticket choice of direct-create (repo picked by the human from a configured list) vs copy-paste with URL paste-back. No auto-creation. Tallyhall org write-blocked until enabled. (founder, 2026-06-10)
-- Changelog source: GitHub releases on Tallyhall/Tallyhall, read-only. (founder)
+- Tickets: human-triggered only; per-ticket choice of direct-create (repo picked by the human from a configured list) vs copy-paste with URL paste-back. No auto-creation. Blocked orgs write-blocked until enabled. (founder, 2026-06-10)
+- Changelog source: GitHub releases on the configured repo, read-only. (founder)
 - Email: draft + copy-to-clipboard with logged timestamp; explicit sent-confirmation; no Gmail API. (founder)
 - CRM: CSV for now, Zoho-shaped; direct integration later. (founder)
 - Storage: local disk now (Drive read-only ingest only), S3 after deployment. (founder + critic)
