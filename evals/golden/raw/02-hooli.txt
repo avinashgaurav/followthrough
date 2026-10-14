@@ -1,0 +1,61 @@
+Speaker 0 (Sam, Tallyhall): Hi Denise, can you hear me okay?
+Speaker 1 (Denise, Hooli): Loud and clear. Sorry I'm two minutes late, the previous meeting ran over.
+Speaker 0 (Sam, Tallyhall): No problem at all. Is Marcus joining?
+Speaker 1 (Denise, Hooli): He said he'd try. He's on a flight this afternoon so he might not make it.
+Speaker 0 (Sam, Tallyhall): Okay. This is just the regular quarterly check-in, nothing formal. I mostly wanted to see how things are going.
+Speaker 1 (Denise, Hooli): Sounds good.
+Speaker 2 (Marcus, Hooli): Hey, sorry, I made it. I'm at the gate so if I drop, that's why.
+Speaker 0 (Sam, Tallyhall): Hi Marcus. Safe travels. Where are you headed?
+Speaker 2 (Marcus, Hooli): Denver, for our sales kickoff. Three days of slides.
+Speaker 0 (Sam, Tallyhall): Enjoy. So, how has the quarter been?
+Speaker 1 (Denise, Hooli): Honestly, quiet, which is what I want from an expense tool. Close went fine in September and fine again in October.
+Speaker 0 (Sam, Tallyhall): That's good to hear.
+Speaker 1 (Denise, Hooli): The export issue you fixed in August has been fine since. We haven't had to touch a file by hand.
+Speaker 0 (Sam, Tallyhall): Great. I'll let the team know it stuck.
+Speaker 2 (Marcus, Hooli): From the sales side, the reps submit from their phones and I don't hear complaints, which for sales reps is basically a compliment.
+Speaker 0 (Sam, Tallyhall): I'll take it.
+Speaker 1 (Denise, Hooli): We onboarded the new controller, Raj, last month. He picked it up in an afternoon. He used something similar at his last company.
+Speaker 0 (Sam, Tallyhall): Nice. Does he need a walkthrough or anything?
+Speaker 1 (Denise, Hooli): No, he's fine. He actually set up the new approval chain for the Austin team himself.
+Speaker 0 (Sam, Tallyhall): Even better.
+Speaker 1 (Denise, Hooli): The Austin team is up to eleven people now, so it was a good test for him.
+Speaker 0 (Sam, Tallyhall): How is Austin finding it? I remember they were the last group to move over.
+Speaker 1 (Denise, Hooli): They were nervous because their old process was paper receipts in an envelope. They've stopped mentioning it, which I take as a good sign.
+Speaker 2 (Marcus, Hooli): One of my Austin reps told me he submitted a receipt from a taxi before he'd even got out. He was very proud of himself.
+Speaker 0 (Sam, Tallyhall): That's the dream workflow.
+Speaker 1 (Denise, Hooli): It really is. Our audit last month was the smoothest we've had, and the auditors didn't ask for a single missing receipt.
+Speaker 0 (Sam, Tallyhall): Anything coming up on your side that I should know about? Reorgs, new entities, anything like that?
+Speaker 1 (Denise, Hooli): Not this quarter. Budget season is next, but that doesn't really touch expenses.
+Speaker 2 (Marcus, Hooli): Headcount is flat for us too. No big changes.
+Speaker 0 (Sam, Tallyhall): Okay. And anything that's bugging you, even small?
+Speaker 1 (Denise, Hooli): Let me think. No, not really. I had a list last time and you got through all of it.
+Speaker 2 (Marcus, Hooli): Nothing from me.
+Speaker 0 (Sam, Tallyhall): Good. I'll keep it short then.
+Speaker 0 (Sam, Tallyhall): Just so you know, we have a customer webinar in November about month-end close. Totally optional, I'll forward the link if you're interested.
+Speaker 1 (Denise, Hooli): Sure, forward it, I'll see if I'm free.
+Speaker 0 (Sam, Tallyhall): Will do.
+Speaker 2 (Marcus, Hooli): They're calling my group, I'm going to drop. Good to see you Sam.
+Speaker 0 (Sam, Tallyhall): You too Marcus, have a good kickoff.
+Speaker 2 (Marcus, Hooli): Thanks. Bye.
+Speaker 1 (Denise, Hooli): How's the weather over there? We finally got some rain.
+Speaker 0 (Sam, Tallyhall): Cold. First frost this week. I'm not ready.
+Speaker 1 (Denise, Hooli): Ha. I'll take rain over frost.
+Speaker 0 (Sam, Tallyhall): Did you end up doing the half marathon?
+Speaker 1 (Denise, Hooli): I did. Slow, but I finished. My knees are still recovering.
+Speaker 0 (Sam, Tallyhall): Congrats, that's a big one.
+Speaker 1 (Denise, Hooli): Thanks. Next year maybe I'll train properly.
+Speaker 0 (Sam, Tallyhall): Okay, same time next quarter? I'll send a calendar invite for mid January.
+Speaker 1 (Denise, Hooli): Works for me. Mornings are better for me in January.
+Speaker 0 (Sam, Tallyhall): Morning it is.
+Speaker 1 (Denise, Hooli): Thanks Sam. Nice to have an easy one for once.
+Speaker 0 (Sam, Tallyhall): Agreed. Have a good rest of the week, Denise.
+Speaker 1 (Denise, Hooli): You too. Bye.
+Speaker 0 (Sam, Tallyhall): Bye.
+Speaker 1 (Denise, Hooli): Oh, actually, one more thing before you go.
+Speaker 0 (Sam, Tallyhall): Sure.
+Speaker 1 (Denise, Hooli): Raj said to say thanks for the onboarding videos. He watched two of them before his first day.
+Speaker 0 (Sam, Tallyhall): That's nice to hear, I'll tell the team who made them.
+Speaker 1 (Denise, Hooli): Okay, that's really it. Bye.
+Speaker 0 (Sam, Tallyhall): Bye Denise.
+Speaker 1 (Denise, Hooli): Talk in January.
+Speaker 0 (Sam, Tallyhall): Talk then. Bye.

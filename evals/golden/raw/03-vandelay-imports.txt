@@ -1,0 +1,60 @@
+Speaker 0 (Arjun, Tallyhall): Hi Rohit, hi Sneha. Awaaz aa rahi hai?
+Speaker 1 (Rohit, Vandelay Imports): Haan Arjun, clear hai. Sneha bhi join ho gayi hai.
+Speaker 2 (Sneha, Vandelay Imports): Hi Arjun, good afternoon.
+Speaker 0 (Arjun, Tallyhall): Good afternoon. Thank you for the time. Main bas yeh dekhna chahta tha ki Mumbai team ka rollout kaisa chal raha hai, aur koi issue ho toh woh bhi discuss kar lete hain.
+Speaker 1 (Rohit, Vandelay Imports): Sure. Overall theek chal raha hai, I would say. Approvals pehle se kaafi fast hain.
+Speaker 0 (Arjun, Tallyhall): Good to hear. Kitne log abhi tak onboard ho gaye?
+Speaker 2 (Sneha, Vandelay Imports): Around ninety people. Warehouse team ke kuch log abhi bhi baaki hain, unka login next week tak ho jayega.
+Speaker 0 (Arjun, Tallyhall): Okay, that's good progress.
+Speaker 0 (Arjun, Tallyhall): Training sessions kaise rahe? Last time aapne bola tha ki Hindi mein bhi session chahiye.
+Speaker 2 (Sneha, Vandelay Imports): Woh ho gaya, aapki team ne do sessions kiye the. Warehouse waalon ko woh zyada samajh aaya.
+Speaker 1 (Rohit, Vandelay Imports): Haan, woh accha tha. Logon ne questions bhi pooche, jo normally nahi hota.
+Speaker 0 (Arjun, Tallyhall): Nice. Main trainer ko bata dunga.
+Speaker 2 (Sneha, Vandelay Imports): Approval chain bhi set ho gayi hai. Ab har department head khud approve karta hai, mujhe beech mein nahi aana padta.
+Speaker 0 (Arjun, Tallyhall): Badhiya. Woh setup aapne khud kiya?
+Speaker 2 (Sneha, Vandelay Imports): Haan, guide follow kiya. Thoda time laga but ho gaya.
+Speaker 1 (Rohit, Vandelay Imports): Lekin ek bada point hai jo main aaj clearly bolna chahta hoon.
+Speaker 0 (Arjun, Tallyhall): Haan, bolo.
+Speaker 1 (Rohit, Vandelay Imports): GST. Abhi receipt scan hota hai toh amount aur date aa jaata hai, but vendor ka GSTIN capture nahi hota.
+Speaker 1 (Rohit, Vandelay Imports): Hamein har bill pe vendor ka GSTIN chahiye, warna input tax credit claim nahi kar paate.
+Speaker 0 (Arjun, Tallyhall): Matlab abhi aap log manually daal rahe ho?
+Speaker 2 (Sneha, Vandelay Imports): Haan, main aur meri team har mahine end mein ek Excel banate hain. Har bill khol ke GSTIN copy karte hain. Almost do din lag jaate hain.
+Speaker 1 (Rohit, Vandelay Imports): Aur agar GSTIN galat ho ya missing ho toh credit hi chala jaata hai. Woh direct paisa hai jo hum chhod rahe hain.
+Speaker 0 (Arjun, Tallyhall): Samajh gaya. Toh ideally scanner GSTIN read kare, aur agar format galat hai toh flag kare?
+Speaker 1 (Rohit, Vandelay Imports): Exactly. Aur export mein ek alag column ho GSTIN ka, taaki hamara CA seedha use kar sake.
+Speaker 0 (Arjun, Tallyhall): Okay, noted. Yeh product team ke paas jayega.
+Speaker 1 (Rohit, Vandelay Imports): Ek aur cheez main honestly bata deta hoon.
+Speaker 0 (Arjun, Tallyhall): Please.
+Speaker 1 (Rohit, Vandelay Imports): Humare CFO ko lag raha hai ki koi local tool lena chahiye jo GST samajhta ho. Renewal March mein hai, aur agar tab tak GST ka kuch nahi hua toh woh switch karne ki baat karenge.
+Speaker 0 (Arjun, Tallyhall): That's helpful to know, thank you for being upfront.
+Speaker 1 (Rohit, Vandelay Imports): Mujhe Tallyhall pasand hai, team bhi khush hai. But main CFO ko bina GST ke defend nahi kar paunga.
+Speaker 0 (Arjun, Tallyhall): Fair. Main isko priority ke saath escalate karta hoon.
+Speaker 2 (Sneha, Vandelay Imports): Arjun, mere side se ek problem hai mobile app ki.
+Speaker 0 (Arjun, Tallyhall): Haan Sneha, batao.
+Speaker 2 (Sneha, Vandelay Imports): Yaar app roz logout ho jaata hai, har subah OTP daalna padta hai, field team bahut irritate hai.
+Speaker 0 (Arjun, Tallyhall): Roz? Yeh expected nahi hai. Session thirty days ka hona chahiye.
+Speaker 2 (Sneha, Vandelay Imports): Roz. Mostly Android phones pe. iPhone waale log complain nahi kar rahe.
+Speaker 2 (Sneha, Vandelay Imports): Aur field team ke log OTP ke chakkar mein receipt hi upload nahi karte, phir month end pe sab ek saath aata hai.
+Speaker 0 (Arjun, Tallyhall): Okay, yeh bug lag raha hai. Kaunse Android version pe hai, pata hai?
+Speaker 2 (Sneha, Vandelay Imports): Exact nahi pata, mostly Samsung aur Redmi hain. Main check karke bata sakti hoon.
+Speaker 0 (Arjun, Tallyhall): Main mobile team se aaj hi baat karta hoon aur Monday tak update deta hoon ki issue kya hai.
+Speaker 2 (Sneha, Vandelay Imports): Thank you.
+Speaker 0 (Arjun, Tallyhall): GST ke liye kya aap kuch sample bills share kar sakte ho? Product team ko real examples chahiye honge.
+Speaker 2 (Sneha, Vandelay Imports): Haan, main Friday tak twenty sample invoices bhej dungi, alag alag vendors ke.
+Speaker 0 (Arjun, Tallyhall): Perfect. Usse bahut help hogi.
+Speaker 1 (Rohit, Vandelay Imports): Aur un mein woh bhi daal dena Sneha, jahan GSTIN handwritten hai.
+Speaker 2 (Sneha, Vandelay Imports): Haan, woh bhi daal dungi.
+Speaker 0 (Arjun, Tallyhall): Great. Aur kuch?
+Speaker 1 (Rohit, Vandelay Imports): Nahi, main points yahi the. Baaki sab theek hai.
+Speaker 0 (Arjun, Tallyhall): Diwali ki chhutti kab se hai aapki?
+Speaker 1 (Rohit, Vandelay Imports): Office teen din band rahega. Uske baad month end, toh busy rahenge.
+Speaker 2 (Sneha, Vandelay Imports): Haan, month end pe hi toh woh Excel waala kaam hota hai.
+Speaker 0 (Arjun, Tallyhall): Samajh sakta hoon. Happy Diwali in advance, dono ko.
+Speaker 1 (Rohit, Vandelay Imports): Thank you, aapko bhi.
+Speaker 0 (Arjun, Tallyhall): Toh recap kar deta hoon.
+Speaker 0 (Arjun, Tallyhall): Mere side se: GSTIN capture aur export column product team ko escalate karunga, aur mobile logout issue pe Monday tak update.
+Speaker 0 (Arjun, Tallyhall): Aapke side se: Sneha Friday tak sample invoices bhejegi, aur Android phone models ki list.
+Speaker 2 (Sneha, Vandelay Imports): Done.
+Speaker 1 (Rohit, Vandelay Imports): Sounds good. Thanks Arjun.
+Speaker 0 (Arjun, Tallyhall): Thank you both. Bye.
+Speaker 2 (Sneha, Vandelay Imports): Bye.

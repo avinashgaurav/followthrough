@@ -1,0 +1,43 @@
+{
+  "transcript_file": "evals/golden/raw/03-vandelay-imports.txt",
+  "client_name": "Vandelay Imports",
+  "drafted_at_note": "hand-written fictional case, labels written by author, 2026-10-14",
+  "expected_items": [
+    {
+      "item_type": "feature_request",
+      "title": "Capture vendor GSTIN on receipts so they can claim input tax credit",
+      "body": "Rohit says the scanner reads amount and date but not the vendor's GSTIN, which they need on every bill to claim input tax credit (translation: we need the vendor GSTIN on every bill, otherwise we cannot claim input tax credit). Missing or wrong GSTINs mean lost credit, which is real money. He also wants a separate GSTIN column in the export for their accountant. This is the capability the renewal hinges on.",
+      "quote": "Hamein har bill pe vendor ka GSTIN chahiye, warna input tax credit claim nahi kar paate."
+    },
+    {
+      "item_type": "complaint",
+      "title": "Manual GSTIN spreadsheet costs Sneha's team two days every month end",
+      "body": "Today Sneha's team opens every bill at month end and copies the GSTIN into a spreadsheet by hand, which takes almost two days (translation: every month end my team builds an Excel, opening each bill and copying the GSTIN; it takes almost two days). This quantifies the cost of the missing GST capture.",
+      "quote": "Haan, main aur meri team har mahine end mein ek Excel banate hain. Har bill khol ke GSTIN copy karte hain. Almost do din lag jaate hain."
+    },
+    {
+      "item_type": "key_insight",
+      "title": "CFO is weighing a local GST-aware tool at the March renewal",
+      "body": "Rohit disclosed that their CFO thinks they should buy a local tool that understands GST, and if nothing on GST lands before the March renewal the CFO will push to switch (translation: our CFO feels we should get a local tool that understands GST; renewal is in March). Rohit likes the product but cannot defend it without GST support. Concrete churn risk with a date.",
+      "quote": "Humare CFO ko lag raha hai ki koi local tool lena chahiye jo GST samajhta ho."
+    },
+    {
+      "item_type": "complaint",
+      "title": "Android app logs users out daily and forces an OTP every morning",
+      "body": "Sneha reports the mobile app logs field users out every day, mostly on Android (Samsung and Redmi), so they re-enter an OTP each morning (translation: the app logs out every day, we have to enter an OTP every morning, the field team is very irritated). Sessions should last thirty days, so this looks like a bug. Field staff stop uploading receipts and dump them at month end, which undercuts the core value.",
+      "quote": "Yaar app roz logout ho jaata hai, har subah OTP daalna padta hai, field team bahut irritate hai."
+    },
+    {
+      "item_type": "action_item_ours",
+      "title": "Arjun raises the logout bug with mobile today, update by Monday",
+      "body": "Arjun committed to talking to the mobile team the same day and giving Vandelay an update on the cause by Monday (translation: I will talk to the mobile team today and update you by Monday on what the issue is).",
+      "quote": "Main mobile team se aaj hi baat karta hoon aur Monday tak update deta hoon ki issue kya hai."
+    },
+    {
+      "item_type": "commitment_theirs",
+      "title": "Sneha sends twenty sample invoices from different vendors by Friday",
+      "body": "Sneha will share twenty sample invoices from different vendors by Friday so product has real GSTIN examples, including handwritten ones at Rohit's request (translation: I will send twenty sample invoices by Friday, from different vendors).",
+      "quote": "Haan, main Friday tak twenty sample invoices bhej dungi, alag alag vendors ke."
+    }
+  ]
+}

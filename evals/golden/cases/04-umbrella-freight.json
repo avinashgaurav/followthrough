@@ -1,0 +1,55 @@
+{
+  "transcript_file": "evals/golden/raw/04-umbrella-freight.txt",
+  "client_name": "Umbrella Freight",
+  "drafted_at_note": "hand-written fictional case, labels written by author, 2026-10-14",
+  "expected_items": [
+    {
+      "item_type": "feature_request",
+      "title": "Drivers must submit in CAD and MXN with conversion at the receipt-date rate",
+      "body": "Long-haul drivers pay for fuel and tolls in Canadian dollars and pesos and currently convert to US dollars themselves, often with the wrong rate. Carla wants submission in the original currency with conversion at the receipt date. Maya believes it may already exist as an account setting, so this may be a configuration gap rather than a product gap.",
+      "quote": "We need drivers to submit in the currency they paid in, and the system converts at the rate on the date of the receipt."
+    },
+    {
+      "item_type": "action_item_ours",
+      "title": "Maya checks the account config and enables multi-currency today",
+      "body": "Maya committed to checking whether multi-currency submission is available on Umbrella Freight's plan and turning it on the same day. Nobody had told the customer the setting existed, which is itself an onboarding gap.",
+      "quote": "I'll check your account config today and turn it on if it's available for your plan."
+    },
+    {
+      "item_type": "complaint",
+      "title": "Approval emails land in spam since their September email move, stalling driver pay",
+      "body": "Since Umbrella Freight changed email providers in September, more than half of the driver-expense approval emails land in dispatch managers' junk folders. Managers never see them, nothing gets approved, and drivers chase Kyle for their money. Likely an allow-list issue on their side, but the impact lands on our product.",
+      "quote": "The approval emails for driver expenses keep landing in spam for our dispatch managers."
+    },
+    {
+      "item_type": "commitment_theirs",
+      "title": "Kyle gets IT to allow list Tallyhall's sending domain this week",
+      "body": "Kyle will ask their IT team to add Tallyhall's sending domain to the allow list this week and report back whether it fixes the spam problem.",
+      "quote": "I'll ask IT to allow list your sending domain this week and let you know if it fixes it."
+    },
+    {
+      "item_type": "action_item_ours",
+      "title": "Maya sends Kyle the sending domain and IP ranges for IT",
+      "body": "To unblock the allow-list change, Maya will send Kyle the exact sending domain and the two IP ranges their IT team needs.",
+      "quote": "I'll send you the exact domain and the two IP ranges so IT has what they need."
+    },
+    {
+      "item_type": "feature_request",
+      "title": "Receipt-free meal allowance generated from the driver trip log",
+      "body": "Drivers get a meal allowance per overnight stop but the app requires a receipt, so they photograph napkins. Carla wants allowance claims generated from the overnight stops in the trip log, and they already export trip logs nightly from their dispatch system. This would remove a large share of manual driver claims.",
+      "quote": "We need a receipt-free allowance claim, tied to the overnight stops in their trip log."
+    },
+    {
+      "item_type": "commitment_theirs",
+      "title": "Carla sends last week's trip log export after the call",
+      "body": "Carla will send a sample of their nightly trip log export so product can assess generating allowances from it.",
+      "quote": "Yes, I'll send you last week's trip log export after this call."
+    },
+    {
+      "item_type": "key_insight",
+      "title": "Union contract makes late reimbursement a grievance risk",
+      "body": "With three hundred and forty drivers and a union contract requiring reimbursement within ten days, late approvals are a contractual problem, not an annoyance. The union rep has raised it twice and a third time triggers a formal grievance. This raises the priority of the spam fix and anything that speeds driver approvals.",
+      "quote": "we have three hundred and forty drivers and the union contract requires reimbursement within ten days."
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "transcript_file": "evals/golden/raw/01-northwind-traders.txt",
+  "client_name": "Northwind Traders",
+  "drafted_at_note": "hand-written fictional case, labels written by author, 2026-10-14",
+  "expected_items": [
+    {
+      "item_type": "feature_request",
+      "title": "Country-based per diem rates gate the February Lisbon and Warsaw rollout",
+      "body": "Hannah needs one travel policy where the per diem rate is looked up from the destination country (ideally the city), because legal says a flat per diem does not hold up in Portugal or Poland. Their sandbox workaround of one policy per group produced twelve policies nobody could read. About sixty people will travel between the three sites monthly from February, so this is a hard deadline. She would accept a CSV rate table they maintain if official tables are out of reach.",
+      "quote": "What we really need is one travel policy where the per diem looks up the rate from the destination country."
+    },
+    {
+      "item_type": "complaint",
+      "title": "Amex feed imports reissued cards twice and triggers false fraud flags",
+      "body": "Since mid November the same card transaction arrives twice, apparently for cards reissued after the October breach notice, so both the old and new card numbers are live in the feed. Employees upload the same receipt twice and Northwind's duplicate check flags it as possible fraud, about thirty times this month. This is a data-quality bug that directly damages trust in the product with their audit team.",
+      "quote": "Since about mid November we're seeing the same card transaction come in twice. Same amount, same merchant, same date, two lines."
+    },
+    {
+      "item_type": "key_insight",
+      "title": "January external audit makes the duplicate bug a credibility risk for the buyer",
+      "body": "Hannah is personally exposed: internal audit already sees the expense data as unreliable, and the external audit starts in the second week of January. Internal skeptics who opposed buying Tallyhall will use any duplicate fraud flags against her. The fix needs to land before Christmas, and the account's internal champion needs ammunition, not just a patch.",
+      "quote": "Our external audit starts the second week of January."
+    },
+    {
+      "item_type": "action_item_ours",
+      "title": "Dev checks the Amex card mapping and reports back by Thursday",
+      "body": "Dev suspects the old card account is still linked in the feed and committed to investigating the mapping on Tallyhall's side. He owes Luis findings by Thursday. Cleaning up already-imported duplicates is a separate, larger task Northwind said they can handle by hand if new duplicates stop.",
+      "quote": "I'll check the card mapping on our side and get back to you by Thursday with what I find."
+    },
+    {
+      "item_type": "commitment_theirs",
+      "title": "Luis sends this month's affected transactions to Dev today",
+      "body": "Luis will export the list of duplicated card transactions from this month and send it to Dev the same day, giving engineering concrete examples to debug the feed mapping.",
+      "quote": "I'll export the list of affected transactions from this month and send it to Dev today so he has examples."
+    },
+    {
+      "item_type": "action_item_ours",
+      "title": "Maya owes a yes or no on country per diems by the fifteenth",
+      "body": "Maya committed to taking the per diem request to product and returning a firm answer by the fifteenth. Hannah needs it to decide whether to tell legal they are falling back to spreadsheets for the new offices.",
+      "quote": "I'll take it to product and get you a yes or no on country per diems by the fifteenth."
+    },
+    {
+      "item_type": "feature_request",
+      "title": "Department and cost center filter on the bulk approval queue",
+      "body": "Luis bulk-approves every Friday and cannot filter the queue by department first, so he approves mixed departments and then checks by hand, which takes most of the afternoon. He wants a department filter, and ideally cost center. Small UX change with a clear weekly time saving for the AP lead.",
+      "quote": "When I bulk-approve from the queue, there's no way to filter by department first."
+    }
+  ]
+}

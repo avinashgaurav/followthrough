@@ -1,0 +1,63 @@
+Speaker 0 (Maya, Tallyhall): Morning Hannah, morning Luis. Thanks for jumping on.
+Speaker 1 (Hannah, Northwind): Morning. Luis is here too, he runs AP day to day.
+Speaker 2 (Luis, Northwind): Hi Maya.
+Speaker 0 (Maya, Tallyhall): I've also got Dev from our solutions team. He's the one who set up your card feeds back in September.
+Speaker 3 (Dev, Tallyhall): Hi both, good to see you again.
+Speaker 1 (Hannah, Northwind): Likewise.
+Speaker 0 (Maya, Tallyhall): So the agenda I had was: how the first quarter went, anything that's broken, and what you need for the international rollout. Does that work?
+Speaker 1 (Hannah, Northwind): That works. Let me start with the quarter, the short version is it's going well.
+Speaker 0 (Maya, Tallyhall): Good to hear.
+Speaker 1 (Hannah, Northwind): Approval time is down. We used to sit at about nine days from submission to payment and we're closer to four now. The receipt scanning is better than what we had, people actually use it.
+Speaker 2 (Luis, Northwind): The team likes the mobile app. I had two people tell me unprompted that it's the first expense tool they don't hate.
+Speaker 0 (Maya, Tallyhall): I'll pass that on, the mobile team will enjoy hearing it.
+Speaker 1 (Hannah, Northwind): Okay. The rollout, because that's the one with a deadline.
+Speaker 0 (Maya, Tallyhall): Go ahead.
+Speaker 1 (Hannah, Northwind): We're opening the Lisbon and Warsaw offices in February. About sixty people will be travelling between the three sites every month.
+Speaker 1 (Hannah, Northwind): Right now our travel policy is a flat per diem, but legal told us that doesn't hold up in Portugal or Poland. We need per diem rates that change by country, and ideally by city.
+Speaker 0 (Maya, Tallyhall): Today you'd have to set that up as separate policies per group, which gets messy.
+Speaker 1 (Hannah, Northwind): We tried that in the sandbox. It's twelve policies and nobody can tell which one applies. What we really need is one travel policy where the per diem looks up the rate from the destination country.
+Speaker 3 (Dev, Tallyhall): And the rates themselves, would you maintain them or expect us to load the government tables?
+Speaker 1 (Hannah, Northwind): If you could load the official tables and keep them current, that's the dream. If not, a CSV upload we control is fine.
+Speaker 3 (Dev, Tallyhall): Got it. The CSV route is a lot more realistic in the near term, I'd guess.
+Speaker 1 (Hannah, Northwind): Either way, I need to know before the offices open. If it's not coming, I have to tell legal we're doing it on spreadsheets, and they will not be happy.
+Speaker 0 (Maya, Tallyhall): Understood. I'll take it to product and get you a yes or no on country per diems by the fifteenth.
+Speaker 1 (Hannah, Northwind): The fifteenth is fine.
+Speaker 2 (Luis, Northwind): Can I jump to the broken stuff?
+Speaker 0 (Maya, Tallyhall): Please.
+Speaker 2 (Luis, Northwind): The Amex feed. Since about mid November we're seeing the same card transaction come in twice. Same amount, same merchant, same date, two lines.
+Speaker 2 (Luis, Northwind): The employee then gets asked for two receipts, they upload the same receipt twice, and our duplicate check flags it as possible fraud. It's happened maybe thirty times this month.
+Speaker 3 (Dev, Tallyhall): Is it every card or a subset?
+Speaker 2 (Luis, Northwind): I think it's only the cards we reissued after the October breach notice. The old card numbers and the new ones both seem to be active in the feed.
+Speaker 3 (Dev, Tallyhall): That would fit. If the feed still has the old account linked, we'd import both.
+Speaker 3 (Dev, Tallyhall): I'll check the card mapping on our side and get back to you by Thursday with what I find.
+Speaker 2 (Luis, Northwind): Thursday is good.
+Speaker 2 (Luis, Northwind): I'll export the list of affected transactions from this month and send it to Dev today so he has examples.
+Speaker 3 (Dev, Tallyhall): Perfect, that'll save me a lot of digging.
+Speaker 1 (Hannah, Northwind): I want to be clear about why this matters to me.
+Speaker 0 (Maya, Tallyhall): Sure.
+Speaker 1 (Hannah, Northwind): Every fraud flag goes to our internal audit team, and they now think the expense data is unreliable. Our external audit starts the second week of January. If the auditors pull a sample and see duplicates with fraud flags on them, I'll spend a week explaining it, and the people who pushed back on buying Tallyhall will say they told me so.
+Speaker 0 (Maya, Tallyhall): That's helpful context. So we want this clean well before January.
+Speaker 1 (Hannah, Northwind): Ideally before Christmas.
+Speaker 3 (Dev, Tallyhall): If it is the old card mapping, the fix on our side is small. Cleaning up the duplicates that already came in is the bigger part.
+Speaker 2 (Luis, Northwind): We can live with cleaning the old ones by hand if new ones stop.
+Speaker 3 (Dev, Tallyhall): Okay, noted.
+Speaker 0 (Maya, Tallyhall): Anything else on the broken side?
+Speaker 2 (Luis, Northwind): One smaller thing, not broken, more annoying.
+Speaker 0 (Maya, Tallyhall): Go on.
+Speaker 2 (Luis, Northwind): When I bulk-approve from the queue, there's no way to filter by department first. I end up approving marketing and sales together and then checking by hand that nothing odd slipped in.
+Speaker 0 (Maya, Tallyhall): So a department filter on the approval queue.
+Speaker 2 (Luis, Northwind): Yes. Department, and if possible cost center. I do the bulk run every Friday and it takes me most of the afternoon.
+Speaker 0 (Maya, Tallyhall): I'll add it to the request with the per diem one.
+Speaker 1 (Hannah, Northwind): How are other customers handling the multi-country thing, out of interest?
+Speaker 0 (Maya, Tallyhall): Mostly with the separate policies approach you tried. It works, but you're right that it gets confusing past a handful.
+Speaker 1 (Hannah, Northwind): Yeah. Not for us.
+Speaker 0 (Maya, Tallyhall): How was the trip to Lisbon by the way? You mentioned you were going for the office lease.
+Speaker 1 (Hannah, Northwind): Good, very hot for October. The office is nice, close to the river.
+Speaker 2 (Luis, Northwind): I'm jealous, I've only seen the photos.
+Speaker 0 (Maya, Tallyhall): Okay, let me recap so we're aligned.
+Speaker 0 (Maya, Tallyhall): On our side, Dev checks the Amex card mapping and comes back by Thursday. I take country per diems and the department filter to product, and I get you an answer on per diems by the fifteenth.
+Speaker 0 (Maya, Tallyhall): On your side, Luis sends the affected transactions today.
+Speaker 2 (Luis, Northwind): Correct.
+Speaker 1 (Hannah, Northwind): That's it from us. Thanks Maya, thanks Dev.
+Speaker 3 (Dev, Tallyhall): Thanks, talk Thursday.
+Speaker 0 (Maya, Tallyhall): Thanks both, have a good week.
