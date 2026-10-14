@@ -5,7 +5,7 @@ Proposed revamp direction. Synthesized from the live + source design audit
 and four reference systems: **Runway** (cinematic dark chrome), **Claude** +
 **ElevenLabs** (warm editorial reading + amber lineage), **Sentry** (data-dense dark).
 
-Status: PROPOSED — approve before it replaces the current green system.
+Status: adopted; this is the shipped UI. Tokens live in `web/src/styles.css`, and where this document and that file disagree, the CSS is what ships.
 
 ---
 
