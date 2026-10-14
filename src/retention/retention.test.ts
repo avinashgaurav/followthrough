@@ -18,10 +18,10 @@ function seedAdmin(db: Database): AuthedUser {
   const id = ulid();
   db.query("INSERT INTO users (id, email, name, role, created_at) VALUES (?, ?, 'Admin', 'admin', ?)").run(
     id,
-    `admin-${id.slice(-4)}@tallyhall.example`,
+    `admin-${id.slice(-4)}@tallyhall.com`,
     nowIso(),
   );
-  return { id, email: `admin-${id.slice(-4)}@tallyhall.example`, name: "Admin", role: "admin" };
+  return { id, email: `admin-${id.slice(-4)}@tallyhall.com`, name: "Admin", role: "admin" };
 }
 
 function seedClient(db: Database, name = "Acme"): string {

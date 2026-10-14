@@ -36,7 +36,7 @@ function seed(opts: { consent?: boolean; transcript?: string | null } = {}): See
   const t = nowIso();
   db.query(
     "INSERT INTO users (id, email, name, role, created_at) VALUES (?, ?, 'Tester', 'member', ?)",
-  ).run(userId, `u-${userId}@tallyhall.example`, t);
+  ).run(userId, `u-${userId}@tallyhall.com`, t);
   db.query("INSERT INTO clients (id, name, created_at) VALUES (?, 'Acme', ?)").run(clientId, t);
   db.query(
     `INSERT INTO meetings (id, client_id, seq, meeting_date, consent_confirmed, status, uploaded_by, created_at)

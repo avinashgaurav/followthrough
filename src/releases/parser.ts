@@ -5,7 +5,7 @@ import { ulid } from "../ids.ts";
 /**
  * Release body parser (SPEC.md section 6).
  *
- * Real tallyhall/app release notes follow a stable shape with drift:
+ * Release notes in the supported format follow a stable shape with drift:
  * H2 sections (Features / Fixes / Enhancements / Technical details), one H3
  * per customer-facing entry, <details> blocks for technical entries, a
  * uniformly indented variant (v1.18.0), a single-entry patch (v1.17.4), and
@@ -78,7 +78,7 @@ function splitH2Sections(text: string): RawSection[] {
 }
 
 /**
- * Fuzzy header classifier. Vocabulary observed across real releases:
+ * Fuzzy header classifier. Vocabulary accepted across release formats:
  * Feature / Features / Enhancement / Enhancements / New Features &
  * Enhancements / What's New -> feature; Fix / Fixes / What's Fixed -> fix;
  * Technical details -> technical.
@@ -127,7 +127,7 @@ export function detectProductArea(title: string): string {
   if (!m?.[1]) return "unspecified";
   const raw = m[1].toLowerCase();
   if (raw.includes("/")) return "Tallyhall / Tallyhall Mobile";
-  return raw === "xyz day" ? "Tallyhall Mobile" : "Tallyhall";
+  return raw === "tallyhall mobile" ? "Tallyhall Mobile" : "Tallyhall";
 }
 
 export function extractPrRefs(text: string): number[] {
@@ -137,7 +137,7 @@ export function extractPrRefs(text: string): number[] {
 }
 
 /**
- * Gating / revert language. Tallyhall demonstrably ships dark: an entry that
+ * Gating / revert language. Products often ship dark: an entry that
  * is flag-gated, internal-only, shadow-mode, advisory, or reverted must never
  * be treated as customer-reachable proof of shipping (matcher caps to 50).
  */

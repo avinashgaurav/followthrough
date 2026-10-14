@@ -27,7 +27,7 @@ export function seed(): Seeded {
     const id = ulid();
     db.query("INSERT INTO users (id, email, name, role, created_at) VALUES (?, ?, ?, ?, ?)").run(
       id,
-      `${name}-${id.slice(-4)}@tallyhall.example`,
+      `${name}-${id.slice(-4)}@tallyhall.com`,
       name,
       role,
       t,

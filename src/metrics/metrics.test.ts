@@ -23,7 +23,7 @@ function seedUser(db: Database, name = "Tester"): string {
   const id = ulid();
   db.query(
     "INSERT INTO users (id, email, name, role, created_at) VALUES (?, ?, ?, 'member', ?)",
-  ).run(id, `${id}@tallyhall.example`, name, nowIso());
+  ).run(id, `${id}@tallyhall.com`, name, nowIso());
   return id;
 }
 
@@ -446,7 +446,7 @@ describe("clientBrief", () => {
     const evId = ulid();
     db.query(
       `INSERT INTO completion_evidence (id, insight_id, kind, url, confidence, status, confirmed_by, confirmed_at, created_at)
-       VALUES (?, ?, 'asset_published', 'https://tallyhall.example/changelog/sso', 100, 'confirmed', ?, ?, ?)`,
+       VALUES (?, ?, 'asset_published', 'https://tallyhall.com/changelog/sso', 100, 'confirmed', ?, ?, ?)`,
     ).run(evId, shipped, u, nowIso(), nowIso());
 
     const md = clientBrief(db, c, now)!;
@@ -456,7 +456,7 @@ describe("clientBrief", () => {
     expect(md).toContain("## Follow-ups owed");
     expect(md).toContain(`${insightHandle(open)} Faster exports (finalized, 6d old)`);
     expect(md).toContain(`${insightHandle(shipped)} SSO support (shipped 2026-06-05)`);
-    expect(md).toContain("https://tallyhall.example/changelog/sso");
+    expect(md).toContain("https://tallyhall.com/changelog/sso");
     expect(md).toContain("shipped, email not yet sent");
     expect(md).not.toContain("—"); // brand rule: no em-dashes
 

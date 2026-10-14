@@ -92,7 +92,7 @@ describe("parseIcs", () => {
       "DTEND:20260610T140000Z",
       'ORGANIZER;CN="Smith, John":mailto:john@acme.com',
       "ATTENDEE;CN=Bob Jones;ROLE=REQ-PARTICIPANT:mailto:bob@acme.com",
-      "ATTENDEE;CN=Ana:mailto:ana@tallyhall.example",
+      "ATTENDEE;CN=Ana:mailto:ana@tallyhall.com",
       "END:VEVENT",
     ]);
     const events = parseIcs(ics);
@@ -107,7 +107,7 @@ describe("parseIcs", () => {
     expect(ev.organizer).toEqual({ name: "Smith, John", email: "john@acme.com" });
     expect(ev.attendees).toEqual([
       { name: "Bob Jones", email: "bob@acme.com" },
-      { name: "Ana", email: "ana@tallyhall.example" },
+      { name: "Ana", email: "ana@tallyhall.com" },
     ]);
   });
 

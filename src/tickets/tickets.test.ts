@@ -39,9 +39,9 @@ function seed(overrides: { state?: string; track?: string | null } = {}): Seeded
   const m2 = ulid();
 
   const addUser = db.query("INSERT INTO users (id, email, name, role, created_at) VALUES (?, ?, ?, ?, ?)");
-  addUser.run(adminId, `admin-${adminId}@tallyhall.example`, "Admin", "admin", t);
-  addUser.run(assigneeId, `dev-${assigneeId}@tallyhall.example`, "Dev", "member", t);
-  addUser.run(otherId, `other-${otherId}@tallyhall.example`, "Other", "member", t);
+  addUser.run(adminId, `admin-${adminId}@tallyhall.com`, "Admin", "admin", t);
+  addUser.run(assigneeId, `dev-${assigneeId}@tallyhall.com`, "Dev", "member", t);
+  addUser.run(otherId, `other-${otherId}@tallyhall.com`, "Other", "member", t);
 
   const addClient = db.query("INSERT INTO clients (id, name, created_at) VALUES (?, ?, ?)");
   addClient.run(c1, "Acme Corp", t);
@@ -189,7 +189,7 @@ describe("mark-raised (manual paste-back)", () => {
     const { db, assigneeId, insightId } = seed();
     const ticketId = insertDraft(db, insightId, assigneeId);
 
-    // paste-back may name ANY repo, including xyz: the human created the issue
+    // paste-back may name ANY repo, including tallyhall: the human created the issue
     const ticket = markRaised(db, {
       ticketId,
       externalUrl: "https://github.com/tallyhall/app/issues/123",
@@ -253,7 +253,7 @@ describe("mark-raised (manual paste-back)", () => {
 });
 
 describe("create-direct (org safety)", () => {
-  test("xyz repo returns 403 even with a token set; GitHub is never called", async () => {
+  test("tallyhall repo returns 403 even with a token set; GitHub is never called", async () => {
     const { db, assigneeId, insightId } = seed();
     const ticketId = insertDraft(db, insightId, assigneeId);
     const gh = stubFetch(201, { html_url: "https://github.com/tallyhall/app/issues/9", number: 9 });
@@ -269,7 +269,7 @@ describe("create-direct (org safety)", () => {
       403,
     );
 
-    expect(err.message).toContain("xyz");
+    expect(err.message).toContain("tallyhall");
     expect(gh.calls).toHaveLength(0); // the write never reached the network
     expect(getTicket(db, ticketId).state).toBe("draft");
     expect(insightState(db, insightId)).toBe("finalized");
@@ -382,9 +382,9 @@ describe("create-direct (org safety)", () => {
     expect(insightState(db, insightId)).toBe("finalized");
   });
 
-  test("createIssue itself refuses xyz even when called directly (defense in depth)", async () => {
+  test("createIssue itself refuses tallyhall even when called directly (defense in depth)", async () => {
     const gh = stubFetch(201, {});
-    await expect(createIssue("tallyhall/app", "t", "b", "ghp_test_token", gh.fn)).rejects.toThrow(/xyz/);
+    await expect(createIssue("tallyhall/app", "t", "b", "ghp_test_token", gh.fn)).rejects.toThrow(/tallyhall/);
     expect(gh.calls).toHaveLength(0);
   });
 });

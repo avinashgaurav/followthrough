@@ -20,7 +20,7 @@ function seedUser(db: Database): string {
   const id = ulid();
   db.query(
     "INSERT INTO users (id, email, name, role, created_at) VALUES (?, ?, 'Tester', 'admin', ?)",
-  ).run(id, `${id}@tallyhall.example`, nowIso());
+  ).run(id, `${id}@tallyhall.com`, nowIso());
   return id;
 }
 
@@ -152,7 +152,7 @@ describe("fetchEvents", () => {
         "SUMMARY:Sync call",
         `DTSTART:${start}`,
         `DTEND:${end}`,
-        "ORGANIZER;CN=Host:mailto:host@tallyhall.example",
+        "ORGANIZER;CN=Host:mailto:host@tallyhall.com",
         "ATTENDEE;CN=Bob:mailto:bob@acme.com",
       ],
     ]);
@@ -162,7 +162,7 @@ describe("fetchEvents", () => {
     const ev = result.events[0]!;
     expect(ev.title).toBe("Sync call");
     expect(ev.end).not.toBeNull();
-    expect(ev.organizer).toEqual({ name: "Host", email: "host@tallyhall.example" });
+    expect(ev.organizer).toEqual({ name: "Host", email: "host@tallyhall.com" });
     expect(ev.attendees).toEqual([{ name: "Bob", email: "bob@acme.com" }]);
     expect(ev.suggested_client_id).toBe(acmeId);
     expect(ev.suggested_client_name).toBe("Acme");

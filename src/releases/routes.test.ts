@@ -207,8 +207,8 @@ describe("runPollPipeline", () => {
   test("polls, parses, matches, and reports counts; second run is a no-op", async () => {
     const s = seed();
     makeInsight(s, {
-      title: "K8s workload cost split",
-      body: "Acme wants to see which namespace and deployment drives cluster spend.",
+      title: "Receipt preview on mobile approvals",
+      body: "Acme approvers want to see the receipt image without opening a laptop.",
       state: "ticketed",
       track: "engineering",
       assignee: s.alice.id,
@@ -220,8 +220,8 @@ describe("runPollPipeline", () => {
         {
           entry_index: 0,
           verdict: "full",
-          evidence_quotes: ["per-workload cost for every cluster"],
-          rationale: "Ships the requested workload cost breakdown.",
+          evidence_quotes: ["shows the receipt image right in the approval notification"],
+          rationale: "Ships the requested mobile receipt preview.",
         },
       ],
     });

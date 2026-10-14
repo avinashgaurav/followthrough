@@ -65,7 +65,7 @@ beforeEach(() => {
   delete process.env.WHISPER_CPP_PATH;
   db = openTestDb();
   db.query(
-    "INSERT INTO users (id, email, name, role, created_at) VALUES (?, 'tester@tallyhall.example', 'Tester', 'member', ?)",
+    "INSERT INTO users (id, email, name, role, created_at) VALUES (?, 'tester@tallyhall.com', 'Tester', 'member', ?)",
   ).run(userId, nowIso());
   db.query("INSERT INTO clients (id, name, created_by, created_at) VALUES (?, 'Acme', ?, ?)").run(
     clientId,

@@ -36,13 +36,13 @@ function seed(state: string): Seeded {
   const meetingId = ulid();
   const insightId = ulid();
   db.query("INSERT INTO users (id, email, name, role, created_at) VALUES (?, ?, 'Admin', 'admin', ?)").run(
-    adminId, `a-${adminId}@tallyhall.example`, t,
+    adminId, `a-${adminId}@tallyhall.com`, t,
   );
   db.query("INSERT INTO users (id, email, name, role, created_at) VALUES (?, ?, 'Assignee', 'member', ?)").run(
-    assigneeId, `m-${assigneeId}@tallyhall.example`, t,
+    assigneeId, `m-${assigneeId}@tallyhall.com`, t,
   );
   db.query("INSERT INTO users (id, email, name, role, created_at) VALUES (?, ?, 'Other', 'member', ?)").run(
-    otherId, `o-${otherId}@tallyhall.example`, t,
+    otherId, `o-${otherId}@tallyhall.com`, t,
   );
   db.query("INSERT INTO clients (id, name, created_at) VALUES (?, 'Acme', ?)").run(clientId, t);
   db.query(
@@ -62,7 +62,7 @@ describe("proposeEvidence", () => {
     const row = await proposeEvidence(db, {
       insightId,
       kind: "asset_published",
-      url: "https://tallyhall.example/blog/dark-mode",
+      url: "https://tallyhall.com/blog/dark-mode",
       actor: { id: assigneeId, role: "member" },
       fetchImpl: liveFetch,
     });
@@ -77,7 +77,7 @@ describe("proposeEvidence", () => {
     expect(ev).toBeTruthy();
     expect(JSON.parse(ev.payload_json)).toEqual({
       kind: "asset_published",
-      url: "https://tallyhall.example/blog/dark-mode",
+      url: "https://tallyhall.com/blog/dark-mode",
     });
   });
 
@@ -86,7 +86,7 @@ describe("proposeEvidence", () => {
     const row = await proposeEvidence(db, {
       insightId,
       kind: "asset_published",
-      url: "https://tallyhall.example/404",
+      url: "https://tallyhall.com/404",
       actor: { id: assigneeId, role: "member" },
       fetchImpl: deadFetch,
     });

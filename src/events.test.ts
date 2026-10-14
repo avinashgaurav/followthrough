@@ -11,7 +11,7 @@ function seedInsight(db: ReturnType<typeof openTestDb>) {
   const t = nowIso();
   db.query(
     "INSERT INTO users (id, email, name, role, created_at) VALUES (?, ?, ?, 'member', ?)",
-  ).run(userId, `u-${userId}@tallyhall.example`, "Test User", t);
+  ).run(userId, `u-${userId}@tallyhall.com`, "Test User", t);
   db.query("INSERT INTO clients (id, name, created_at) VALUES (?, 'Acme', ?)").run(clientId, t);
   db.query(
     "INSERT INTO meetings (id, client_id, seq, meeting_date, uploaded_by, created_at) VALUES (?, ?, 1, ?, ?, ?)",

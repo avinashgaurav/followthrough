@@ -39,7 +39,7 @@ describe("isAllowedEmail", () => {
     try {
       env.ALLOWED_EMAIL_DOMAINS = " @Acme.com , ";
       expect(isAllowedEmail("x@acme.com")).toBe(true);
-      expect(isAllowedEmail("x@tallyhall.example")).toBe(false);
+      expect(isAllowedEmail("x@tallyhall.com")).toBe(false);
       env.ALLOWED_EMAIL_DOMAINS = undefined;
       expect(isAllowedEmail("x@anything.dev")).toBe(true);
     } finally {
@@ -47,66 +47,66 @@ describe("isAllowedEmail", () => {
     }
   });
 
-  test("only @tallyhall.example passes when locked to tallyhall.example", () => {
-    expect(isAllowedEmail("a@tallyhall.example")).toBe(true);
-    expect(isAllowedEmail("A@Tallyhall.COM")).toBe(true);
+  test("only @tallyhall.com passes when locked to tallyhall.com", () => {
+    expect(isAllowedEmail("a@tallyhall.com")).toBe(true);
+    expect(isAllowedEmail("A@TALLYHALL.COM")).toBe(true);
     expect(isAllowedEmail("a@gmail.com")).toBe(false);
-    expect(isAllowedEmail("a@nottallyhall.example.evil.com")).toBe(false);
+    expect(isAllowedEmail("a@nottallyhall.com.evil.com")).toBe(false);
   });
 });
 
 describe("shared-password login", () => {
-  test("unknown @tallyhall.example email + shared password → auto-provisions a member and signs in", async () => {
+  test("unknown @tallyhall.com email + shared password → auto-provisions a member and signs in", async () => {
     const db = openTestDb();
-    const r = await login(db, "new.person@tallyhall.example", PW, null, null, { accessPassword: PW });
+    const r = await login(db, "new.person@tallyhall.com", PW, null, null, { accessPassword: PW });
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.role).toBe("member");
-    const u = db.query("SELECT role FROM users WHERE email = 'new.person@tallyhall.example'").get() as { role: string };
+    const u = db.query("SELECT role FROM users WHERE email = 'new.person@tallyhall.com'").get() as { role: string };
     expect(u.role).toBe("member");
     // session row exists for the new user
     const s = db.query("SELECT COUNT(*) n FROM sessions").get() as { n: number };
     expect(s.n).toBe(1);
   });
 
-  test("non-@tallyhall.example email + shared password → rejected, no user created", async () => {
+  test("non-@tallyhall.com email + shared password → rejected, no user created", async () => {
     const db = openTestDb();
     const r = await login(db, "outsider@gmail.com", PW, null, null, { accessPassword: PW });
     expect(r.ok).toBe(false);
     expect((db.query("SELECT COUNT(*) n FROM users").get() as { n: number }).n).toBe(0);
   });
 
-  test("@tallyhall.example + wrong password (no code account) → rejected", async () => {
+  test("@tallyhall.com + wrong password (no code account) → rejected", async () => {
     const db = openTestDb();
-    const r = await login(db, "nope@tallyhall.example", "wrong", null, null, { accessPassword: PW });
+    const r = await login(db, "nope@tallyhall.com", "wrong", null, null, { accessPassword: PW });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toBe("invalid");
   });
 
   test("shared password is REFUSED for an existing admin (no privilege escalation)", async () => {
     const db = openTestDb();
-    seedUser(db, "boss@tallyhall.example", "admin");
-    const r = await login(db, "boss@tallyhall.example", PW, null, null, { accessPassword: PW });
+    seedUser(db, "boss@tallyhall.com", "admin");
+    const r = await login(db, "boss@tallyhall.com", PW, null, null, { accessPassword: PW });
     expect(r.ok).toBe(false);
   });
 
   test("shared password is refused for a disabled member", async () => {
     const db = openTestDb();
-    seedUser(db, "ex@tallyhall.example", "member", { disabled: true });
-    const r = await login(db, "ex@tallyhall.example", PW, null, null, { accessPassword: PW });
+    seedUser(db, "ex@tallyhall.com", "member", { disabled: true });
+    const r = await login(db, "ex@tallyhall.com", PW, null, null, { accessPassword: PW });
     expect(r.ok).toBe(false);
   });
 
   test("existing member can sign in with the shared password (keeps their role)", async () => {
     const db = openTestDb();
-    seedUser(db, "member@tallyhall.example", "member");
-    const r = await login(db, "member@tallyhall.example", PW, null, null, { accessPassword: PW });
+    seedUser(db, "member@tallyhall.com", "member");
+    const r = await login(db, "member@tallyhall.com", PW, null, null, { accessPassword: PW });
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.role).toBe("member");
   });
 
   test("ACCESS_PASSWORD blank → shared path off, falls through to code path", async () => {
     const db = openTestDb();
-    const r = await login(db, "x@tallyhall.example", PW, null, null, { accessPassword: "" });
+    const r = await login(db, "x@tallyhall.com", PW, null, null, { accessPassword: "" });
     expect(r.ok).toBe(false); // no code account, shared path disabled
   });
 });
@@ -114,16 +114,16 @@ describe("shared-password login", () => {
 describe("per-user code login (fallback path still works)", () => {
   test("correct personal code signs an admin in", async () => {
     const db = openTestDb();
-    seedUser(db, "admin@tallyhall.example", "admin", { codeHash: await hashCode("CODE12345") });
-    const r = await login(db, "admin@tallyhall.example", "CODE12345", null, null, { accessPassword: PW });
+    seedUser(db, "admin@tallyhall.com", "admin", { codeHash: await hashCode("CODE12345") });
+    const r = await login(db, "admin@tallyhall.com", "CODE12345", null, null, { accessPassword: PW });
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.role).toBe("admin");
   });
 
   test("wrong personal code is rejected", async () => {
     const db = openTestDb();
-    seedUser(db, "admin@tallyhall.example", "admin", { codeHash: await hashCode("CODE12345") });
-    const r = await login(db, "admin@tallyhall.example", "BADCODE", null, null, { accessPassword: PW });
+    seedUser(db, "admin@tallyhall.com", "admin", { codeHash: await hashCode("CODE12345") });
+    const r = await login(db, "admin@tallyhall.com", "BADCODE", null, null, { accessPassword: PW });
     expect(r.ok).toBe(false);
   });
 });

@@ -9,7 +9,7 @@ function seedUser(db: Database, name = "Tester"): string {
   const id = ulid();
   db.query(
     "INSERT INTO users (id, email, name, role, created_at) VALUES (?, ?, ?, 'member', ?)",
-  ).run(id, `${id}@tallyhall.example`, name, nowIso());
+  ).run(id, `${id}@tallyhall.com`, name, nowIso());
   return id;
 }
 
@@ -79,7 +79,7 @@ function seedDigestScenario() {
   transition(db, shipped, u, "shipped", daysAgo(2), "finalized");
   db.query(
     `INSERT INTO completion_evidence (id, insight_id, kind, url, confidence, status, created_at)
-     VALUES (?, ?, 'release_match', 'https://github.com/Tallyhall/Tallyhall/releases/v1.20.0', 100, 'confirmed', ?)`,
+     VALUES (?, ?, 'release_match', 'https://github.com/tallyhall/app/releases/v1.20.0', 100, 'confirmed', ?)`,
   ).run(ulid(), shipped, nowIso());
 
   // top ask: requested by two clients
@@ -104,7 +104,7 @@ describe("buildDigest", () => {
     expect(md).toContain(`${insightHandle(fresh)} Fresh ask`);
     expect(md).toContain(`${insightHandle(stuck)} Stuck ask`);
     expect(md).toContain(`${insightHandle(shipped)} Shipped ask`);
-    expect(md).toContain("https://github.com/Tallyhall/Tallyhall/releases/v1.20.0");
+    expect(md).toContain("https://github.com/tallyhall/app/releases/v1.20.0");
     expect(md).toContain(`${insightHandle(popular)} Popular ask (requested by 2 clients)`);
     expect(md).not.toContain("—"); // brand rule: no em-dashes
   });

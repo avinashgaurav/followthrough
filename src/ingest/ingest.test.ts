@@ -26,12 +26,12 @@ function seedUser(db: Database, role: "admin" | "member" = "member"): AuthedUser
   const id = ulid();
   db.query("INSERT INTO users (id, email, name, role, created_at) VALUES (?, ?, ?, ?, ?)").run(
     id,
-    `u-${id}@tallyhall.example`,
+    `u-${id}@tallyhall.com`,
     "Test User",
     role,
     nowIso(),
   );
-  return { id, email: `u-${id}@tallyhall.example`, name: "Test User", role };
+  return { id, email: `u-${id}@tallyhall.com`, name: "Test User", role };
 }
 
 function jsonRequest(url: string, body: unknown): Request {

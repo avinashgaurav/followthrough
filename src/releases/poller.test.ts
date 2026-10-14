@@ -154,11 +154,11 @@ describe("addManualRelease dedup", () => {
   test("same tag is a duplicate even after the repo key changes", () => {
     const db = openTestDb();
     db.query(
-      "INSERT INTO users (id, email, name, role, created_at) VALUES ('u1', 'u1@tallyhall.example', 'U', 'admin', '2026-01-01T00:00:00Z')",
+      "INSERT INTO users (id, email, name, role, created_at) VALUES ('u1', 'u1@tallyhall.com', 'U', 'admin', '2026-01-01T00:00:00Z')",
     ).run();
     const saved = env.RELEASE_REPO;
     try {
-      env.RELEASE_REPO = "Tallyhall/Tallyhall";
+      env.RELEASE_REPO = "tallyhall/app";
       addManualRelease(db, { tag_name: "v2.0.0", body_md: "## Feature\n\n### SSO\n\nShipped." }, "u1");
       env.RELEASE_REPO = undefined; // now stored under "manual"
       expect(() =>

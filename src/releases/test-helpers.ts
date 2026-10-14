@@ -25,9 +25,9 @@ export function seed(): Seeded {
   const adminId = ulid();
   const aliceId = ulid();
   const bobId = ulid();
-  addUser.run(adminId, `admin-${adminId.slice(-5)}@tallyhall.example`, "Admin", "admin", t);
-  addUser.run(aliceId, `alice-${aliceId.slice(-5)}@tallyhall.example`, "Alice", "member", t);
-  addUser.run(bobId, `bob-${bobId.slice(-5)}@tallyhall.example`, "Bob", "member", t);
+  addUser.run(adminId, `admin-${adminId.slice(-5)}@tallyhall.com`, "Admin", "admin", t);
+  addUser.run(aliceId, `alice-${aliceId.slice(-5)}@tallyhall.com`, "Alice", "member", t);
+  addUser.run(bobId, `bob-${bobId.slice(-5)}@tallyhall.com`, "Bob", "member", t);
 
   const clientId = ulid();
   db.query("INSERT INTO clients (id, name, created_at) VALUES (?, 'Acme', ?)").run(clientId, t);

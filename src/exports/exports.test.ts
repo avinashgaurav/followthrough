@@ -18,7 +18,7 @@ function seedUser(db: Database): string {
   const id = ulid();
   db.query(
     "INSERT INTO users (id, email, name, role, created_at) VALUES (?, ?, 'Tester', 'member', ?)",
-  ).run(id, `${id}@tallyhall.example`, nowIso());
+  ).run(id, `${id}@tallyhall.com`, nowIso());
   return id;
 }
 

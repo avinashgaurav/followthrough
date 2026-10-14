@@ -39,10 +39,10 @@ function seed(state = "shipped"): Seeded {
   const insightId = ulid();
 
   db.query("INSERT INTO users (id, email, name, role, created_at) VALUES (?, ?, 'Admin', 'admin', ?)").run(
-    adminId, `a-${adminId}@tallyhall.example`, t,
+    adminId, `a-${adminId}@tallyhall.com`, t,
   );
   db.query("INSERT INTO users (id, email, name, role, created_at) VALUES (?, ?, 'Assignee', 'member', ?)").run(
-    assigneeId, `m-${assigneeId}@tallyhall.example`, t,
+    assigneeId, `m-${assigneeId}@tallyhall.com`, t,
   );
   db.query("INSERT INTO clients (id, name, is_internal, created_at) VALUES (?, 'Acme', 0, ?)").run(clientA, t);
   db.query("INSERT INTO clients (id, name, is_internal, created_at) VALUES (?, 'Globex', 0, ?)").run(clientB, t);
@@ -85,7 +85,7 @@ function seed(state = "shipped"): Seeded {
 
   db.query(
     `INSERT INTO completion_evidence (id, insight_id, kind, url, confidence, status, created_at)
-     VALUES (?, ?, 'asset_published', 'https://tallyhall.example/changelog/v1.20.0', 100, 'confirmed', ?)`,
+     VALUES (?, ?, 'asset_published', 'https://tallyhall.com/changelog/v1.20.0', 100, 'confirmed', ?)`,
   ).run(ulid(), insightId, t);
 
   return { db, adminId, assigneeId, insightId, clientA, clientB, clientI, contactA };
@@ -126,7 +126,7 @@ describe("generateDrafts fan-out", () => {
     expect(promptA).toContain("we burn money every night on idle databases");
     expect(promptA).toContain("2026-04-02");
     expect(promptA).not.toContain("can we get auto shutdown for staging");
-    expect(promptA).toContain("https://tallyhall.example/changelog/v1.20.0");
+    expect(promptA).toContain("https://tallyhall.com/changelog/v1.20.0");
     expect(promptB).toContain("can we get auto shutdown for staging");
 
     // brand rules live in the stable system prompt
@@ -225,7 +225,7 @@ describe("confirmSent", () => {
     });
     const updated = confirmSent(s.db, {
       draftId: drafts[0]!.id,
-      finalText: "Hi Priya, the scheduled shutdown is live: https://tallyhall.example/changelog/v1.20.0",
+      finalText: "Hi Priya, the scheduled shutdown is live: https://tallyhall.com/changelog/v1.20.0",
       actor: { id: s.assigneeId, role: "member" },
     });
     expect(updated.sent_confirmed_at).toBeTruthy();

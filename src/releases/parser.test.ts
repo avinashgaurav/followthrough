@@ -15,10 +15,10 @@ import {
 } from "./parser.ts";
 
 /**
- * Golden-file tests (SPEC.md section 6) pinned on real tallyhall/app release
- * bodies: v1.20.0 (details blocks + gating), v1.19.2 (fix-heavy), the
- * uniformly indented v1.18.0, single-entry v1.17.4, baseline v1.0.0, and the
- * 21-entry v1.16.0.
+ * Golden-file tests (SPEC.md section 6) pinned on fictional Tallyhall release
+ * bodies that reproduce the format quirks: v1.20.0 (details blocks + gating),
+ * v1.19.2 (fix-heavy), the uniformly indented v1.18.0, single-entry v1.17.4,
+ * baseline v1.0.0, and the 21-entry v1.16.0.
  */
 
 function fixture(tag: string): { body: string; tagName: string } {
@@ -37,7 +37,7 @@ describe("normalizeBody", () => {
   test("strips uniform indentation (the v1.18.0 case)", () => {
     const text = normalizeBody(fixture("v1.18.0").body);
     expect(text).toContain("\n## Fixes\n");
-    expect(text).toContain("\n### Tallyhall — Kubernetes node and workload cost breakdown\n");
+    expect(text).toContain("\n### Tallyhall - Receipt preview in mobile approval notifications\n");
   });
 
   test("drops Full Changelog trailer lines", () => {
@@ -70,15 +70,18 @@ describe("classifySectionHeader", () => {
 
 describe("entry part helpers", () => {
   test("detectProductArea", () => {
-    expect(detectProductArea("Tallyhall — Kubernetes cost breakdown")).toBe("Tallyhall");
-    expect(detectProductArea("Tallyhall Mobile — Deploy to AWS VMs")).toBe("Tallyhall Mobile");
-    expect(detectProductArea("Tallyhall / Tallyhall Mobile — GCP onboarding")).toBe("Tallyhall / Tallyhall Mobile");
-    expect(detectProductArea("Scheduled starts no longer skipped")).toBe("unspecified");
+    expect(detectProductArea("Tallyhall - Receipt preview in approvals")).toBe("Tallyhall");
+    expect(detectProductArea("Tallyhall Mobile - Mileage from trip history")).toBe("Tallyhall Mobile");
+    expect(detectProductArea("Tallyhall / Tallyhall Mobile - Push delivery")).toBe(
+      "Tallyhall / Tallyhall Mobile",
+    );
+    expect(detectProductArea("Tallyhall — em-dash prefix still parses")).toBe("Tallyhall");
+    expect(detectProductArea("Scheduled exports no longer skipped")).toBe("unspecified");
   });
 
   test("extractPrRefs dedupes and sorts", () => {
-    expect(extractPrRefs("Ships #1655 then #1608, reverted by #1696 (#1608)")).toEqual([
-      1608, 1655, 1696,
+    expect(extractPrRefs("Ships #1031 then #1012, reverted by #1066 (#1012)")).toEqual([
+      1012, 1031, 1066,
     ]);
   });
 
@@ -87,7 +90,7 @@ describe("entry part helpers", () => {
     expect(detectFlags("only in the internal admin app")).toEqual(["internal_only"]);
     expect(detectFlags("running in shadow mode")).toEqual(["shadow"]);
     expect(detectFlags("advisory only, no enforcement")).toEqual(["advisory"]);
-    expect(detectFlags("merged and then reverted by #1696, net effect is zero")).toEqual([
+    expect(detectFlags("merged and then reverted by #1066, net effect is zero")).toEqual([
       "reverted",
     ]);
     expect(detectFlags("plain customer-facing fix")).toEqual([]);
@@ -105,24 +108,24 @@ describe("golden: v1.20.0 (features + details blocks + gating)", () => {
 
   test("feature titles", () => {
     expect(entries[0]!.title).toBe(
-      "Auto-remediation — rightsizing / config rule class across AWS, Azure & GCP",
+      "Auto-approval - policy rules for low-risk expenses across cards, mileage & per diem",
     );
     expect(entries[1]!.title).toBe(
-      "Architecture & Cost Reports — unified tag picker (values grouped by key)",
+      "Reports & Exports - unified cost center picker (values grouped by entity)",
     );
   });
 
-  test("ClickHouse details block is flag_gated with PR ref 1655", () => {
-    const ch = entries.find((e) => e.title.startsWith("Aggregator ClickHouse"))!;
+  test("ledger dual-write details block is flag_gated with PR ref 1031", () => {
+    const ch = entries.find((e) => e.title.startsWith("Ledger store dual-write"))!;
     expect(ch.section_type).toBe("technical");
     expect(ch.flags).toEqual(["flag_gated"]);
-    expect(ch.pr_refs).toEqual([1655]);
+    expect(ch.pr_refs).toEqual([1031]);
   });
 
   test("Scope & rollback block carries flag_gated + reverted and all PR refs", () => {
     const scope = entries.find((e) => e.title === "Scope & rollback")!;
     expect(scope.flags).toEqual(["flag_gated", "reverted"]);
-    expect(scope.pr_refs).toEqual([1608, 1655, 1681, 1685, 1693, 1696, 1699]);
+    expect(scope.pr_refs).toEqual([1012, 1031, 1061, 1063, 1065, 1066, 1069]);
   });
 });
 
@@ -138,13 +141,13 @@ describe("golden: v1.19.2 (fix burst + advisory flag)", () => {
 
   test("first fix title pinned", () => {
     expect(entries[0]!.title).toBe(
-      "Part-time and ephemeral instances no longer show $0 savings on stop/idle recommendations",
+      "Split expenses no longer show $0 reimbursable when one line is personal",
     );
     expect(entries[0]!.section_type).toBe("fix");
   });
 
-  test("Graviton rightsizing entry is advisory-flagged", () => {
-    const grav = entries.find((e) => e.title.startsWith("Wider rightsizing coverage"))!;
+  test("duplicate-detection entry is advisory-flagged", () => {
+    const grav = entries.find((e) => e.title.startsWith("Wider duplicate detection coverage"))!;
     expect(grav.flags).toContain("advisory");
   });
 });
@@ -156,15 +159,15 @@ describe("golden: v1.18.0 (uniformly indented body)", () => {
     expect(entries.map((e) => e.section_type)).toEqual(["feature", "fix", "technical", "technical"]);
   });
 
-  test("product areas parsed from the em-dash title prefix", () => {
-    expect(entries[0]!.title).toBe("Tallyhall — Kubernetes node and workload cost breakdown");
+  test("product areas parsed from the dash title prefix", () => {
+    expect(entries[0]!.title).toBe("Tallyhall - Receipt preview in mobile approval notifications");
     expect(entries[0]!.product_area).toBe("Tallyhall");
     expect(entries[1]!.product_area).toBe("Tallyhall / Tallyhall Mobile");
   });
 
   test("details summary HTML is stripped", () => {
-    expect(entries[2]!.title).toBe("K8s workload cost attribution");
-    expect(entries[3]!.title).toBe("GCP onboarding — skip org-scoped roles");
+    expect(entries[2]!.title).toBe("Receipt preview rendering");
+    expect(entries[3]!.title).toBe("Push delivery - skip expired device tokens");
   });
 });
 
@@ -177,7 +180,7 @@ describe("golden: v1.17.4 (single-entry patch)", () => {
     expect(entries[0]!.product_area).toBe("Tallyhall");
     expect(entries[0]!.flags).toEqual([]);
     expect(entries[0]!.title).toBe(
-      "Tallyhall — Permissions restricted by an Organization policy are no longer flagged as missing",
+      "Tallyhall - Receipts with a zero-tax line are no longer flagged as incomplete",
     );
   });
 });
@@ -205,7 +208,7 @@ describe("golden: v1.16.0 (large mixed release)", () => {
 
   test("validated PR refs survive on technical entries", () => {
     const drop = entries.find((e) => e.title.startsWith("Drop legacy"))!;
-    expect(drop.pr_refs).toEqual([1409, 1554]);
+    expect(drop.pr_refs).toEqual([812, 907]);
   });
 });
 
