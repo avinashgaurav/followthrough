@@ -51,7 +51,7 @@ A prompt or model change ships only if, on the 4 fictional golden cases (targets
 
 ## Cost per task
 
-**Estimate, about $0.20 to $0.30 per meeting** with a transcript up to 12,000 characters (one chunk). Not yet measured; the app already logs real cost per extraction run in `extraction_runs.cost_usd`.
+**Estimate, about $0.17 to $0.27 per meeting** with a transcript up to 12,000 characters (one chunk). Not yet measured; the app already logs real cost per extraction run in `extraction_runs.cost_usd`.
 
 Arithmetic: default model `claude-opus-4-8` at $5 input and $25 output per million tokens (`src/llm/provider.ts`), about 4 characters per token, adaptive thinking on.
 

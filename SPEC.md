@@ -123,7 +123,7 @@ All derived from the append-only `events` table; status columns are caches, neve
 - **AI quality**: discard rate, edit-distance ratio (draft vs final snapshots captured from day one), routing-correction rate, changelog-match precision, extraction yield per meeting.
 - **Volume**: capture volume by source/uploader (top-of-funnel health), tickets/ships/notifies per week, CRM export activity.
 
-Event taxonomy (35 namespaced types in code as of 2026-10-14, including `meeting.uploaded`, `extraction.completed/failed`, `insight.created/state_changed/merged/reverted`, `ticket.drafted/raised`, `release.fetched`, `match.proposed/confirmed`, `evidence.confirmed`, `email.drafted/copied/sent_confirmed`, `export.csv_generated`, `user.created`) with a common envelope (actor, entity, occurred_at, payload). SQLite triggers make the table physically append-only. One `insight_milestones` view (MIN occurred_at per state) makes every TAT a simple SELECT.
+Event taxonomy (35 namespaced types in code as of 2026-10-14, including `meeting.uploaded`, `extraction.completed/failed`, `insight.state_changed/routed/absorbed_merge/body_edited`, `ticket.drafted/raised`, `release.fetched`, `match.proposed/confirmed`, `evidence.confirmed`, `email.drafted/copied/sent_confirmed`, `export.csv_generated`, `user.created`) with a common envelope (actor, entity, occurred_at, payload). SQLite triggers make the table physically append-only. One `insight_milestones` view (MIN occurred_at per state) makes every TAT a simple SELECT.
 
 ## 12. Notifications, queues, digest, search
 
