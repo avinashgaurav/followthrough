@@ -1,0 +1,45 @@
+Speaker 0 (Kavya, Tallyhall): Namaste Vikram ji, hi Neha. Sab theek?
+Speaker 1 (Vikram, Saffron Agro Exports): Namaste Kavya. Haan, sab badhiya. Neha bhi aa gayi hai.
+Speaker 2 (Neha, Saffron Agro Exports): Hi Kavya, good morning.
+Speaker 0 (Kavya, Tallyhall): Good morning. Aaj ka agenda simple hai, field team ka feedback aur jo bhi pending issues hain.
+Speaker 1 (Vikram, Saffron Agro Exports): Theek hai. Pehle bata doon, Nashik aur Indore dono depots pe ab sab log app use kar rahe hain.
+Speaker 2 (Neha, Saffron Agro Exports): Around one twenty field officers. Paper claims almost band ho gaye hain.
+Speaker 0 (Kavya, Tallyhall): That's great. Last quarter toh half log paper pe the.
+Speaker 1 (Vikram, Saffron Agro Exports): Haan, woh training ka kamaal hai. Lekin kuch cheezein abhi bhi atak rahi hain.
+Speaker 0 (Kavya, Tallyhall): Bataiye.
+Speaker 1 (Vikram, Saffron Agro Exports): Pehli cheez DA ki hai. Hamare field officers ka daily allowance city ke tier pe depend karta hai.
+Speaker 1 (Vikram, Saffron Agro Exports): Tier one city mein alag rate, tier two mein alag, aur village visits ka alag. Abhi officer khud amount daalta hai.
+Speaker 1 (Vikram, Saffron Agro Exports): Hamein chahiye ki officer bas city select kare aur system tier ke hisaab se DA khud laga de.
+Speaker 0 (Kavya, Tallyhall): Samajh gayi. Rates aapki policy mein likhe hain?
+Speaker 1 (Vikram, Saffron Agro Exports): Haan, ek PDF hai. Main aaj shaam tak aapko DA policy ka PDF bhej deta hoon.
+Speaker 0 (Kavya, Tallyhall): Perfect. Main check karti hoon ki tier-wise rates hamare per diem setup mein configure ho sakte hain ya nahi, aur Wednesday tak aapko bata dungi.
+Speaker 1 (Vikram, Saffron Agro Exports): Theek hai.
+Speaker 2 (Neha, Saffron Agro Exports): Ab meri problem. Bahut saare bills Marathi mein hote hain, chhote dhabe aur local transport waale.
+Speaker 2 (Neha, Saffron Agro Exports): Marathi bills scan karte hain toh amount aur date aksar galat aata hai. Phir mujhe har claim manually theek karna padta hai.
+Speaker 0 (Kavya, Tallyhall): Kitne claims mein yeh hota hai roughly?
+Speaker 2 (Neha, Saffron Agro Exports): Har hafte pachaas se zyada. Mera aadha din isi mein jaata hai.
+Speaker 0 (Kavya, Tallyhall): Yeh serious hai. Kya aap kuch sample bills bhej sakti hain?
+Speaker 2 (Neha, Saffron Agro Exports): Haan, main Monday tak pandrah Marathi bills ke photos bhej dungi.
+Speaker 0 (Kavya, Tallyhall): Thank you. Main woh samples hamari OCR team ko dungi aur agle hafte aapko update dungi ki fix kab tak aayega.
+Speaker 2 (Neha, Saffron Agro Exports): Okay, thanks.
+Speaker 1 (Vikram, Saffron Agro Exports): Ek aur cheez. Field officers email check hi nahi karte. Approval ya rejection ka mail jaata hai toh unko pata hi nahi chalta.
+Speaker 1 (Vikram, Saffron Agro Exports): Agar claim reject ho toh WhatsApp pe message aana chahiye, tabhi woh dekhenge.
+Speaker 0 (Kavya, Tallyhall): WhatsApp notifications abhi hamare roadmap pe nahi hain. Main isko product team ke saath raise karungi.
+Speaker 1 (Vikram, Saffron Agro Exports): Please karo, yeh bahut kaam ka hoga.
+Speaker 0 (Kavya, Tallyhall): Aur kuch?
+Speaker 1 (Vikram, Saffron Agro Exports): Haan, ek baat seedhi bol deta hoon. January mein renewal hai.
+Speaker 1 (Vikram, Saffron Agro Exports): Hamare MD ne ek local tool ka demo dekha hai jo aadhe price mein hai. Unhone bola hai renewal se pehle compare karenge.
+Speaker 0 (Kavya, Tallyhall): Thank you for telling me. Comparison mein kya dekhenge woh?
+Speaker 1 (Vikram, Saffron Agro Exports): Mostly price, aur yeh DA aur Marathi bills waale issues. Agar yeh solve ho gaye toh switch karne ka koi reason nahi hai.
+Speaker 0 (Kavya, Tallyhall): Samajh gayi. Main December ke pehle hafte mein MD ke saath ek call set karti hoon, jismein in dono issues ka status dikha sakein.
+Speaker 1 (Vikram, Saffron Agro Exports): Haan, woh accha rahega. Main MD sir ka calendar check karke aapko dates bhej dunga.
+Speaker 0 (Kavya, Tallyhall): Perfect.
+Speaker 2 (Neha, Saffron Agro Exports): Kavya, woh Hindi training video bahut accha tha. Field waalon ne usko bahut share kiya.
+Speaker 0 (Kavya, Tallyhall): Arre wah, main team ko bataungi.
+Speaker 1 (Vikram, Saffron Agro Exports): Aur Indore depot ka manager bhi khush hai, approvals ab do din mein ho jaate hain.
+Speaker 0 (Kavya, Tallyhall): Good to hear. Chaliye, recap kar leti hoon.
+Speaker 0 (Kavya, Tallyhall): Mere side se: tier-wise DA ka configuration Wednesday tak check karungi, Marathi bills OCR team ko dungi aur next week update, WhatsApp notifications product team ke saath raise karungi, aur MD ke saath December call.
+Speaker 0 (Kavya, Tallyhall): Aapki side se: Vikram ji DA policy PDF aur MD ki dates bhejenge, Neha pandrah Marathi bills Monday tak.
+Speaker 1 (Vikram, Saffron Agro Exports): Bilkul sahi. Thank you Kavya.
+Speaker 2 (Neha, Saffron Agro Exports): Thanks, bye.
+Speaker 0 (Kavya, Tallyhall): Bye, dhanyavaad.

@@ -1,0 +1,55 @@
+Speaker 0 (Priya, Tallyhall): Morning all. I've got Helen, Omar and Grace. Tom from our solutions team is on too.
+Speaker 3 (Tom, Tallyhall): Hi everyone.
+Speaker 1 (Helen, Brightwater Vet): Morning Priya. We've got a full hour booked and I have a long list, so let's be efficient.
+Speaker 0 (Priya, Tallyhall): Perfect. Quick context first, how are the clinics finding things since the summer rollout?
+Speaker 2 (Omar, Brightwater Vet): All fourteen clinics are live. The practice managers submit from the clinic tablets mostly.
+Speaker 4 (Grace, Brightwater Vet): And approvals are down to about three days, from over a week on the old forms.
+Speaker 0 (Priya, Tallyhall): That's great to hear.
+Speaker 1 (Helen, Brightwater Vet): It is. Right, the list. First one is budgets.
+Speaker 1 (Helen, Brightwater Vet): Every clinic has a monthly budget for consumables and small equipment. Right now nobody sees that a clinic is over until I run the report at month end.
+Speaker 1 (Helen, Brightwater Vet): We need a budget cap per clinic, with a warning to the practice manager when they pass eighty percent of it.
+Speaker 0 (Priya, Tallyhall): Should it block the expense when they go over, or just warn?
+Speaker 1 (Helen, Brightwater Vet): Warn the practice manager, and copy me once they're over. No hard block, vets sometimes have to buy things in an emergency.
+Speaker 0 (Priya, Tallyhall): Understood. Second item?
+Speaker 2 (Omar, Brightwater Vet): Mileage. Our large-animal vets drive out to farm calls and back.
+Speaker 2 (Omar, Brightwater Vet): The mileage tool only counts one way when they tick round trip, so they're being paid half the distance.
+Speaker 2 (Omar, Brightwater Vet): Two of the vets noticed it on their own payslips, which is not a great look for me.
+Speaker 3 (Tom, Tallyhall): That sounds like a bug on our side, the round trip flag should double it. I'll reproduce it and come back to you by Thursday with a cause and a fix date.
+Speaker 2 (Omar, Brightwater Vet): Thank you. I'll send you three of the affected claims so you can see exactly what happened.
+Speaker 3 (Tom, Tallyhall): That would help a lot.
+Speaker 1 (Helen, Brightwater Vet): And we'll need the underpaid vets back paid, but that's on us once we know the numbers.
+Speaker 4 (Grace, Brightwater Vet): Can I do the card one?
+Speaker 0 (Priya, Tallyhall): Go ahead, Grace.
+Speaker 4 (Grace, Brightwater Vet): The corporate card transactions are taking four or five days to show up in Tallyhall. Our bank says they send them the same day.
+Speaker 4 (Grace, Brightwater Vet): So at month end I'm reconciling against a feed that's missing the last week, and I end up doing it twice.
+Speaker 0 (Priya, Tallyhall): That's not normal. I'll open a ticket with our card feed team today and send you a status update on Friday.
+Speaker 4 (Grace, Brightwater Vet): Do you need anything from the bank?
+Speaker 0 (Priya, Tallyhall): A contact on their card programme side would speed it up.
+Speaker 4 (Grace, Brightwater Vet): I'll email you our relationship manager's details this afternoon.
+Speaker 0 (Priya, Tallyhall): Great.
+Speaker 2 (Omar, Brightwater Vet): One more from me. When a vet buys supplies for two clinics in one shop, the receipt has to go against one clinic.
+Speaker 2 (Omar, Brightwater Vet): We need to split a single receipt across clinics, by amount or by percentage, so each clinic's costs are right.
+Speaker 0 (Priya, Tallyhall): Splitting by cost centre exists for some plans. Tom, can you check whether it works with clinics as cost centres?
+Speaker 3 (Tom, Tallyhall): I can. I'll check that in the same session as the mileage bug and include it in Thursday's reply.
+Speaker 1 (Helen, Brightwater Vet): Good. Now the bigger picture, and I want to be direct about this.
+Speaker 1 (Helen, Brightwater Vet): We're opening six more clinics in the first quarter. The board decides in December whether we put them on Tallyhall or move everything to the expense module that comes bundled with our accounting suite.
+Speaker 1 (Helen, Brightwater Vet): The bundled module is basically free for us. So you're competing on whether the time savings justify the cost.
+Speaker 0 (Priya, Tallyhall): That's really useful to know. What does the board need to see?
+Speaker 1 (Helen, Brightwater Vet): A price for twenty clinics, and some proof of time saved.
+Speaker 0 (Priya, Tallyhall): I'll send you a pricing proposal for all twenty clinics before the end of November, so it's in hand well before the board meets.
+Speaker 1 (Helen, Brightwater Vet): And the proof?
+Speaker 4 (Grace, Brightwater Vet): I can pull our approval times from before and after. I'll put that together for Helen by mid November.
+Speaker 1 (Helen, Brightwater Vet): Good. I'll also set up thirty minutes with our CEO before the board meeting, so she hears it from you directly.
+Speaker 0 (Priya, Tallyhall): I'd appreciate that.
+Speaker 2 (Omar, Brightwater Vet): The new clinics will need training too. The new practice managers start in January.
+Speaker 3 (Tom, Tallyhall): I'll run a live training session for the new practice managers in their first week of January.
+Speaker 2 (Omar, Brightwater Vet): Great, I'll send you their start dates once they're confirmed.
+Speaker 0 (Priya, Tallyhall): Anything else on the list, Helen?
+Speaker 1 (Helen, Brightwater Vet): No, that's all of it. The rest is going well, honestly.
+Speaker 4 (Grace, Brightwater Vet): The receipt scanning on the tablets is very good now, by the way.
+Speaker 0 (Priya, Tallyhall): Nice to hear. Let me recap quickly.
+Speaker 0 (Priya, Tallyhall): Tom reproduces the mileage bug, checks receipt splitting across clinics, and replies by Thursday. I open the card feed ticket today with a status on Friday, and I send the twenty-clinic pricing before the end of November. Tom runs the January training.
+Speaker 0 (Priya, Tallyhall): On your side, Omar sends three affected mileage claims and the new managers' start dates, Grace sends the bank contact and the approval-time comparison, and Helen sets up the CEO call.
+Speaker 1 (Helen, Brightwater Vet): That's everything. Thanks both.
+Speaker 3 (Tom, Tallyhall): Thanks, talk Thursday.
+Speaker 0 (Priya, Tallyhall): Thanks all, bye.
