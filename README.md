@@ -12,6 +12,9 @@
 
 A client asks for a feature on a call, it ships weeks later, and nobody tells the client; Followthrough tracks each ask from the client's exact words to "shipped" to "client told".
 
+> [!NOTE]
+> **In pilot:** a sales team is trying followthrough on its own client calls.
+
 ![Demo: Home, Review and Capture screens on fictional data](docs/demo.gif)
 
 > [!NOTE]
