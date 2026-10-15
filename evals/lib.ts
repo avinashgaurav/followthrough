@@ -25,6 +25,7 @@ import {
   chunkTranscript,
   cleanTranscript,
 } from "../src/extract/segment.ts";
+import { isInstructionToTool } from "../src/extract/guards.ts";
 
 export const REPO_ROOT = resolve(import.meta.dir, "..");
 export const RAW_DIR = join(REPO_ROOT, "evals", "golden", "raw");
@@ -57,6 +58,8 @@ export type GoldenCase = z.infer<typeof GoldenCaseSchema>;
 export function hasRealLLMKey(): boolean {
   const anthropic = (process.env.ANTHROPIC_API_KEY ?? "").trim();
   const openrouter = (process.env.OPENROUTER_API_KEY ?? "").trim();
+  // The opt-in claude-cli eval route needs no key: it uses the local CLI login.
+  if (process.env.LLM_PROVIDER === "claude-cli") return true;
   return anthropic !== "" || openrouter !== "";
 }
 
@@ -117,6 +120,8 @@ export interface OfflineExtraction {
   citationDropped: number;
   /** Items dropped by the verifier judge. */
   verifierDropped: number;
+  /** Items whose quote was an instruction aimed at the tool (injection guard). */
+  injectionDropped: number;
   /** Items whose verbatim quote was already produced earlier in this run. */
   duplicateDropped: number;
   /** What the app pipeline would persist for this transcript. */
@@ -152,6 +157,7 @@ export async function extractOffline(
   let extractedCount = 0;
   let citationDropped = 0;
   let verifierDropped = 0;
+  let injectionDropped = 0;
   let duplicateDropped = 0;
   const predicted: PredictedItem[] = [];
   const seenQuotes = new Set<string>();
@@ -169,6 +175,11 @@ export async function extractOffline(
     // Citation gate: no citation, no insight. Identical to the app pipeline.
     const cited: Array<{ item: (typeof ext.data.items)[number]; verbatim: string }> = [];
     for (const item of ext.data.items) {
+      // Injection guard, identical to the app pipeline.
+      if (isInstructionToTool(item.quote)) {
+        injectionDropped++;
+        continue;
+      }
       const match = findQuote(item.quote);
       if (!match) {
         citationDropped++;
@@ -229,6 +240,7 @@ export async function extractOffline(
     extractedCount,
     citationDropped,
     verifierDropped,
+    injectionDropped,
     duplicateDropped,
     predicted,
     usage,

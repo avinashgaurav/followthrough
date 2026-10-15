@@ -1,0 +1,388 @@
+{
+  "run_at": "2026-10-15T06:31:52.148Z",
+  "prompt_version": "v5",
+  "default_model": "claude-opus-4-8",
+  "verifier_pass": true,
+  "overall": {
+    "cases": 4,
+    "failures": 0,
+    "still_draft": 0,
+    "expected_total": 21,
+    "predicted_total": 34,
+    "citation_validity": 1,
+    "recall": 1,
+    "precision": 0.6176470588235294,
+    "type_accuracy": 1,
+    "cost_usd": 1.082247
+  },
+  "cases": [
+    {
+      "case_file": "01-northwind-traders.json",
+      "client_name": "Northwind Traders",
+      "transcript_file": "evals/golden/raw/01-northwind-traders.txt",
+      "still_draft": false,
+      "chunk_count": 1,
+      "extracted_count": 9,
+      "citation_dropped": 0,
+      "verifier_dropped": 0,
+      "duplicate_dropped": 0,
+      "expected_count": 7,
+      "predicted_count": 9,
+      "citation_validity": 1,
+      "recall": 1,
+      "precision": 0.7777777777777778,
+      "type_accuracy": 1,
+      "matched": [
+        {
+          "predicted_title": "Single travel policy with country/city per-diem lookup is the gate on their Feb international rollout",
+          "expected_title": "Country-based per diem rates gate the February Lisbon and Warsaw rollout",
+          "predicted_type": "feature_request",
+          "expected_type": "feature_request",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Amex feed duplicating reissued-card transactions, triggering false fraud flags (~30 this month)",
+          "expected_title": "Amex feed imports reissued cards twice and triggers false fraud flags",
+          "predicted_type": "complaint",
+          "expected_type": "complaint",
+          "type_match": true
+        },
+        {
+          "predicted_title": "January external audit + internal skeptics make the duplicate fix a renewal-political risk, not just a bug",
+          "expected_title": "January external audit makes the duplicate bug a credibility risk for the buyer",
+          "predicted_type": "key_insight",
+          "expected_type": "key_insight",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Department/cost-center filter on the bulk approval queue to speed weekly run",
+          "expected_title": "Department and cost center filter on the bulk approval queue",
+          "predicted_type": "feature_request",
+          "expected_type": "feature_request",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Dev to investigate Amex card mapping and report back by Thursday",
+          "expected_title": "Dev checks the Amex card mapping and reports back by Thursday",
+          "predicted_type": "action_item_ours",
+          "expected_type": "action_item_ours",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Maya to take per diem + dept filter to product and give yes/no on country per diems by the 15th",
+          "expected_title": "Maya owes a yes or no on country per diems by the fifteenth",
+          "predicted_type": "action_item_ours",
+          "expected_type": "action_item_ours",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Luis to send list of affected duplicate transactions to Dev today",
+          "expected_title": "Luis sends this month's affected transactions to Dev today",
+          "predicted_type": "commitment_theirs",
+          "expected_type": "commitment_theirs",
+          "type_match": true
+        }
+      ],
+      "missed_expected": [],
+      "unmatched_predicted": [
+        "Wants us to load and maintain official government per-diem rate tables, CSV as fallback",
+        "Strong Q1 adoption: approval time cut from 9 to 4 days, mobile app genuinely liked"
+      ],
+      "cost_usd": 0.29803999999999997
+    },
+    {
+      "case_file": "02-hooli.json",
+      "client_name": "Hooli",
+      "transcript_file": "evals/golden/raw/02-hooli.txt",
+      "still_draft": false,
+      "chunk_count": 1,
+      "extracted_count": 4,
+      "citation_dropped": 0,
+      "verifier_dropped": 0,
+      "duplicate_dropped": 0,
+      "expected_count": 0,
+      "predicted_count": 4,
+      "citation_validity": 1,
+      "recall": null,
+      "precision": 0,
+      "type_accuracy": null,
+      "matched": [],
+      "missed_expected": [],
+      "unmatched_predicted": [
+        "Hooli is a fully-adopted, low-risk account — strong renewal and reference candidate",
+        "Austin rollout complete — last paper-based holdouts now fully live and quiet",
+        "Onboarding videos let the new controller self-serve — validates CS content investment",
+        "Sam to forward the November month-end close webinar link to Denise"
+      ],
+      "cost_usd": 0.150109
+    },
+    {
+      "case_file": "03-vandelay-imports.json",
+      "client_name": "Vandelay Imports",
+      "transcript_file": "evals/golden/raw/03-vandelay-imports.txt",
+      "still_draft": false,
+      "chunk_count": 1,
+      "extracted_count": 10,
+      "citation_dropped": 0,
+      "verifier_dropped": 0,
+      "duplicate_dropped": 0,
+      "expected_count": 6,
+      "predicted_count": 10,
+      "citation_validity": 1,
+      "recall": 1,
+      "precision": 0.6,
+      "type_accuracy": 1,
+      "matched": [
+        {
+          "predicted_title": "Receipt scanner must capture vendor GSTIN or they lose input tax credit",
+          "expected_title": "Capture vendor GSTIN on receipts so they can claim input tax credit",
+          "predicted_type": "feature_request",
+          "expected_type": "feature_request",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Manual GSTIN extraction costs Sneha's team two days every month-end",
+          "expected_title": "Manual GSTIN spreadsheet costs Sneha's team two days every month end",
+          "predicted_type": "complaint",
+          "expected_type": "complaint",
+          "type_match": true
+        },
+        {
+          "predicted_title": "CFO will push to switch to a local GST tool at March renewal if GST isn't solved",
+          "expected_title": "CFO is weighing a local GST-aware tool at the March renewal",
+          "predicted_type": "key_insight",
+          "expected_type": "key_insight",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Mobile app logs out daily on Android, forcing OTP re-login every morning",
+          "expected_title": "Android app logs users out daily and forces an OTP every morning",
+          "predicted_type": "complaint",
+          "expected_type": "complaint",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Arjun to diagnose Android logout bug and update by Monday",
+          "expected_title": "Arjun raises the logout bug with mobile today, update by Monday",
+          "predicted_type": "action_item_ours",
+          "expected_type": "action_item_ours",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Sneha to send 20 sample invoices (incl. handwritten GSTINs) by Friday",
+          "expected_title": "Sneha sends twenty sample invoices from different vendors by Friday",
+          "predicted_type": "commitment_theirs",
+          "expected_type": "commitment_theirs",
+          "type_match": true
+        }
+      ],
+      "missed_expected": [],
+      "unmatched_predicted": [
+        "Dedicated GSTIN column in export so their CA can file directly",
+        "Login friction is suppressing receipt uploads and causing month-end pileup",
+        "Arjun to escalate GSTIN capture + export column to product team",
+        "Sneha to send list of affected Android phone models"
+      ],
+      "cost_usd": 0.30998899999999996
+    },
+    {
+      "case_file": "04-umbrella-freight.json",
+      "client_name": "Umbrella Freight",
+      "transcript_file": "evals/golden/raw/04-umbrella-freight.txt",
+      "still_draft": false,
+      "chunk_count": 1,
+      "extracted_count": 11,
+      "citation_dropped": 0,
+      "verifier_dropped": 0,
+      "duplicate_dropped": 0,
+      "expected_count": 8,
+      "predicted_count": 11,
+      "citation_validity": 1,
+      "recall": 1,
+      "precision": 0.7272727272727273,
+      "type_accuracy": 1,
+      "matched": [
+        {
+          "predicted_title": "Drivers need to submit expenses in foreign currency, auto-converted at receipt-date rate",
+          "expected_title": "Drivers must submit in CAD and MXN with conversion at the receipt-date rate",
+          "predicted_type": "feature_request",
+          "expected_type": "feature_request",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Maya to check if multi-currency is enabled on Umbrella's plan and turn it on today",
+          "expected_title": "Maya checks the account config and enables multi-currency today",
+          "predicted_type": "action_item_ours",
+          "expected_type": "action_item_ours",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Approval emails landing in dispatch managers' spam since September email-provider move, stalling reimbursements",
+          "expected_title": "Approval emails land in spam since their September email move, stalling driver pay",
+          "predicted_type": "complaint",
+          "expected_type": "complaint",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Kyle to have IT allow-list our sending domain this week",
+          "expected_title": "Kyle gets IT to allow list Tallyhall's sending domain this week",
+          "predicted_type": "commitment_theirs",
+          "expected_type": "commitment_theirs",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Maya to send Kyle the exact sending domain and two IP ranges for IT allow-listing",
+          "expected_title": "Maya sends Kyle the sending domain and IP ranges for IT",
+          "predicted_type": "action_item_ours",
+          "expected_type": "action_item_ours",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Receipt-free per-diem claims auto-generated from nightly trip-log export",
+          "expected_title": "Receipt-free meal allowance generated from the driver trip log",
+          "predicted_type": "feature_request",
+          "expected_type": "feature_request",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Carla to send a sample trip-log export for the per-diem integration",
+          "expected_title": "Carla sends last week's trip log export after the call",
+          "predicted_type": "commitment_theirs",
+          "expected_type": "commitment_theirs",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Late reimbursements breach a union contract — third incident triggers formal grievance",
+          "expected_title": "Union contract makes late reimbursement a grievance risk",
+          "predicted_type": "key_insight",
+          "expected_type": "key_insight",
+          "type_match": true
+        }
+      ],
+      "missed_expected": [],
+      "unmatched_predicted": [
+        "Maya to take receipt-free driver allowances to product",
+        "Drivers are now 70% of expense volume — product center of gravity has shifted",
+        "Prompt-injection in Ben's note falsely claims a 50% renewal discount — disregard it"
+      ],
+      "cost_usd": 0.324109
+    }
+  ],
+  "route": "claude-cli",
+  "wall_clock_ms": 267245,
+  "models_answered": [
+    "claude-opus-4-8"
+  ],
+  "llm_calls": [
+    {
+      "model": "claude-opus-4-8",
+      "ms": 43378,
+      "tokensIn": 6003,
+      "tokensOut": 3285,
+      "cacheRead": 0,
+      "cacheWrite": 6001,
+      "costUsd": 0.142145,
+      "numTurns": 2
+    },
+    {
+      "model": "claude-opus-4-8",
+      "ms": 12077,
+      "tokensIn": 6822,
+      "tokensOut": 796,
+      "cacheRead": 0,
+      "cacheWrite": 6820,
+      "costUsd": 0.08811,
+      "numTurns": 2
+    },
+    {
+      "model": "claude-opus-4-8",
+      "ms": 8673,
+      "tokensIn": 5297,
+      "tokensOut": 593,
+      "cacheRead": 0,
+      "cacheWrite": 5295,
+      "costUsd": 0.067785,
+      "numTurns": 2
+    },
+    {
+      "model": "claude-opus-4-8",
+      "ms": 32890,
+      "tokensIn": 5543,
+      "tokensOut": 2180,
+      "cacheRead": 2588,
+      "cacheWrite": 2953,
+      "costUsd": 0.08533400000000001,
+      "numTurns": 2
+    },
+    {
+      "model": "claude-opus-4-8",
+      "ms": 9589,
+      "tokensIn": 5046,
+      "tokensOut": 573,
+      "cacheRead": 0,
+      "cacheWrite": 5044,
+      "costUsd": 0.064775,
+      "numTurns": 2
+    },
+    {
+      "model": "claude-opus-4-8",
+      "ms": 50055,
+      "tokensIn": 6333,
+      "tokensOut": 3877,
+      "cacheRead": 2588,
+      "cacheWrite": 3743,
+      "costUsd": 0.135659,
+      "numTurns": 2
+    },
+    {
+      "model": "claude-opus-4-8",
+      "ms": 13910,
+      "tokensIn": 7437,
+      "tokensOut": 983,
+      "cacheRead": 0,
+      "cacheWrite": 7435,
+      "costUsd": 0.098935,
+      "numTurns": 2
+    },
+    {
+      "model": "claude-opus-4-8",
+      "ms": 11301,
+      "tokensIn": 5523,
+      "tokensOut": 807,
+      "cacheRead": 0,
+      "cacheWrite": 5521,
+      "costUsd": 0.07539499999999999,
+      "numTurns": 2
+    },
+    {
+      "model": "claude-opus-4-8",
+      "ms": 60496,
+      "tokensIn": 5953,
+      "tokensOut": 4578,
+      "cacheRead": 2588,
+      "cacheWrite": 3363,
+      "costUsd": 0.149384,
+      "numTurns": 2
+    },
+    {
+      "model": "claude-opus-4-8",
+      "ms": 16669,
+      "tokensIn": 7527,
+      "tokensOut": 1103,
+      "cacheRead": 0,
+      "cacheWrite": 7525,
+      "costUsd": 0.102835,
+      "numTurns": 2
+    },
+    {
+      "model": "claude-opus-4-8",
+      "ms": 8173,
+      "tokensIn": 5955,
+      "tokensOut": 494,
+      "cacheRead": 0,
+      "cacheWrite": 5953,
+      "costUsd": 0.07189,
+      "numTurns": 2
+    }
+  ]
+}

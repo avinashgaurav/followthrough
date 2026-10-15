@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import { tmpdir } from "node:os";
 import { z } from "zod";
 import { env, llmDailyBudgetUsd } from "../config.ts";
 
@@ -290,6 +291,143 @@ class OpenRouterLLM implements LLM {
   }
 }
 
+/**
+ * Evaluation-only provider: LLM_PROVIDER=claude-cli routes calls through the
+ * locally installed, logged-in Claude Code CLI (`claude -p`) instead of the
+ * API, so the eval harness can run on a subscription without an API key. It is
+ * never selected unless that variable is set, and it is not a production path.
+ *
+ * Kept as close to a plain Messages call as the CLI allows: the app's own
+ * system prompt (--system-prompt replaces Claude Code's), no tools, no MCP, no
+ * hooks/CLAUDE.md/skills/plugins (--safe-mode), no settings files, no session
+ * persistence, and the Zod schema enforced via --json-schema. Known
+ * differences: the CLI prepends a short preamble and an environment block to
+ * the system prompt, enforces structured output through its own tool rather
+ * than output_config.format, and max_tokens cannot be set. costUsd is the CLI's
+ * own list-price estimate (it includes prompt-cache writes).
+ */
+export const claudeCliCallLog: Array<{
+  model: string;
+  ms: number;
+  tokensIn: number;
+  tokensOut: number;
+  cacheRead: number;
+  cacheWrite: number;
+  costUsd: number;
+  numTurns: number;
+}> = [];
+
+/** A CLI call that runs longer than this is killed and fails, so a hung login prompt cannot stall a run. */
+const CLAUDE_CLI_TIMEOUT_MS = 300_000;
+
+class ClaudeCliLLM implements LLM {
+  private async run(
+    system: string | undefined,
+    prompt: string,
+    model: string,
+    jsonSchema?: unknown,
+  ): Promise<{ text: string; structured: unknown } & LLMUsage> {
+    const args = [
+      "-p",
+      "--output-format", "json",
+      "--system-prompt", system ?? "",
+      "--tools", "",
+      "--model", model,
+      "--effort", "high",
+      "--no-session-persistence",
+      "--setting-sources", "",
+      "--strict-mcp-config",
+      "--safe-mode",
+      "--disable-slash-commands",
+      ...(jsonSchema ? ["--json-schema", JSON.stringify(jsonSchema)] : []),
+    ];
+    const started = Date.now();
+    // Prompt on stdin (not argv) and a neutral cwd so no project context is discovered.
+    // CLAUDE_CLI_BIN overrides the binary (default `claude` on PATH).
+    const proc = Bun.spawn([process.env.CLAUDE_CLI_BIN ?? "claude", ...args], {
+      cwd: tmpdir(),
+      stdin: new Blob([prompt]),
+      stdout: "pipe",
+      stderr: "pipe",
+      timeout: CLAUDE_CLI_TIMEOUT_MS,
+      killSignal: "SIGKILL",
+    });
+    const [out, err, code] = await Promise.all([
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+      proc.exited,
+    ]);
+    if (proc.signalCode === "SIGKILL" && Date.now() - started >= CLAUDE_CLI_TIMEOUT_MS) {
+      throw new Error(`claude CLI timed out after ${CLAUDE_CLI_TIMEOUT_MS / 1000} s and was killed`);
+    }
+    let r: {
+      is_error?: boolean;
+      subtype?: string;
+      result?: string;
+      api_error_status?: unknown;
+      structured_output?: unknown;
+      total_cost_usd?: number;
+      num_turns?: number;
+      usage?: {
+        input_tokens?: number;
+        output_tokens?: number;
+        cache_creation_input_tokens?: number;
+        cache_read_input_tokens?: number;
+      };
+      modelUsage?: Record<string, unknown>;
+    };
+    try {
+      r = JSON.parse(out);
+    } catch {
+      throw new Error(`claude CLI exited ${code} without a JSON result: ${(err || out).slice(0, 500)}`);
+    }
+    if (r.is_error) {
+      throw new Error(
+        `claude CLI error (${r.subtype}, api status ${String(r.api_error_status)}): ${String(r.result ?? "").slice(0, 500)}`,
+      );
+    }
+    const u = r.usage ?? {};
+    const answered = Object.keys(r.modelUsage ?? {}).join("+") || model;
+    const tokensIn = (u.input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0);
+    const entry = {
+      model: answered,
+      ms: Date.now() - started,
+      tokensIn,
+      tokensOut: u.output_tokens ?? 0,
+      cacheRead: u.cache_read_input_tokens ?? 0,
+      cacheWrite: u.cache_creation_input_tokens ?? 0,
+      costUsd: r.total_cost_usd ?? 0,
+      numTurns: r.num_turns ?? 0,
+    };
+    claudeCliCallLog.push(entry);
+    return {
+      text: String(r.result ?? ""),
+      structured: r.structured_output,
+      model: answered,
+      tokensIn,
+      tokensOut: entry.tokensOut,
+      costUsd: entry.costUsd,
+    };
+  }
+
+  async complete(opts: CompleteOptions): Promise<{ text: string } & LLMUsage> {
+    const r = await this.run(opts.system, opts.prompt, opts.model ?? DEFAULT_MODEL);
+    return { text: r.text, model: r.model, tokensIn: r.tokensIn, tokensOut: r.tokensOut, costUsd: r.costUsd };
+  }
+
+  async completeJSON<T>(opts: CompleteJSONOptions<T>): Promise<{ data: T } & LLMUsage> {
+    // The CLI's validator does not resolve the draft-2020-12 meta-schema URI.
+    const { $schema: _meta, ...schema } = z.toJSONSchema(opts.schema as z.ZodType) as Record<string, unknown>;
+    void _meta;
+    const r = await this.run(opts.system, opts.prompt, opts.model ?? DEFAULT_MODEL, schema);
+    const parsed = opts.schema.safeParse(r.structured);
+    if (!parsed.success) {
+      throw new LLMOutputError(`claude CLI structured output failed schema validation: ${parsed.error.message.slice(0, 600)}`);
+    }
+    return { data: parsed.data, model: r.model, tokensIn: r.tokensIn, tokensOut: r.tokensOut, costUsd: r.costUsd };
+  }
+}
+
 /** Deterministic mock for tests and keyless dev. Queue responses in order of use. */
 export class MockLLM implements LLM {
   private queue: unknown[] = [];
@@ -326,7 +464,18 @@ export function setLLM(llm: LLM | null): void {
 
 export function getLLM(): LLM {
   if (instance) return instance;
-  if (env.ANTHROPIC_API_KEY) {
+  if (process.env.LLM_PROVIDER === "claude-cli") {
+    // Opt-in eval route only; see ClaudeCliLLM. Never chosen implicitly, and
+    // refused in production unless explicitly allowed for an eval run.
+    if (process.env.NODE_ENV === "production" && process.env.ALLOW_CLAUDE_CLI_EVAL !== "1") {
+      throw new Error(
+        "LLM_PROVIDER=claude-cli is an eval-only route and is refused when NODE_ENV=production. " +
+          "Set ALLOW_CLAUDE_CLI_EVAL=1 to override for an eval run.",
+      );
+    }
+    console.warn("LLM_PROVIDER=claude-cli: routing through the local Claude Code CLI (evals only).");
+    instance = new ClaudeCliLLM();
+  } else if (env.ANTHROPIC_API_KEY) {
     instance = new AnthropicLLM(env.ANTHROPIC_API_KEY);
   } else if (env.OPENROUTER_API_KEY) {
     console.warn("Using OpenRouter (Claude models only, data_collection=deny). Prefer a direct ANTHROPIC_API_KEY.");

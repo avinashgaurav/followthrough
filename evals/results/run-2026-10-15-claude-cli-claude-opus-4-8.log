@@ -1,0 +1,13 @@
+$ bun run evals/run-evals.ts
+LLM_PROVIDER=claude-cli: routing through the local Claude Code CLI (evals only).
+CASE                           EXP  PRED    CIT  RECALL   PREC   TYPE     COST$
+01-northwind-traders             7     9   100%    100%    78%   100%    0.2980
+02-hooli                         0     4   100%       -     0%      -    0.1501
+03-vandelay-imports              6    10   100%    100%    60%   100%    0.3100
+04-umbrella-freight              8    11   100%    100%    73%   100%    0.3241
+
+Overall: 4 case(s), 21 expected, 34 predicted | citation 100%, recall 100%, precision 62%, type 100% | cost $1.0822
+Results written to evals/results/2026-10-15T06-31-52-148Z-claude-cli-claude-opus-4-8.json
+real 267.32
+user 14.19
+sys 8.91

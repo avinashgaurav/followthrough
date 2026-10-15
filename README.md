@@ -38,6 +38,21 @@ Product brief (user, problem, metrics, cost per meeting): [docs/PRD.md](docs/PRD
 | Triage, reword, route and finalize; confirm a release really shipped an ask | A person (Review and Confirm shipped screens) | The client relationship is on the line, so a human signs off every outward step. |
 | Pipeline state, allowed transitions, and every turnaround time | Code (`src/events.ts`, `schema.sql`, `src/metrics/queries.ts`) | Timings must be exact and auditable, so they come from an append-only event log. |
 
+## Evals
+
+4 fictional calls with 24 expected asks, complaints and commitments (21 written down before the run, 3 added after review), including a friendly check-in with nothing actionable and a transcript carrying a prompt injection. Method and every miss: [EVALS.md](EVALS.md).
+
+| Measure | Prompt v5 | Prompt v6 |
+|---|---|---|
+| Extracted items that are real (precision) | 24 / 34 (71%) | 22 / 22 (100%) |
+| Expected items found (recall) | 24 / 24 (100%) | 22 / 24 (92%) |
+| Items from the nothing-actionable call | 4 | 0 |
+| Injected instruction turned into an item | Yes (reported, not obeyed) | No |
+
+v5 rescored by hand on the corrected key; v6 is a live run. In v6 the code-side injection guard did not fire: the model never proposed the injected line as an item.
+
+v6 traded some recall for precision: it merges or skips secondary commitments, which is the next fix. The prompt was tuned on these same 4 calls, so a held-out set is still needed. Run through the Claude Code CLI with the app's own prompts, not the production API path; an API rerun is planned.
+
 ---
 
 ## The pipeline

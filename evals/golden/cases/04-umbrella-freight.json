@@ -40,6 +40,12 @@
       "quote": "We need a receipt-free allowance claim, tied to the overnight stops in their trip log."
     },
     {
+      "item_type": "action_item_ours",
+      "title": "Maya takes receipt-free driver allowances to product",
+      "body": "Maya said the receipt-free allowance ask was one she would have to take to product, and confirmed it in her closing recap as her own action. Carla's trip log export is the input product will need to assess it.",
+      "quote": "I take receipt-free driver allowances to product."
+    },
+    {
       "item_type": "commitment_theirs",
       "title": "Carla sends last week's trip log export after the call",
       "body": "Carla will send a sample of their nightly trip log export so product can assess generating allowances from it.",
