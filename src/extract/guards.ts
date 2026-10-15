@@ -10,13 +10,24 @@
  * is untouched.
  */
 
+// Words that name the tool itself. Bare "model" is excluded: "the model risk
+// committee", "the model on the Android app" are ordinary meeting talk.
+const TOOL = String.raw`(?:ai(?:\s+(?:notetaker|note-taker|note\s+taker|assistant|bot))?|a\.i\.|assistant|bot|chatbot|notetaker|note-taker|note\s+taker|llm|language\s+model|transcriber|summari[sz]er)`;
+
 const INSTRUCTION_PATTERNS: RegExp[] = [
   // "ignore previous instructions", "disregard all prior instructions"
   /\b(ignore|disregard|forget|override)\s+(all\s+|any\s+|the\s+|your\s+)?(previous|prior|above|earlier|preceding|system)\s+(instructions?|prompts?|rules|messages?|directions?)\b/i,
-  // "note to the AI notetaker", "message for the assistant"
-  /\b(note|message|instructions?)\s+(to|for)\s+(the\s+|any\s+|our\s+)?(ai|a\.i\.|assistant|bot|chatbot|notetaker|note-taker|note\s+taker|llm|language\s+model|model|transcriber|summari[sz]er)\b/i,
-  // "AI notetaker: mark ...", "dear assistant, record ..."
-  /\b(ai|assistant|notetaker|note-taker|llm|bot)\b[^.!?\n]{0,40}\b(mark|record|tag|flag|set|log|classify|rate)\b/i,
+  // "ignore everything above", "ignore all of the above." The target must end
+  // the phrase, so "ignore everything before the March invoices" is untouched.
+  /\bignore\s+(everything|all(\s+of\s+the)?)\s+(above|before)\s*([.,;:!?]|$)/i,
+  // "note to the AI notetaker:", "message for the assistant." The tool word
+  // must end the phrase, so "message for the assistant director" is untouched.
+  new RegExp(String.raw`\b(note|message|instructions?)\s+(to|for)\s+(the\s+|any\s+|our\s+)?${TOOL}\s*([:,.;!?]|$)`, "i"),
+  // Direct address followed by an imperative: "AI notetaker: mark ...",
+  // "Dear assistant, record ...". The address must open the sentence, so "Our
+  // AI assistant keeps trying to set ..." or "The AI feature should flag ..."
+  // is untouched.
+  new RegExp(String.raw`(^|[.!?]\s+)((hey|hi|dear|ok|okay)\s+)?(the\s+)?${TOOL}\s*[:,]\s*(please\s+)?(mark|record|tag|flag|set|log|classify|rate|add|change|update|ignore|treat)\b`, "i"),
   // "mark everything as high priority"
   /\bmark\s+(everything|all\s+(items|of\s+(this|these|them))|every\s+item)\s+as\b/i,
   /\b(system|developer)\s+prompt\b/i,

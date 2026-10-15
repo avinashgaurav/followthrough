@@ -317,6 +317,9 @@ export const claudeCliCallLog: Array<{
   numTurns: number;
 }> = [];
 
+/** A CLI call that runs longer than this is killed and fails, so a hung login prompt cannot stall a run. */
+const CLAUDE_CLI_TIMEOUT_MS = 300_000;
+
 class ClaudeCliLLM implements LLM {
   private async run(
     system: string | undefined,
@@ -340,17 +343,23 @@ class ClaudeCliLLM implements LLM {
     ];
     const started = Date.now();
     // Prompt on stdin (not argv) and a neutral cwd so no project context is discovered.
+    // CLAUDE_CLI_BIN overrides the binary (default `claude` on PATH).
     const proc = Bun.spawn([process.env.CLAUDE_CLI_BIN ?? "claude", ...args], {
       cwd: tmpdir(),
       stdin: new Blob([prompt]),
       stdout: "pipe",
       stderr: "pipe",
+      timeout: CLAUDE_CLI_TIMEOUT_MS,
+      killSignal: "SIGKILL",
     });
     const [out, err, code] = await Promise.all([
       new Response(proc.stdout).text(),
       new Response(proc.stderr).text(),
       proc.exited,
     ]);
+    if (proc.signalCode === "SIGKILL" && Date.now() - started >= CLAUDE_CLI_TIMEOUT_MS) {
+      throw new Error(`claude CLI timed out after ${CLAUDE_CLI_TIMEOUT_MS / 1000} s and was killed`);
+    }
     let r: {
       is_error?: boolean;
       subtype?: string;
@@ -456,7 +465,14 @@ export function setLLM(llm: LLM | null): void {
 export function getLLM(): LLM {
   if (instance) return instance;
   if (process.env.LLM_PROVIDER === "claude-cli") {
-    // Opt-in eval route only; see ClaudeCliLLM. Never chosen implicitly.
+    // Opt-in eval route only; see ClaudeCliLLM. Never chosen implicitly, and
+    // refused in production unless explicitly allowed for an eval run.
+    if (process.env.NODE_ENV === "production" && process.env.ALLOW_CLAUDE_CLI_EVAL !== "1") {
+      throw new Error(
+        "LLM_PROVIDER=claude-cli is an eval-only route and is refused when NODE_ENV=production. " +
+          "Set ALLOW_CLAUDE_CLI_EVAL=1 to override for an eval run.",
+      );
+    }
     console.warn("LLM_PROVIDER=claude-cli: routing through the local Claude Code CLI (evals only).");
     instance = new ClaudeCliLLM();
   } else if (env.ANTHROPIC_API_KEY) {
