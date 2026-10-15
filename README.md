@@ -27,7 +27,9 @@ A client asks for a feature on a call, it ships weeks later, and nobody tells th
 > | Items from the nothing-actionable call | 4 | **0** |
 > | Injected instruction turned into an item | Yes (reported, not obeyed) | **No** |
 >
-> Caveat: fictional data; run through the Claude Code CLI, not the production API path; the prompt was tuned on these same 4 calls, so a held-out set is still needed. Method and every miss: [EVALS.md](EVALS.md).
+> **Held-out check** (4 new fictional calls, 38 expected items, key committed before any model call, prompt frozen, 3 runs): precision **100%** in every run, recall **76%** (71% to 79%), nothing extracted from the nothing-actionable call, and the injected instruction never became an item. The recall gap is one known weakness: when one person makes two commitments, v6 often merges the second into the first.
+>
+> Caveat: fictional data; run through the Claude Code CLI, not the production API path; the v5 and v6 columns are on the 4 calls the prompt was tuned on; the held-out key was written by the author. Method and every miss: [EVALS.md](EVALS.md).
 
 ## Why AI here, why code there
 
