@@ -27,6 +27,7 @@ import {
   type ExtractedItem,
   type ItemType,
 } from "./prompts.ts";
+import { isInstructionToTool } from "./guards.ts";
 
 /**
  * Multi-pass extraction pipeline (SPEC.md section 5):
@@ -60,6 +61,8 @@ export interface ExtractionResult {
   mentionsAdded: number;
   droppedCitations: number;
   droppedVerifier: number;
+  /** Items whose quote was an instruction aimed at the tool (prompt injection). */
+  droppedInjection: number;
 }
 
 interface MeetingRow {
@@ -356,6 +359,7 @@ async function execute(
 
   let droppedCitations = 0;
   let droppedVerifier = 0;
+  let droppedInjection = 0;
   const survivors: Candidate[] = [];
 
   for (let i = 0; i < chunks.length; i++) {
@@ -371,6 +375,12 @@ async function execute(
     // substring of the FULL cleaned transcript after whitespace normalization.
     const cited: Candidate[] = [];
     for (const item of ext.data.items) {
+      // Injection guard: a quote that instructs the tool is never an insight,
+      // whatever the model made of it. See guards.ts.
+      if (isInstructionToTool(item.quote)) {
+        droppedInjection++;
+        continue;
+      }
       const match = findQuote(item.quote);
       if (!match) {
         droppedCitations++;
@@ -584,6 +594,7 @@ async function execute(
       plural(chunks.length, "chunk"),
       plural(droppedCitations, "citation failure"),
       plural(droppedVerifier, "verifier drop"),
+      ...(droppedInjection > 0 ? [plural(droppedInjection, "injection guard drop")] : []),
     ].join(", ");
     db.query(
       `UPDATE extraction_runs
@@ -602,13 +613,14 @@ async function execute(
         mentions_added: mentionsAdded,
         dropped_citations: droppedCitations,
         dropped_verifier: droppedVerifier,
+        dropped_injection: droppedInjection,
       },
     });
   });
   persist();
   for (const id of new Set(touchedInsightIds)) syncInsightFts(db, id);
 
-  return { runId, created, mentionsAdded, droppedCitations, droppedVerifier };
+  return { runId, created, mentionsAdded, droppedCitations, droppedVerifier, droppedInjection };
 }
 
 // ---------------------------------------------------------------- manual add

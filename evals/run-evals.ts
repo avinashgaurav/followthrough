@@ -20,7 +20,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { PROMPT_VERSION } from "../src/extract/prompts.ts";
-import { DEFAULT_MODEL, getLLM, type LLM } from "../src/llm/provider.ts";
+import { DEFAULT_MODEL, claudeCliCallLog, getLLM, type LLM } from "../src/llm/provider.ts";
 import {
   CASES_DIR,
   GoldenCaseSchema,
@@ -43,6 +43,7 @@ export interface CaseResult {
   extracted_count: number;
   citation_dropped: number;
   verifier_dropped: number;
+  injection_dropped: number;
   duplicate_dropped: number;
   expected_count: number;
   predicted_count: number;
@@ -92,6 +93,7 @@ function errorResult(caseFile: string, message: string): CaseResult {
     extracted_count: 0,
     citation_dropped: 0,
     verifier_dropped: 0,
+    injection_dropped: 0,
     duplicate_dropped: 0,
     expected_count: 0,
     predicted_count: 0,
@@ -204,6 +206,7 @@ async function evaluateCase(
     extracted_count: extraction.extractedCount,
     citation_dropped: extraction.citationDropped,
     verifier_dropped: extraction.verifierDropped,
+    injection_dropped: extraction.injectionDropped,
     duplicate_dropped: extraction.duplicateDropped,
     expected_count: scores.expectedCount,
     predicted_count: scores.predictedCount,
@@ -297,6 +300,7 @@ export async function runEvals(
   }
 
   log(tableHeader());
+  const startedMs = Date.now();
   const results: CaseResult[] = [];
   for (const file of files) {
     let result: CaseResult;
@@ -335,7 +339,10 @@ export async function runEvals(
   if (opts.writeResults ?? true) {
     const runIso = new Date().toISOString();
     mkdirSync(resultsDir, { recursive: true });
-    resultsFile = join(resultsDir, `${runIso.replace(/[:.]/g, "-")}.json`);
+    // The opt-in claude-cli eval route tags its result files with route and model.
+    const cli = process.env.LLM_PROVIDER === "claude-cli";
+    const tag = cli ? `-claude-cli-${DEFAULT_MODEL}` : "";
+    resultsFile = join(resultsDir, `${runIso.replace(/[:.]/g, "-")}${tag}.json`);
     writeFileSync(
       resultsFile,
       JSON.stringify(
@@ -346,6 +353,14 @@ export async function runEvals(
           verifier_pass: verify,
           overall,
           cases: results,
+          ...(cli
+            ? {
+                route: "claude-cli",
+                wall_clock_ms: Date.now() - startedMs,
+                models_answered: [...new Set(claudeCliCallLog.map((c) => c.model))],
+                llm_calls: claudeCliCallLog,
+              }
+            : {}),
         },
         null,
         2,

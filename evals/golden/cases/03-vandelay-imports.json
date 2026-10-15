@@ -34,10 +34,22 @@
       "quote": "Main mobile team se aaj hi baat karta hoon aur Monday tak update deta hoon ki issue kya hai."
     },
     {
+      "item_type": "action_item_ours",
+      "title": "Arjun escalates GSTIN capture and the export column to the product team",
+      "body": "In the closing recap Arjun took the GSTIN asks to product as his own action: GSTIN capture on receipts plus a separate GSTIN export column (translation: from my side, I will escalate GSTIN capture and the export column to the product team). Earlier he had said it would go to product and that he would escalate it with priority after hearing the CFO risk.",
+      "quote": "Mere side se: GSTIN capture aur export column product team ko escalate karunga"
+    },
+    {
       "item_type": "commitment_theirs",
       "title": "Sneha sends twenty sample invoices from different vendors by Friday",
       "body": "Sneha will share twenty sample invoices from different vendors by Friday so product has real GSTIN examples, including handwritten ones at Rohit's request (translation: I will send twenty sample invoices by Friday, from different vendors).",
       "quote": "Haan, main Friday tak twenty sample invoices bhej dungi, alag alag vendors ke."
+    },
+    {
+      "item_type": "commitment_theirs",
+      "title": "Sneha sends the list of Android phone models hitting the logout bug",
+      "body": "Sneha does not know the exact Android versions behind the daily logout, mostly Samsung and Redmi, and offered to check and report back (translation: I don't know exactly, mostly Samsung and Redmi; I can check and tell you). Arjun's recap assigned it to her as the list of Android phone models, and she confirmed. It gives the mobile team what they need to reproduce the bug.",
+      "quote": "Exact nahi pata, mostly Samsung aur Redmi hain. Main check karke bata sakti hoon."
     }
   ]
 }
