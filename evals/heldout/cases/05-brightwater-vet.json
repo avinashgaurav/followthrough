@@ -1,0 +1,97 @@
+{
+  "transcript_file": "evals/heldout/raw/05-brightwater-vet.txt",
+  "client_name": "Brightwater Vet",
+  "drafted_at_note": "hand-written fictional held-out case; key written and committed before any model call, 2026-10-15",
+  "expected_items": [
+    {
+      "item_type": "feature_request",
+      "title": "Per-clinic budget caps with a warning at 80 percent",
+      "body": "Each of the fourteen clinics has a monthly consumables and small-equipment budget, and overspend is only visible when Helen runs the month-end report. Helen wants a per-clinic cap that warns the practice manager at 80 percent and copies her once the clinic is over. No hard block, because vets sometimes buy in an emergency.",
+      "quote": "We need a budget cap per clinic, with a warning to the practice manager when they pass eighty percent of it."
+    },
+    {
+      "item_type": "complaint",
+      "title": "Round-trip mileage pays vets for only one way",
+      "body": "When large-animal vets tick round trip for farm calls, the mileage tool counts one way, so they are paid half the distance. Two vets spotted it on their payslips, which embarrasses Omar internally, and the client will have to back pay them.",
+      "quote": "The mileage tool only counts one way when they tick round trip, so they're being paid half the distance."
+    },
+    {
+      "item_type": "action_item_ours",
+      "title": "Tom reproduces the mileage bug and replies by Thursday with cause and fix date",
+      "body": "Tom accepted it as a likely bug on our side and committed to reproducing it and replying by Thursday with a cause and a fix date.",
+      "quote": "I'll reproduce it and come back to you by Thursday with a cause and a fix date."
+    },
+    {
+      "item_type": "commitment_theirs",
+      "title": "Omar sends three affected mileage claims",
+      "body": "Omar will send three of the underpaid round-trip claims so Tom can see exactly what happened.",
+      "quote": "I'll send you three of the affected claims so you can see exactly what happened."
+    },
+    {
+      "item_type": "complaint",
+      "title": "Corporate card transactions arrive four to five days late",
+      "body": "Card transactions take four or five days to appear, although the bank says it sends them the same day. Grace reconciles month end against a feed missing the last week and ends up doing it twice.",
+      "quote": "The corporate card transactions are taking four or five days to show up in Tallyhall."
+    },
+    {
+      "item_type": "action_item_ours",
+      "title": "Priya opens a card feed ticket today and sends a status on Friday",
+      "body": "Priya committed to opening a ticket with the card feed team the same day and sending Grace a status update on Friday.",
+      "quote": "I'll open a ticket with our card feed team today and send you a status update on Friday."
+    },
+    {
+      "item_type": "commitment_theirs",
+      "title": "Grace emails the bank relationship manager's details this afternoon",
+      "body": "To speed up the card feed investigation, Grace will email the contact for their bank's card programme the same afternoon.",
+      "quote": "I'll email you our relationship manager's details this afternoon."
+    },
+    {
+      "item_type": "feature_request",
+      "title": "Split one receipt across clinics by amount or percentage",
+      "body": "Vets buy supplies for two clinics in one shop, but a receipt can only go against one clinic, so clinic costs are wrong. Omar wants a single receipt split across clinics by amount or percentage. Cost-centre splitting may already exist on some plans.",
+      "quote": "We need to split a single receipt across clinics, by amount or by percentage, so each clinic's costs are right."
+    },
+    {
+      "item_type": "action_item_ours",
+      "title": "Tom checks receipt splitting with clinics as cost centres, in Thursday's reply",
+      "body": "Tom will check whether cost-centre splitting works with clinics as cost centres and include the answer in his Thursday reply.",
+      "quote": "I'll check that in the same session as the mileage bug and include it in Thursday's reply."
+    },
+    {
+      "item_type": "key_insight",
+      "title": "Board decides in December between Tallyhall and a near-free bundled expense module",
+      "body": "Six new clinics open in Q1, and in December the board decides whether to put them on Tallyhall or move everything to the expense module bundled with their accounting suite, which is basically free. The account is at risk, and the decision will turn on price for twenty clinics and proof of time saved.",
+      "quote": "The board decides in December whether we put them on Tallyhall or move everything to the expense module that comes bundled with our accounting suite."
+    },
+    {
+      "item_type": "action_item_ours",
+      "title": "Priya sends twenty-clinic pricing before the end of November",
+      "body": "Priya committed to a pricing proposal covering all twenty clinics before the end of November, ahead of the board meeting.",
+      "quote": "I'll send you a pricing proposal for all twenty clinics before the end of November"
+    },
+    {
+      "item_type": "commitment_theirs",
+      "title": "Grace prepares before-and-after approval times by mid November",
+      "body": "Grace will pull approval times from before and after the rollout and put them together for Helen by mid November, as the time-saved proof for the board.",
+      "quote": "I'll put that together for Helen by mid November."
+    },
+    {
+      "item_type": "commitment_theirs",
+      "title": "Helen sets up thirty minutes with their CEO before the board meeting",
+      "body": "Helen will arrange a thirty-minute call between Priya and their CEO before the board decides, so the CEO hears the case directly.",
+      "quote": "I'll also set up thirty minutes with our CEO before the board meeting"
+    },
+    {
+      "item_type": "action_item_ours",
+      "title": "Tom runs live training for the new practice managers in the first week of January",
+      "body": "The six new clinics' practice managers start in January; Tom committed to a live training session in their first week.",
+      "quote": "I'll run a live training session for the new practice managers in their first week of January."
+    },
+    {
+      "item_type": "commitment_theirs",
+      "title": "Omar sends the new practice managers' start dates once confirmed",
+      "body": "Omar will send the start dates of the new practice managers once they are confirmed, so the January training can be scheduled.",
+      "quote": "I'll send you their start dates once they're confirmed."
+    }
+  ]
+}

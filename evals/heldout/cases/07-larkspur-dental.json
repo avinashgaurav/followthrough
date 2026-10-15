@@ -1,0 +1,6 @@
+{
+  "transcript_file": "evals/heldout/raw/07-larkspur-dental.txt",
+  "client_name": "Larkspur Dental",
+  "drafted_at_note": "hand-written fictional held-out case; key written and committed before any model call, 2026-10-15",
+  "expected_items": []
+}

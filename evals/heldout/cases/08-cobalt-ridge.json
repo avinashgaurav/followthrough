@@ -1,0 +1,79 @@
+{
+  "transcript_file": "evals/heldout/raw/08-cobalt-ridge.txt",
+  "client_name": "Cobalt Ridge Builders",
+  "drafted_at_note": "hand-written fictional held-out case; key written and committed before any model call, 2026-10-15",
+  "expected_items": [
+    {
+      "item_type": "feature_request",
+      "title": "Mandatory job code on every expense, synced from their project system",
+      "body": "Foremen type job names into notes and spell them differently. Rosa wants a mandatory job code picked from a list kept in sync with their project management system, which gets a few new codes a month.",
+      "quote": "We need a mandatory job code on every expense, picked from a list that stays in sync with our project management system."
+    },
+    {
+      "item_type": "key_insight",
+      "title": "Harbor Street public works contract makes job-level reporting a payment risk from February",
+      "body": "A public works job starts in February and the city requires job-level cost reports for every expense or can hold back large progress payments. That sets a deadline on the job code ask.",
+      "quote": "the city requires job-level cost reports for every expense, or they can hold back our progress payments."
+    },
+    {
+      "item_type": "action_item_ours",
+      "title": "Daniel takes job code sync to product this week",
+      "body": "Syncing the code list from their project system is not supported; Daniel will take it to product this week and come back with an answer.",
+      "quote": "I'll take the job code sync to our product team this week and come back with an answer."
+    },
+    {
+      "item_type": "commitment_theirs",
+      "title": "Rosa sends the current job code list tomorrow",
+      "body": "Rosa will send their current list of job codes the next day.",
+      "quote": "I'll send you our current job code list tomorrow"
+    },
+    {
+      "item_type": "commitment_theirs",
+      "title": "Rosa introduces Marco, their IT lead who owns the project system",
+      "body": "In the same breath as the job code list, Rosa committed to introducing Daniel to Marco, who owns the project system the sync would read from.",
+      "quote": "I'll also introduce you to Marco, our IT lead, because he owns the project system."
+    },
+    {
+      "item_type": "action_item_ours",
+      "title": "Daniel sets up a mandatory job code field with a fixed list as a stopgap",
+      "body": "Until a sync exists, Daniel will configure a mandatory custom job code field with a fixed list so the spelling problem goes away.",
+      "quote": "In the meantime I'll set up the job code field as mandatory with a fixed list, so at least the spelling problem goes away."
+    },
+    {
+      "item_type": "complaint",
+      "title": "Uploads on low-signal sites fail silently after showing submitted",
+      "body": "On sites with bad signal the app shows submitted but the receipt never arrives, with no error. Foremen then throw away the paper receipt; at least a dozen receipts were lost this month, some worth hundreds of dollars.",
+      "quote": "A foreman takes a photo of a receipt, the app says submitted, and then it never arrives."
+    },
+    {
+      "item_type": "action_item_ours",
+      "title": "Daniel files the silent upload failure with engineering today as a priority bug",
+      "body": "Daniel committed to filing the lost uploads with engineering the same day as a priority bug.",
+      "quote": "I'll file it with engineering today as a priority bug."
+    },
+    {
+      "item_type": "commitment_theirs",
+      "title": "Felix sends a screen recording of a failed upload and each foreman's app version",
+      "body": "Felix will record his screen the next time an upload fails and send the video along with the app version from each foreman's phone.",
+      "quote": "I'll record my screen next time it happens and send you the video, plus the app version from each foreman's phone."
+    },
+    {
+      "item_type": "action_item_ours",
+      "title": "Daniel adds the foremen to the offline upload beta this week",
+      "body": "An offline mode that queues uploads is in beta; Daniel will add Cobalt Ridge's foremen to it this week.",
+      "quote": "I'll add your foremen to the beta this week."
+    },
+    {
+      "item_type": "feature_request",
+      "title": "Automatic mileage logging between sites from phone location",
+      "body": "Foremen drive between sites all day and log every trip by hand; they want the app to log site-to-site drives automatically from location.",
+      "quote": "They'd like the app to log the drive between two sites automatically from the phone's location."
+    },
+    {
+      "item_type": "action_item_ours",
+      "title": "Daniel puts the foremen down for early access to GPS mileage",
+      "body": "GPS mileage tracking is on the roadmap; Daniel will register Cobalt Ridge's foremen as an early-access customer.",
+      "quote": "I'll put your foremen down as an early-access customer for it."
+    }
+  ]
+}

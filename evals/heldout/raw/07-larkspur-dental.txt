@@ -1,0 +1,52 @@
+Speaker 0 (Ethan, Tallyhall): Hi Fatima, thanks for making time. Is Leo joining?
+Speaker 1 (Fatima, Larkspur Dental): Hi Ethan. Leo's with a patient until ten past, he'll pop in if he finishes early.
+Speaker 0 (Ethan, Tallyhall): No problem. This is the usual check-in, nothing on my side that needs a decision.
+Speaker 1 (Fatima, Larkspur Dental): Good, because my brain is full of payroll today.
+Speaker 0 (Ethan, Tallyhall): Ha. End of month already. How have things been since we last spoke?
+Speaker 1 (Fatima, Larkspur Dental): Steady. All nine practices are submitting through the app now. The last one moved over in August.
+Speaker 0 (Ethan, Tallyhall): That was the Riverside practice?
+Speaker 1 (Fatima, Larkspur Dental): Yes. They were the slowest, but their office manager is now the one who reminds everyone else to submit on time.
+Speaker 0 (Ethan, Tallyhall): That's a nice turnaround.
+Speaker 1 (Fatima, Larkspur Dental): It is. Month end took me a day and a half in September. It used to be four days.
+Speaker 0 (Ethan, Tallyhall): That's a big difference.
+Speaker 1 (Fatima, Larkspur Dental): The duplicate receipt warning you added has caught a few double submissions too. Nothing malicious, just people uploading twice.
+Speaker 0 (Ethan, Tallyhall): Good, that's what it's there for.
+Speaker 1 (Fatima, Larkspur Dental): And the mileage issue from the spring hasn't come back.
+Speaker 0 (Ethan, Tallyhall): Glad it stayed fixed.
+Speaker 2 (Leo, Larkspur Dental): Morning, sorry. Finished early for once.
+Speaker 0 (Ethan, Tallyhall): Morning Leo. We were just going through how the quarter went.
+Speaker 2 (Leo, Larkspur Dental): From the clinical side, the dentists like that they can snap a receipt at a conference and forget about it.
+Speaker 2 (Leo, Larkspur Dental): Our CPD conference claims used to sit in people's bags for months.
+Speaker 0 (Ethan, Tallyhall): That's good to hear.
+Speaker 1 (Fatima, Larkspur Dental): Our accountant said the year-end pack was the cleanest she's had from us.
+Speaker 0 (Ethan, Tallyhall): Anything coming up on your side? New practices, changes in the team?
+Speaker 1 (Fatima, Larkspur Dental): Nothing this quarter. We looked at an acquisition but it fell through.
+Speaker 2 (Leo, Larkspur Dental): Headcount is flat. Same dentists, same hygienists.
+Speaker 0 (Ethan, Tallyhall): Okay. And is anything bothering you, even something small?
+Speaker 1 (Fatima, Larkspur Dental): I've been trying to think of something so you don't feel the call was wasted, but no.
+Speaker 2 (Leo, Larkspur Dental): Nothing from me either.
+Speaker 0 (Ethan, Tallyhall): That's a good problem to have.
+Speaker 0 (Ethan, Tallyhall): We've just released an analytics add-on with spend dashboards by location. Would that be useful for you?
+Speaker 1 (Fatima, Larkspur Dental): Honestly, no. The standard reports cover what we need. Maybe next year.
+Speaker 0 (Ethan, Tallyhall): Totally fine.
+Speaker 2 (Leo, Larkspur Dental): I'll have to run, I've got a root canal at half past.
+Speaker 0 (Ethan, Tallyhall): Good luck to the patient.
+Speaker 2 (Leo, Larkspur Dental): Ha. Thanks Ethan, good to see you.
+Speaker 1 (Fatima, Larkspur Dental): Did you get away over half term in the end?
+Speaker 0 (Ethan, Tallyhall): We did, three days by the coast. It rained the whole time.
+Speaker 1 (Fatima, Larkspur Dental): Classic.
+Speaker 0 (Ethan, Tallyhall): The kids didn't care. They just wanted chips on the pier.
+Speaker 1 (Fatima, Larkspur Dental): Mine are the same. We're doing the Christmas market trip again this year.
+Speaker 0 (Ethan, Tallyhall): The one with the ice rink?
+Speaker 1 (Fatima, Larkspur Dental): That's it. My youngest finally wants to try skating.
+Speaker 0 (Ethan, Tallyhall): Brave. Bring knee pads.
+Speaker 1 (Fatima, Larkspur Dental): For me or for her?
+Speaker 0 (Ethan, Tallyhall): Both, probably.
+Speaker 0 (Ethan, Tallyhall): Shall we do the same time next quarter, early February?
+Speaker 1 (Fatima, Larkspur Dental): Yes, but not the first week, that's our busiest.
+Speaker 0 (Ethan, Tallyhall): Second week of February then. I'll send an invite.
+Speaker 1 (Fatima, Larkspur Dental): Perfect.
+Speaker 1 (Fatima, Larkspur Dental): Thanks for keeping it short, it's appreciated today.
+Speaker 0 (Ethan, Tallyhall): Any time. Good luck with payroll.
+Speaker 1 (Fatima, Larkspur Dental): Thanks. Bye Ethan.
+Speaker 0 (Ethan, Tallyhall): Bye Fatima.

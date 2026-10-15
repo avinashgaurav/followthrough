@@ -1,0 +1,73 @@
+{
+  "transcript_file": "evals/heldout/raw/06-saffron-agro.txt",
+  "client_name": "Saffron Agro Exports",
+  "drafted_at_note": "hand-written fictional held-out case; key written and committed before any model call, 2026-10-15",
+  "expected_items": [
+    {
+      "item_type": "feature_request",
+      "title": "Auto-apply daily allowance by city tier",
+      "body": "Field officers' daily allowance depends on city tier (tier one, tier two, village visits) and officers currently type the amount themselves. Vikram wants the officer to pick the city and the system to apply the tier rate. Translation: we want the officer to just select the city and the system applies the DA by tier.",
+      "quote": "Hamein chahiye ki officer bas city select kare aur system tier ke hisaab se DA khud laga de."
+    },
+    {
+      "item_type": "commitment_theirs",
+      "title": "Vikram sends the DA policy PDF this evening",
+      "body": "Vikram will send the PDF with the tier-wise daily allowance rates by this evening.",
+      "quote": "Main aaj shaam tak aapko DA policy ka PDF bhej deta hoon."
+    },
+    {
+      "item_type": "action_item_ours",
+      "title": "Kavya checks whether tier-wise DA can be configured, answer by Wednesday",
+      "body": "Kavya will check whether tier-wise rates can be configured in the per diem setup and reply by Wednesday.",
+      "quote": "Main check karti hoon ki tier-wise rates hamare per diem setup mein configure ho sakte hain ya nahi, aur Wednesday tak aapko bata dungi."
+    },
+    {
+      "item_type": "complaint",
+      "title": "Scanning misreads amount and date on Marathi bills",
+      "body": "Many field bills are in Marathi, and scanning often gets the amount and date wrong, so Neha fixes each claim by hand: more than fifty claims a week and half her day.",
+      "quote": "Marathi bills scan karte hain toh amount aur date aksar galat aata hai."
+    },
+    {
+      "item_type": "commitment_theirs",
+      "title": "Neha sends photos of fifteen Marathi bills by Monday",
+      "body": "Neha will send fifteen sample Marathi bill photos by Monday for the OCR team.",
+      "quote": "Haan, main Monday tak pandrah Marathi bills ke photos bhej dungi."
+    },
+    {
+      "item_type": "action_item_ours",
+      "title": "Kavya passes the samples to the OCR team and updates next week on a fix date",
+      "body": "Kavya will hand the Marathi samples to the OCR team and tell Neha next week when a fix will land.",
+      "quote": "Main woh samples hamari OCR team ko dungi aur agle hafte aapko update dungi ki fix kab tak aayega."
+    },
+    {
+      "item_type": "feature_request",
+      "title": "WhatsApp notification when a claim is rejected",
+      "body": "Field officers do not read email, so approval and rejection emails go unseen. Vikram wants rejections sent on WhatsApp.",
+      "quote": "Agar claim reject ho toh WhatsApp pe message aana chahiye, tabhi woh dekhenge."
+    },
+    {
+      "item_type": "action_item_ours",
+      "title": "Kavya raises WhatsApp notifications with the product team",
+      "body": "WhatsApp notifications are not on the roadmap; Kavya committed to raising the ask with product.",
+      "quote": "Main isko product team ke saath raise karungi."
+    },
+    {
+      "item_type": "key_insight",
+      "title": "January renewal at risk: MD is comparing a half-price local tool",
+      "body": "Renewal is in January and their MD has seen a demo of a local tool at half the price and will compare before renewing. Vikram says the comparison rests on price plus the DA and Marathi bill issues; if those are solved there is no reason to switch.",
+      "quote": "Hamare MD ne ek local tool ka demo dekha hai jo aadhe price mein hai."
+    },
+    {
+      "item_type": "action_item_ours",
+      "title": "Kavya sets up a call with the MD in the first week of December",
+      "body": "Kavya will set up a call with their MD in the first week of December to show the status of the DA and Marathi bill issues before renewal.",
+      "quote": "Main December ke pehle hafte mein MD ke saath ek call set karti hoon, jismein in dono issues ka status dikha sakein."
+    },
+    {
+      "item_type": "commitment_theirs",
+      "title": "Vikram sends the MD's available dates",
+      "body": "Vikram will check the MD's calendar and send dates for the December call.",
+      "quote": "Main MD sir ka calendar check karke aapko dates bhej dunga."
+    }
+  ]
+}
