@@ -1,0 +1,439 @@
+{
+  "run_at": "2026-10-15T11:03:09.713Z",
+  "prompt_version": "v6",
+  "default_model": "claude-opus-4-8",
+  "verifier_pass": true,
+  "overall": {
+    "cases": 4,
+    "failures": 0,
+    "still_draft": 0,
+    "expected_total": 38,
+    "predicted_total": 30,
+    "citation_validity": 1,
+    "recall": 0.7894736842105263,
+    "precision": 1,
+    "type_accuracy": 1,
+    "cost_usd": 0.8346805
+  },
+  "cases": [
+    {
+      "case_file": "05-brightwater-vet.json",
+      "client_name": "Brightwater Vet",
+      "transcript_file": "evals/heldout/raw/05-brightwater-vet.txt",
+      "still_draft": false,
+      "chunk_count": 1,
+      "extracted_count": 12,
+      "citation_dropped": 0,
+      "verifier_dropped": 0,
+      "injection_dropped": 0,
+      "duplicate_dropped": 0,
+      "expected_count": 15,
+      "predicted_count": 12,
+      "citation_validity": 1,
+      "recall": 0.8,
+      "precision": 1,
+      "type_accuracy": 1,
+      "matched": [
+        {
+          "predicted_title": "Per-clinic budget caps with 80% spend warning to practice managers",
+          "expected_title": "Per-clinic budget caps with a warning at 80 percent",
+          "predicted_type": "feature_request",
+          "expected_type": "feature_request",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Round-trip mileage only pays one way — vets underpaid, spotted on payslips",
+          "expected_title": "Round-trip mileage pays vets for only one way",
+          "predicted_type": "complaint",
+          "expected_type": "complaint",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Corporate card feed lags 4-5 days, forcing Grace to reconcile twice at month end",
+          "expected_title": "Corporate card transactions arrive four to five days late",
+          "predicted_type": "complaint",
+          "expected_type": "complaint",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Split a single receipt across multiple clinics by amount or percentage",
+          "expected_title": "Split one receipt across clinics by amount or percentage",
+          "predicted_type": "feature_request",
+          "expected_type": "feature_request",
+          "type_match": true
+        },
+        {
+          "predicted_title": "December board decision: renew+expand to 20 clinics vs. switch to free bundled expense module",
+          "expected_title": "Board decides in December between Tallyhall and a near-free bundled expense module",
+          "predicted_type": "key_insight",
+          "expected_type": "key_insight",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Tom to reproduce mileage bug and confirm clinic receipt-splitting, reply Thursday",
+          "expected_title": "Tom reproduces the mileage bug and replies by Thursday with cause and fix date",
+          "predicted_type": "action_item_ours",
+          "expected_type": "action_item_ours",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Priya to open card feed ticket today, status update Friday",
+          "expected_title": "Priya opens a card feed ticket today and sends a status on Friday",
+          "predicted_type": "action_item_ours",
+          "expected_type": "action_item_ours",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Priya to send 20-clinic pricing proposal before end of November",
+          "expected_title": "Priya sends twenty-clinic pricing before the end of November",
+          "predicted_type": "action_item_ours",
+          "expected_type": "action_item_ours",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Tom to run live training for new practice managers in first week of January",
+          "expected_title": "Tom runs live training for the new practice managers in the first week of January",
+          "predicted_type": "action_item_ours",
+          "expected_type": "action_item_ours",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Grace to deliver before/after approval-time comparison — the board's proof of time saved",
+          "expected_title": "Grace prepares before-and-after approval times by mid November",
+          "predicted_type": "commitment_theirs",
+          "expected_type": "commitment_theirs",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Helen to set up 30-minute CEO call before the board meeting",
+          "expected_title": "Helen sets up thirty minutes with their CEO before the board meeting",
+          "predicted_type": "commitment_theirs",
+          "expected_type": "commitment_theirs",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Omar to send three affected mileage claims and new managers' start dates",
+          "expected_title": "Omar sends three affected mileage claims",
+          "predicted_type": "commitment_theirs",
+          "expected_type": "commitment_theirs",
+          "type_match": true
+        }
+      ],
+      "missed_expected": [
+        "Grace emails the bank relationship manager's details this afternoon",
+        "Tom checks receipt splitting with clinics as cost centres, in Thursday's reply",
+        "Omar sends the new practice managers' start dates once confirmed"
+      ],
+      "unmatched_predicted": [],
+      "cost_usd": 0.312914
+    },
+    {
+      "case_file": "06-saffron-agro.json",
+      "client_name": "Saffron Agro Exports",
+      "transcript_file": "evals/heldout/raw/06-saffron-agro.txt",
+      "still_draft": false,
+      "chunk_count": 1,
+      "extracted_count": 10,
+      "citation_dropped": 0,
+      "verifier_dropped": 0,
+      "injection_dropped": 0,
+      "duplicate_dropped": 0,
+      "expected_count": 11,
+      "predicted_count": 10,
+      "citation_validity": 1,
+      "recall": 0.9090909090909091,
+      "precision": 1,
+      "type_accuracy": 1,
+      "matched": [
+        {
+          "predicted_title": "Auto-calculate daily allowance by city tier instead of manual entry",
+          "expected_title": "Auto-apply daily allowance by city tier",
+          "predicted_type": "feature_request",
+          "expected_type": "feature_request",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Marathi bill OCR mis-reads amount and date, costing Neha half a day weekly",
+          "expected_title": "Scanning misreads amount and date on Marathi bills",
+          "predicted_type": "complaint",
+          "expected_type": "complaint",
+          "type_match": true
+        },
+        {
+          "predicted_title": "WhatsApp notifications for claim approval/rejection",
+          "expected_title": "WhatsApp notification when a claim is rejected",
+          "predicted_type": "feature_request",
+          "expected_type": "feature_request",
+          "type_match": true
+        },
+        {
+          "predicted_title": "January renewal at risk: MD evaluating a half-price local competitor, decision hinges on DA + Marathi OCR fixes",
+          "expected_title": "January renewal at risk: MD is comparing a half-price local tool",
+          "predicted_type": "key_insight",
+          "expected_type": "key_insight",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Kavya to confirm tier-wise DA config feasibility by Wednesday",
+          "expected_title": "Kavya checks whether tier-wise DA can be configured, answer by Wednesday",
+          "predicted_type": "action_item_ours",
+          "expected_type": "action_item_ours",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Kavya to route Marathi sample bills to OCR team and report fix timeline next week",
+          "expected_title": "Kavya passes the samples to the OCR team and updates next week on a fix date",
+          "predicted_type": "action_item_ours",
+          "expected_type": "action_item_ours",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Kavya to raise WhatsApp notifications with product team",
+          "expected_title": "Kavya raises WhatsApp notifications with the product team",
+          "predicted_type": "action_item_ours",
+          "expected_type": "action_item_ours",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Kavya to set up a December MD call showing DA and Marathi fix status",
+          "expected_title": "Kavya sets up a call with the MD in the first week of December",
+          "predicted_type": "action_item_ours",
+          "expected_type": "action_item_ours",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Vikram to send DA policy PDF and MD's availability for December call",
+          "expected_title": "Vikram sends the DA policy PDF this evening",
+          "predicted_type": "commitment_theirs",
+          "expected_type": "commitment_theirs",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Neha to send 15 Marathi sample bills by Monday",
+          "expected_title": "Neha sends photos of fifteen Marathi bills by Monday",
+          "predicted_type": "commitment_theirs",
+          "expected_type": "commitment_theirs",
+          "type_match": true
+        }
+      ],
+      "missed_expected": [
+        "Vikram sends the MD's available dates"
+      ],
+      "unmatched_predicted": [],
+      "cost_usd": 0.2619165
+    },
+    {
+      "case_file": "07-larkspur-dental.json",
+      "client_name": "Larkspur Dental",
+      "transcript_file": "evals/heldout/raw/07-larkspur-dental.txt",
+      "still_draft": false,
+      "chunk_count": 1,
+      "extracted_count": 0,
+      "citation_dropped": 0,
+      "verifier_dropped": 0,
+      "injection_dropped": 0,
+      "duplicate_dropped": 0,
+      "expected_count": 0,
+      "predicted_count": 0,
+      "citation_validity": null,
+      "recall": null,
+      "precision": null,
+      "type_accuracy": null,
+      "matched": [],
+      "missed_expected": [],
+      "unmatched_predicted": [],
+      "cost_usd": 0.011375
+    },
+    {
+      "case_file": "08-cobalt-ridge.json",
+      "client_name": "Cobalt Ridge Builders",
+      "transcript_file": "evals/heldout/raw/08-cobalt-ridge.txt",
+      "still_draft": false,
+      "chunk_count": 1,
+      "extracted_count": 8,
+      "citation_dropped": 0,
+      "verifier_dropped": 0,
+      "injection_dropped": 0,
+      "duplicate_dropped": 0,
+      "expected_count": 12,
+      "predicted_count": 8,
+      "citation_validity": 1,
+      "recall": 0.6666666666666666,
+      "precision": 1,
+      "type_accuracy": 1,
+      "matched": [
+        {
+          "predicted_title": "Mandatory job codes synced from their project management system",
+          "expected_title": "Mandatory job code on every expense, synced from their project system",
+          "predicted_type": "feature_request",
+          "expected_type": "feature_request",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Harbor Street public works contract (Feb) ties progress payments to job-level reports",
+          "expected_title": "Harbor Street public works contract makes job-level reporting a payment risk from February",
+          "predicted_type": "key_insight",
+          "expected_type": "key_insight",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Daniel to take job code sync to product and set up mandatory fixed-list field as stopgap",
+          "expected_title": "Daniel takes job code sync to product this week",
+          "predicted_type": "action_item_ours",
+          "expected_type": "action_item_ours",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Rosa to send job code list and introduce Marco (IT lead who owns project system)",
+          "expected_title": "Rosa sends the current job code list tomorrow",
+          "predicted_type": "commitment_theirs",
+          "expected_type": "commitment_theirs",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Silent upload failures are losing receipts on low-signal sites",
+          "expected_title": "Uploads on low-signal sites fail silently after showing submitted",
+          "predicted_type": "complaint",
+          "expected_type": "complaint",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Daniel to file silent-upload bug as priority and add foremen to offline beta",
+          "expected_title": "Daniel files the silent upload failure with engineering today as a priority bug",
+          "predicted_type": "action_item_ours",
+          "expected_type": "action_item_ours",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Felix to send screen recording and per-foreman app versions for upload bug",
+          "expected_title": "Felix sends a screen recording of a failed upload and each foreman's app version",
+          "predicted_type": "commitment_theirs",
+          "expected_type": "commitment_theirs",
+          "type_match": true
+        },
+        {
+          "predicted_title": "Automatic GPS mileage logging between sites for foremen",
+          "expected_title": "Automatic mileage logging between sites from phone location",
+          "predicted_type": "feature_request",
+          "expected_type": "feature_request",
+          "type_match": true
+        }
+      ],
+      "missed_expected": [
+        "Rosa introduces Marco, their IT lead who owns the project system",
+        "Daniel sets up a mandatory job code field with a fixed list as a stopgap",
+        "Daniel adds the foremen to the offline upload beta this week",
+        "Daniel puts the foremen down for early access to GPS mileage"
+      ],
+      "unmatched_predicted": [],
+      "cost_usd": 0.248475
+    }
+  ],
+  "route": "claude-cli",
+  "wall_clock_ms": 250564,
+  "models_answered": [
+    "claude-opus-4-8"
+  ],
+  "llm_calls": [
+    {
+      "model": "claude-opus-4-8",
+      "ms": 60047,
+      "tokensIn": 6305,
+      "tokensOut": 4813,
+      "cacheRead": 6303,
+      "cacheWrite": 0,
+      "costUsd": 0.12348649999999999,
+      "numTurns": 2
+    },
+    {
+      "model": "claude-opus-4-8",
+      "ms": 17941,
+      "tokensIn": 7487,
+      "tokensOut": 1294,
+      "cacheRead": 1135,
+      "cacheWrite": 6350,
+      "costUsd": 0.0964275,
+      "numTurns": 2
+    },
+    {
+      "model": "claude-opus-4-8",
+      "ms": 12466,
+      "tokensIn": 6891,
+      "tokensOut": 964,
+      "cacheRead": 0,
+      "cacheWrite": 6889,
+      "costUsd": 0.093,
+      "numTurns": 2
+    },
+    {
+      "model": "claude-opus-4-8",
+      "ms": 53180,
+      "tokensIn": 6280,
+      "tokensOut": 3914,
+      "cacheRead": 6278,
+      "cacheWrite": 0,
+      "costUsd": 0.10099899999999999,
+      "numTurns": 2
+    },
+    {
+      "model": "claude-opus-4-8",
+      "ms": 14043,
+      "tokensIn": 7055,
+      "tokensOut": 960,
+      "cacheRead": 1135,
+      "cacheWrite": 5918,
+      "costUsd": 0.0837575,
+      "numTurns": 2
+    },
+    {
+      "model": "claude-opus-4-8",
+      "ms": 10031,
+      "tokensIn": 5907,
+      "tokensOut": 724,
+      "cacheRead": 0,
+      "cacheWrite": 5905,
+      "costUsd": 0.07716,
+      "numTurns": 2
+    },
+    {
+      "model": "claude-opus-4-8",
+      "ms": 7618,
+      "tokensIn": 5782,
+      "tokensOut": 339,
+      "cacheRead": 5780,
+      "cacheWrite": 0,
+      "costUsd": 0.011375,
+      "numTurns": 2
+    },
+    {
+      "model": "claude-opus-4-8",
+      "ms": 44761,
+      "tokensIn": 6127,
+      "tokensOut": 3461,
+      "cacheRead": 6125,
+      "cacheWrite": 0,
+      "costUsd": 0.0895975,
+      "numTurns": 2
+    },
+    {
+      "model": "claude-opus-4-8",
+      "ms": 14791,
+      "tokensIn": 6419,
+      "tokensOut": 938,
+      "cacheRead": 1135,
+      "cacheWrite": 5282,
+      "costUsd": 0.07684750000000001,
+      "numTurns": 2
+    },
+    {
+      "model": "claude-opus-4-8",
+      "ms": 15669,
+      "tokensIn": 5444,
+      "tokensOut": 1104,
+      "cacheRead": 0,
+      "cacheWrite": 5442,
+      "costUsd": 0.08202999999999999,
+      "numTurns": 2
+    }
+  ]
+}
