@@ -76,6 +76,8 @@ DEMO_MODE=true LLM_DAILY_BUDGET_USD=5 PRODUCT_NAME=Tallyhall bun run seed:demo &
 
 Seeding makes real LLM calls once and is all-or-nothing: a failure leaves the database untouched and the next boot retries. Mount a persistent volume at `DATA_DIR`, or every redeploy re-seeds (and re-spends). Demo mode caps AI spend at $5/day unless `LLM_DAILY_BUDGET_USD` says otherwise.
 
+The hosted demo linked from the README needs no server at all: `cd web && bun run build:demo` builds a static, read-only copy of the web app that serves responses recorded from a seeded `DEMO_MODE` instance and refuses every write. No model calls, nothing persists between visitors. How it works and how to re-record the fixtures: [`web/src/demo/README.md`](../web/src/demo/README.md).
+
 ## Development
 
 ```bash

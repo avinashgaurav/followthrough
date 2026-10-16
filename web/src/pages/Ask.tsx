@@ -37,7 +37,9 @@ export function Ask() {
             type="text"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            placeholder="e.g. What are clients asking about most?"
+            placeholder={
+              __STATIC_DEMO__ ? "e.g. What did we promise Acme?" : "e.g. What are clients asking about most?"
+            }
             aria-label="Your question"
             style={{ flex: 1 }}
           />

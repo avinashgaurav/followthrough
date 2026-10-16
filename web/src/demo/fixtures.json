@@ -1,0 +1,3811 @@
+{
+  "generated_at": "2026-10-16T07:58:29.122Z",
+  "responses": {
+    "/api/me": {
+      "status": 200,
+      "body": {
+        "user": {
+          "id": "open-access-guest",
+          "email": "open-access@guest.local",
+          "name": "Guest",
+          "role": "admin"
+        },
+        "require_login": false,
+        "is_guest": true,
+        "allowed_email_domains": [],
+        "writable_repos": [],
+        "demo": true
+      }
+    },
+    "/api/auth/session": {
+      "status": 404,
+      "body": {
+        "error": "not found"
+      }
+    },
+    "/api/auth/config": {
+      "status": 200,
+      "body": {
+        "allowed_email_domains": []
+      }
+    },
+    "/api/settings/access": {
+      "status": 200,
+      "body": {
+        "require_login": false,
+        "can_require": false
+      }
+    },
+    "/api/users": {
+      "status": 403,
+      "body": {
+        "error": "This is a read-only demo. Self-host Followthrough to capture your own meetings.",
+        "demo": true
+      }
+    },
+    "/api/queue": {
+      "status": 200,
+      "body": {
+        "to_review": [
+          {
+            "id": "01M51V7KPNNTGMN28V31EQ976P",
+            "title": "Up for renewal in March with CFO demanding an ROI case",
+            "state": "extracted",
+            "track": null,
+            "item_type": "key_insight",
+            "priority": 0,
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "client_name": "Acme Corp",
+            "assignee_user_id": null,
+            "created_at": "2026-10-16T07:53:39.796Z",
+            "meeting_id": "01M51V62JYPFSDA5JAZ74V9FTA",
+            "meeting_seq": 1,
+            "meeting_date": "2026-09-25",
+            "meeting_title": "Acme: month-end close check-in",
+            "handle": "INS-EQ976P"
+          },
+          {
+            "id": "01M51V7KPNBXC8TW7PE92XKN22",
+            "title": "Maya to send time-saved ROI report from Acme's own data by month-end",
+            "state": "extracted",
+            "track": null,
+            "item_type": "action_item_ours",
+            "priority": 0,
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "client_name": "Acme Corp",
+            "assignee_user_id": null,
+            "created_at": "2026-10-16T07:53:39.796Z",
+            "meeting_id": "01M51V62JYPFSDA5JAZ74V9FTA",
+            "meeting_seq": 1,
+            "meeting_date": "2026-09-25",
+            "meeting_title": "Acme: month-end close check-in",
+            "handle": "INS-2XKN22"
+          },
+          {
+            "id": "01M51V7KPNN5VCPCS5X9H3BM6P",
+            "title": "Jordan to send list of twelve regional managers to enable mobile approvals",
+            "state": "extracted",
+            "track": null,
+            "item_type": "commitment_theirs",
+            "priority": 0,
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "client_name": "Acme Corp",
+            "assignee_user_id": null,
+            "created_at": "2026-10-16T07:53:39.796Z",
+            "meeting_id": "01M51V62JYPFSDA5JAZ74V9FTA",
+            "meeting_seq": 1,
+            "meeting_date": "2026-09-25",
+            "meeting_title": "Acme: month-end close check-in",
+            "handle": "INS-H3BM6P"
+          },
+          {
+            "id": "01M51V974QJNV35FKTD1EG2BBX",
+            "title": "Account churned-shopped over entity issue; renewal hinges on a date",
+            "state": "extracted",
+            "track": null,
+            "item_type": "key_insight",
+            "priority": 0,
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "client_name": "Globex",
+            "assignee_user_id": null,
+            "created_at": "2026-10-16T07:54:32.470Z",
+            "meeting_id": "01M51V7KPSCA8KXK09MQBFS7VE",
+            "meeting_seq": 1,
+            "meeting_date": "2026-10-02",
+            "meeting_title": "Globex: multi-entity rollout",
+            "handle": "INS-EG2BBX"
+          },
+          {
+            "id": "01M51V974QDFJYWSQV8AY06JG9",
+            "title": "Receipt scanner misreads totals ~1 in 10 for field-team photos",
+            "state": "extracted",
+            "track": null,
+            "item_type": "complaint",
+            "priority": 0,
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "client_name": "Globex",
+            "assignee_user_id": null,
+            "created_at": "2026-10-16T07:54:32.470Z",
+            "meeting_id": "01M51V7KPSCA8KXK09MQBFS7VE",
+            "meeting_seq": 1,
+            "meeting_date": "2026-10-02",
+            "meeting_title": "Globex: multi-entity rollout",
+            "handle": "INS-Y06JG9"
+          },
+          {
+            "id": "01M51V974Q278AM6YGH8V56JH9",
+            "title": "Mobile approvals need the receipt visible on-screen",
+            "state": "extracted",
+            "track": null,
+            "item_type": "feature_request",
+            "priority": 0,
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "client_name": "Globex",
+            "assignee_user_id": null,
+            "created_at": "2026-10-16T07:54:32.470Z",
+            "meeting_id": "01M51V7KPSCA8KXK09MQBFS7VE",
+            "meeting_seq": 1,
+            "meeting_date": "2026-10-02",
+            "meeting_title": "Globex: multi-entity rollout",
+            "handle": "INS-V56JH9"
+          },
+          {
+            "id": "01M51V974RE2AQQPGED2MBDQPB",
+            "title": "Tom to send 20 worst misread receipts by Friday",
+            "state": "extracted",
+            "track": null,
+            "item_type": "commitment_theirs",
+            "priority": 0,
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "client_name": "Globex",
+            "assignee_user_id": null,
+            "created_at": "2026-10-16T07:54:32.470Z",
+            "meeting_id": "01M51V7KPSCA8KXK09MQBFS7VE",
+            "meeting_seq": 1,
+            "meeting_date": "2026-10-02",
+            "meeting_title": "Globex: multi-entity rollout",
+            "handle": "INS-MBDQPB"
+          },
+          {
+            "id": "01M51V974RC1B033JNN6DBE28K",
+            "title": "Sam to return with an entity-permissions date from product next week",
+            "state": "extracted",
+            "track": null,
+            "item_type": "action_item_ours",
+            "priority": 0,
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "client_name": "Globex",
+            "assignee_user_id": null,
+            "created_at": "2026-10-16T07:54:32.470Z",
+            "meeting_id": "01M51V7KPSCA8KXK09MQBFS7VE",
+            "meeting_seq": 1,
+            "meeting_date": "2026-10-02",
+            "meeting_title": "Globex: multi-entity rollout",
+            "handle": "INS-DBE28K"
+          },
+          {
+            "id": "01M51VB0QJNSVM5ZDVNCN343B5",
+            "title": "Configurable Slack digest to stop notification fatigue killing approver adoption",
+            "state": "extracted",
+            "track": null,
+            "item_type": "feature_request",
+            "priority": 0,
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "assignee_user_id": null,
+            "created_at": "2026-10-16T07:55:31.442Z",
+            "meeting_id": "01M51V974WGS2ANQP8F86PTK9A",
+            "meeting_seq": 1,
+            "meeting_date": "2026-10-09",
+            "meeting_title": "Initech: first month review",
+            "handle": "INS-N343B5"
+          },
+          {
+            "id": "01M51VB0QJ7TKRJT078VHXJ7H3",
+            "title": "Auto-calculate mileage from start/end address to curb inflated reimbursements",
+            "state": "extracted",
+            "track": null,
+            "item_type": "feature_request",
+            "priority": 0,
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "assignee_user_id": null,
+            "created_at": "2026-10-16T07:55:31.442Z",
+            "meeting_id": "01M51V974WGS2ANQP8F86PTK9A",
+            "meeting_seq": 1,
+            "meeting_date": "2026-10-09",
+            "meeting_title": "Initech: first month review",
+            "handle": "INS-HXJ7H3"
+          },
+          {
+            "id": "01M51VB0QJHS4FBRPEG19Y19GT",
+            "title": "NetSuite export breaks when a cost center is blank, repeat failure for finance",
+            "state": "extracted",
+            "track": null,
+            "item_type": "complaint",
+            "priority": 0,
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "assignee_user_id": null,
+            "created_at": "2026-10-16T07:55:31.442Z",
+            "meeting_id": "01M51V974WGS2ANQP8F86PTK9A",
+            "meeting_seq": 1,
+            "meeting_date": "2026-10-09",
+            "meeting_title": "Initech: first month review",
+            "handle": "INS-9Y19GT"
+          },
+          {
+            "id": "01M51VB0QJRH1MYYAWJ9JM9K5H",
+            "title": "Maya to notify Initech when the NetSuite blank-cost-center export fix ships",
+            "state": "extracted",
+            "track": null,
+            "item_type": "action_item_ours",
+            "priority": 0,
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "assignee_user_id": null,
+            "created_at": "2026-10-16T07:55:31.442Z",
+            "meeting_id": "01M51V974WGS2ANQP8F86PTK9A",
+            "meeting_seq": 1,
+            "meeting_date": "2026-10-09",
+            "meeting_title": "Initech: first month review",
+            "handle": "INS-JM9K5H"
+          },
+          {
+            "id": "01M51VB0QKJ5GSJKC07BXMX608",
+            "title": "Maya to send approval-rules setup guide today (second approver over $5k)",
+            "state": "extracted",
+            "track": null,
+            "item_type": "action_item_ours",
+            "priority": 0,
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "assignee_user_id": null,
+            "created_at": "2026-10-16T07:55:31.442Z",
+            "meeting_id": "01M51V974WGS2ANQP8F86PTK9A",
+            "meeting_seq": 1,
+            "meeting_date": "2026-10-09",
+            "meeting_title": "Initech: first month review",
+            "handle": "INS-XMX608"
+          },
+          {
+            "id": "01M51VB0QKTBEME4EGBF60ZPS9",
+            "title": "Initech will run a formal review at the 90-day mark",
+            "state": "extracted",
+            "track": null,
+            "item_type": "commitment_theirs",
+            "priority": 0,
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "assignee_user_id": null,
+            "created_at": "2026-10-16T07:55:31.442Z",
+            "meeting_id": "01M51V974WGS2ANQP8F86PTK9A",
+            "meeting_seq": 1,
+            "meeting_date": "2026-10-09",
+            "meeting_title": "Initech: first month review",
+            "handle": "INS-60ZPS9"
+          }
+        ],
+        "to_finalize": [],
+        "to_ticket": [],
+        "to_confirm": [],
+        "to_email": [],
+        "org_counts": {
+          "client_notified": 1,
+          "extracted": 14,
+          "finalized": 2
+        }
+      }
+    },
+    "/api/metrics/overview": {
+      "status": 200,
+      "body": {
+        "stage_tats": [
+          {
+            "track": "engineering",
+            "extracted_to_finalized": {
+              "avg": 0.001,
+              "median": 0.001,
+              "p90": 0.001,
+              "n": 2
+            },
+            "finalized_to_ticketed": {
+              "avg": null,
+              "median": null,
+              "p90": null,
+              "n": 0
+            },
+            "ticketed_to_shipped": {
+              "avg": null,
+              "median": null,
+              "p90": null,
+              "n": 0
+            },
+            "finalized_to_shipped": {
+              "avg": 0,
+              "median": 0,
+              "p90": 0,
+              "n": 1
+            },
+            "shipped_to_notified": {
+              "avg": 0,
+              "median": 0,
+              "p90": 0,
+              "n": 1
+            },
+            "end_to_end": {
+              "avg": 0.002,
+              "median": 0.002,
+              "p90": 0.002,
+              "n": 1
+            }
+          },
+          {
+            "track": "product_polish",
+            "extracted_to_finalized": {
+              "avg": 0.001,
+              "median": 0.001,
+              "p90": 0.001,
+              "n": 1
+            },
+            "finalized_to_ticketed": {
+              "avg": null,
+              "median": null,
+              "p90": null,
+              "n": 0
+            },
+            "ticketed_to_shipped": {
+              "avg": null,
+              "median": null,
+              "p90": null,
+              "n": 0
+            },
+            "finalized_to_shipped": {
+              "avg": null,
+              "median": null,
+              "p90": null,
+              "n": 0
+            },
+            "shipped_to_notified": {
+              "avg": null,
+              "median": null,
+              "p90": null,
+              "n": 0
+            },
+            "end_to_end": {
+              "avg": null,
+              "median": null,
+              "p90": null,
+              "n": 0
+            }
+          },
+          {
+            "track": "untracked",
+            "extracted_to_finalized": {
+              "avg": null,
+              "median": null,
+              "p90": null,
+              "n": 0
+            },
+            "finalized_to_ticketed": {
+              "avg": null,
+              "median": null,
+              "p90": null,
+              "n": 0
+            },
+            "ticketed_to_shipped": {
+              "avg": null,
+              "median": null,
+              "p90": null,
+              "n": 0
+            },
+            "finalized_to_shipped": {
+              "avg": null,
+              "median": null,
+              "p90": null,
+              "n": 0
+            },
+            "shipped_to_notified": {
+              "avg": null,
+              "median": null,
+              "p90": null,
+              "n": 0
+            },
+            "end_to_end": {
+              "avg": null,
+              "median": null,
+              "p90": null,
+              "n": 0
+            }
+          }
+        ],
+        "funnel": [
+          {
+            "week": "2026-W42",
+            "cohort": 17,
+            "counts": {
+              "triaged": 3,
+              "finalized": 3,
+              "ticketed": 0,
+              "shipped": 1,
+              "notified": 1,
+              "closed": 0
+            },
+            "pct": {
+              "triaged": 17.6,
+              "finalized": 17.6,
+              "ticketed": 0,
+              "shipped": 5.9,
+              "notified": 5.9,
+              "closed": 0
+            }
+          }
+        ],
+        "wip_aging": [
+          {
+            "state": "client_notified",
+            "track": "engineering",
+            "count": 1,
+            "age_buckets": {
+              "0-3d": 1,
+              "4-7d": 0,
+              "8-14d": 0,
+              "15d+": 0
+            }
+          },
+          {
+            "state": "extracted",
+            "track": "untracked",
+            "count": 14,
+            "age_buckets": {
+              "0-3d": 14,
+              "4-7d": 0,
+              "8-14d": 0,
+              "15d+": 0
+            }
+          },
+          {
+            "state": "finalized",
+            "track": "engineering",
+            "count": 1,
+            "age_buckets": {
+              "0-3d": 1,
+              "4-7d": 0,
+              "8-14d": 0,
+              "15d+": 0
+            }
+          },
+          {
+            "state": "finalized",
+            "track": "product_polish",
+            "count": 1,
+            "age_buckets": {
+              "0-3d": 1,
+              "4-7d": 0,
+              "8-14d": 0,
+              "15d+": 0
+            }
+          }
+        ],
+        "stuck_items": [],
+        "per_person": [
+          {
+            "user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "name": "Maya (Tallyhall)",
+            "week": "2026-W42",
+            "finalized": 3,
+            "ticketed": 0,
+            "evidence_confirms": 1,
+            "email_copies": 1
+          }
+        ],
+        "per_client_closed_loop": [
+          {
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "client_name": "Acme Corp",
+            "finalized": 2,
+            "notified": 1,
+            "closed_loop_pct": 50,
+            "median_days_finalized_to_notified": 0
+          },
+          {
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "client_name": "Globex",
+            "finalized": 1,
+            "notified": 0,
+            "closed_loop_pct": 0,
+            "median_days_finalized_to_notified": null
+          },
+          {
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "finalized": 0,
+            "notified": 0,
+            "closed_loop_pct": null,
+            "median_days_finalized_to_notified": null
+          }
+        ],
+        "theme_demand": [
+          {
+            "tag": "demo",
+            "count": 3,
+            "distinct_clients": 2,
+            "track_mix": {
+              "engineering": 2,
+              "product_polish": 1
+            }
+          }
+        ],
+        "ai_quality": {
+          "extracted_from_runs": 17,
+          "rejected_from_runs": 0,
+          "discard_rate": 0,
+          "edit_distance_sample": 3,
+          "mean_edit_distance_ratio": 0,
+          "routing_correction_rate": 0,
+          "routing_correction_note": "ai_suggested_json not yet populated"
+        },
+        "capture_volume": {
+          "meetings_per_week": [
+            {
+              "week": "2026-W42",
+              "source": "manual",
+              "count": 3
+            }
+          ],
+          "activity_per_week": [
+            {
+              "week": "2026-W42",
+              "emails_copied": 1,
+              "tickets_raised": 0,
+              "evidence_confirms": 1
+            }
+          ]
+        }
+      }
+    },
+    "/api/releases": {
+      "status": 200,
+      "body": {
+        "releases": [
+          {
+            "id": "01M51VB0QVGHJSWKHS781J27R0",
+            "repo": "manual",
+            "tag_name": "v2.4.0",
+            "name": "v2.4.0",
+            "published_at": "2026-10-16T07:55:31.451Z",
+            "fetched_at": "2026-10-16T07:55:31.453Z",
+            "entry_count": 2,
+            "proposed_matches": 1
+          }
+        ],
+        "repo": null,
+        "github_token_configured": false
+      }
+    },
+    "/api/matches?status=proposed": {
+      "status": 200,
+      "body": {
+        "matches": [
+          {
+            "id": "01M51VB64789MHSXFD30NDRM1W",
+            "status": "proposed",
+            "verdict": "full",
+            "confidence": 80,
+            "method": "llm",
+            "rationale": "Delivers exactly what the insight asks: receipt image shown in the mobile approval screen and push notification, enabling approval without a laptop.",
+            "decided_by": null,
+            "decided_at": null,
+            "created_at": "2026-10-16T07:55:36.967Z",
+            "insight_id": "01M51V7KPMHW9WXD130EYNTJR1",
+            "insight_title": "Mobile receipt preview in approval notification is the lever on their month-end close",
+            "insight_state": "finalized",
+            "insight_track": "product_polish",
+            "release_entry_id": "01M51VB0QXNTHXVVE78MBHA24E",
+            "entry_title": "Receipt preview in mobile approvals",
+            "entry_section_type": "feature",
+            "release_id": "01M51VB0QVGHJSWKHS781J27R0",
+            "release_tag": "v2.4.0",
+            "release_published_at": "2026-10-16T07:55:31.451Z",
+            "insight_handle": "INS-YNTJR1",
+            "evidence_quotes": [
+              "Approvers now see the receipt image directly in the mobile approval screen and in the push notification, so they can approve without opening a laptop."
+            ],
+            "entry_flags": []
+          }
+        ]
+      }
+    },
+    "/api/matches?status=confirmed": {
+      "status": 200,
+      "body": {
+        "matches": [
+          {
+            "id": "01M51VBB5BBD31J1ZXDHC8R7Y2",
+            "status": "confirmed",
+            "verdict": "full",
+            "confidence": 80,
+            "method": "llm",
+            "rationale": "Directly fixes the exact bug: NetSuite CSV export dropping the empty cost center column and failing the whole import.",
+            "decided_by": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "decided_at": "2026-10-16T07:55:46.811Z",
+            "created_at": "2026-10-16T07:55:42.123Z",
+            "insight_id": "01M51V7KPNZTXJKWCMRMJ1WWKQ",
+            "insight_title": "NetSuite CSV export drops empty cost center column, failing the entire import",
+            "insight_state": "client_notified",
+            "insight_track": "engineering",
+            "release_entry_id": "01M51VB0QX8DE8VN9JCRH2V5YP",
+            "entry_title": "NetSuite export no longer fails on blank cost centers",
+            "entry_section_type": "fix",
+            "release_id": "01M51VB0QVGHJSWKHS781J27R0",
+            "release_tag": "v2.4.0",
+            "release_published_at": "2026-10-16T07:55:31.451Z",
+            "insight_handle": "INS-J1WWKQ",
+            "evidence_quotes": [
+              "NetSuite export no longer fails on blank cost centers",
+              "CSV exports to NetSuite now keep the cost center column even when it is empty, so the import no longer fails for the whole file."
+            ],
+            "entry_flags": []
+          }
+        ]
+      }
+    },
+    "/api/exports": {
+      "status": 200,
+      "body": {
+        "exports": []
+      }
+    },
+    "/api/digest/preview": {
+      "status": 200,
+      "body": {
+        "markdown": "# Weekly digest (2026-10-16)\n\n## New insights this week\n**engineering**\n- INS-J1WWKQ NetSuite CSV export drops empty cost center column, failing the entire import (Acme Corp)\n- INS-4HKV6X Entity-level permissions block a 300-seat EU rollout (Globex)\n**product_polish**\n- INS-YNTJR1 Mobile receipt preview in approval notification is the lever on their month-end close (Acme Corp)\n**untracked**\n- INS-EQ976P Up for renewal in March with CFO demanding an ROI case (Acme Corp)\n- INS-2XKN22 Maya to send time-saved ROI report from Acme's own data by month-end (Acme Corp)\n- INS-H3BM6P Jordan to send list of twelve regional managers to enable mobile approvals (Acme Corp)\n- INS-EG2BBX Account churned-shopped over entity issue; renewal hinges on a date (Globex)\n- INS-Y06JG9 Receipt scanner misreads totals ~1 in 10 for field-team photos (Globex)\n- INS-V56JH9 Mobile approvals need the receipt visible on-screen (Globex)\n- INS-MBDQPB Tom to send 20 worst misread receipts by Friday (Globex)\n- INS-DBE28K Sam to return with an entity-permissions date from product next week (Globex)\n- INS-N343B5 Configurable Slack digest to stop notification fatigue killing approver adoption (Initech)\n- INS-HXJ7H3 Auto-calculate mileage from start/end address to curb inflated reimbursements (Initech)\n- INS-9Y19GT NetSuite export breaks when a cost center is blank, repeat failure for finance (Initech)\n- INS-JM9K5H Maya to notify Initech when the NetSuite blank-cost-center export fix ships (Initech)\n- INS-XMX608 Maya to send approval-rules setup guide today (second approver over $5k) (Initech)\n- INS-60ZPS9 Initech will run a formal review at the 90-day mark (Initech)\n\n## Awaiting finalization\n- INS-EQ976P Up for renewal in March with CFO demanding an ROI case (extracted, 0d old)\n- INS-2XKN22 Maya to send time-saved ROI report from Acme's own data by month-end (extracted, 0d old)\n- INS-H3BM6P Jordan to send list of twelve regional managers to enable mobile approvals (extracted, 0d old)\n- INS-EG2BBX Account churned-shopped over entity issue; renewal hinges on a date (extracted, 0d old)\n- INS-Y06JG9 Receipt scanner misreads totals ~1 in 10 for field-team photos (extracted, 0d old)\n- INS-V56JH9 Mobile approvals need the receipt visible on-screen (extracted, 0d old)\n- INS-MBDQPB Tom to send 20 worst misread receipts by Friday (extracted, 0d old)\n- INS-DBE28K Sam to return with an entity-permissions date from product next week (extracted, 0d old)\n- INS-N343B5 Configurable Slack digest to stop notification fatigue killing approver adoption (extracted, 0d old)\n- INS-HXJ7H3 Auto-calculate mileage from start/end address to curb inflated reimbursements (extracted, 0d old)\n- INS-9Y19GT NetSuite export breaks when a cost center is blank, repeat failure for finance (extracted, 0d old)\n- INS-JM9K5H Maya to notify Initech when the NetSuite blank-cost-center export fix ships (extracted, 0d old)\n- INS-XMX608 Maya to send approval-rules setup guide today (second approver over $5k) (extracted, 0d old)\n- INS-60ZPS9 Initech will run a formal review at the 90-day mark (extracted, 0d old)\n\n## Stuck items\nNone.\n\n## Completions this week\n- INS-J1WWKQ NetSuite CSV export drops empty cost center column, failing the entire import (shipped 2026-10-16) evidence: on file\n\n## Top asks by requester count\n- INS-J1WWKQ NetSuite CSV export drops empty cost center column, failing the entire import (requested by 1 client)\n- INS-EQ976P Up for renewal in March with CFO demanding an ROI case (requested by 1 client)\n- INS-H3BM6P Jordan to send list of twelve regional managers to enable mobile approvals (requested by 1 client)\n- INS-2XKN22 Maya to send time-saved ROI report from Acme's own data by month-end (requested by 1 client)\n- INS-YNTJR1 Mobile receipt preview in approval notification is the lever on their month-end close (requested by 1 client)\n\n## Shipped but client not yet emailed\nNone.\n"
+      }
+    },
+    "/api/stt/status": {
+      "status": 200,
+      "body": {
+        "ok": true,
+        "missing": [],
+        "provider": "whisper"
+      }
+    },
+    "/api/calendar/status": {
+      "status": 403,
+      "body": {
+        "error": "This is a read-only demo. Self-host Followthrough to capture your own meetings.",
+        "demo": true
+      }
+    },
+    "/api/calendar/events": {
+      "status": 403,
+      "body": {
+        "error": "This is a read-only demo. Self-host Followthrough to capture your own meetings.",
+        "demo": true
+      }
+    },
+    "/api/watchfolder/status": {
+      "status": 403,
+      "body": {
+        "error": "This is a read-only demo. Self-host Followthrough to capture your own meetings.",
+        "demo": true
+      }
+    },
+    "/api/insights": {
+      "status": 200,
+      "body": {
+        "insights": [
+          {
+            "id": "01M51VB0QJNSVM5ZDVNCN343B5",
+            "title": "Configurable Slack digest to stop notification fatigue killing approver adoption",
+            "state": "extracted",
+            "track": null,
+            "item_type": "feature_request",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "assignee_user_id": null,
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:55:31.442Z",
+            "updated_at": "2026-10-16T07:55:31.442Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-N343B5",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51VB0QJ7TKRJT078VHXJ7H3",
+            "title": "Auto-calculate mileage from start/end address to curb inflated reimbursements",
+            "state": "extracted",
+            "track": null,
+            "item_type": "feature_request",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "assignee_user_id": null,
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:55:31.442Z",
+            "updated_at": "2026-10-16T07:55:31.442Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-HXJ7H3",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51VB0QJHS4FBRPEG19Y19GT",
+            "title": "NetSuite export breaks when a cost center is blank, repeat failure for finance",
+            "state": "extracted",
+            "track": null,
+            "item_type": "complaint",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "assignee_user_id": null,
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:55:31.442Z",
+            "updated_at": "2026-10-16T07:55:31.442Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-9Y19GT",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51VB0QJRH1MYYAWJ9JM9K5H",
+            "title": "Maya to notify Initech when the NetSuite blank-cost-center export fix ships",
+            "state": "extracted",
+            "track": null,
+            "item_type": "action_item_ours",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "assignee_user_id": null,
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:55:31.442Z",
+            "updated_at": "2026-10-16T07:55:31.442Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-JM9K5H",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51VB0QKJ5GSJKC07BXMX608",
+            "title": "Maya to send approval-rules setup guide today (second approver over $5k)",
+            "state": "extracted",
+            "track": null,
+            "item_type": "action_item_ours",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "assignee_user_id": null,
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:55:31.442Z",
+            "updated_at": "2026-10-16T07:55:31.442Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-XMX608",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51VB0QKTBEME4EGBF60ZPS9",
+            "title": "Initech will run a formal review at the 90-day mark",
+            "state": "extracted",
+            "track": null,
+            "item_type": "commitment_theirs",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "assignee_user_id": null,
+            "ai_confidence": "medium",
+            "created_at": "2026-10-16T07:55:31.442Z",
+            "updated_at": "2026-10-16T07:55:31.442Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-60ZPS9",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51V974P4RG14EQVNA4HKV6X",
+            "title": "Entity-level permissions block a 300-seat EU rollout",
+            "state": "finalized",
+            "track": "engineering",
+            "item_type": "feature_request",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "client_name": "Globex",
+            "assignee_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:54:32.470Z",
+            "updated_at": "2026-10-16T07:55:31.450Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-4HKV6X",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51V974QJNV35FKTD1EG2BBX",
+            "title": "Account churned-shopped over entity issue; renewal hinges on a date",
+            "state": "extracted",
+            "track": null,
+            "item_type": "key_insight",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "client_name": "Globex",
+            "assignee_user_id": null,
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:54:32.470Z",
+            "updated_at": "2026-10-16T07:54:32.470Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-EG2BBX",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51V974QDFJYWSQV8AY06JG9",
+            "title": "Receipt scanner misreads totals ~1 in 10 for field-team photos",
+            "state": "extracted",
+            "track": null,
+            "item_type": "complaint",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "client_name": "Globex",
+            "assignee_user_id": null,
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:54:32.470Z",
+            "updated_at": "2026-10-16T07:54:32.470Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-Y06JG9",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51V974Q278AM6YGH8V56JH9",
+            "title": "Mobile approvals need the receipt visible on-screen",
+            "state": "extracted",
+            "track": null,
+            "item_type": "feature_request",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "client_name": "Globex",
+            "assignee_user_id": null,
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:54:32.470Z",
+            "updated_at": "2026-10-16T07:54:32.470Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-V56JH9",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51V974RE2AQQPGED2MBDQPB",
+            "title": "Tom to send 20 worst misread receipts by Friday",
+            "state": "extracted",
+            "track": null,
+            "item_type": "commitment_theirs",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "client_name": "Globex",
+            "assignee_user_id": null,
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:54:32.470Z",
+            "updated_at": "2026-10-16T07:54:32.470Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-MBDQPB",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51V974RC1B033JNN6DBE28K",
+            "title": "Sam to return with an entity-permissions date from product next week",
+            "state": "extracted",
+            "track": null,
+            "item_type": "action_item_ours",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "client_name": "Globex",
+            "assignee_user_id": null,
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:54:32.470Z",
+            "updated_at": "2026-10-16T07:54:32.470Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-DBE28K",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51V7KPMHW9WXD130EYNTJR1",
+            "title": "Mobile receipt preview in approval notification is the lever on their month-end close",
+            "state": "finalized",
+            "track": "product_polish",
+            "item_type": "feature_request",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "client_name": "Acme Corp",
+            "assignee_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:53:39.796Z",
+            "updated_at": "2026-10-16T07:55:31.449Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-YNTJR1",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51V7KPNZTXJKWCMRMJ1WWKQ",
+            "title": "NetSuite CSV export drops empty cost center column, failing the entire import",
+            "state": "client_notified",
+            "track": "engineering",
+            "item_type": "complaint",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "client_name": "Acme Corp",
+            "assignee_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:53:39.796Z",
+            "updated_at": "2026-10-16T07:55:53.076Z",
+            "mention_count": 2,
+            "requester_count": 1,
+            "handle": "INS-J1WWKQ",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": true
+          },
+          {
+            "id": "01M51V7KPNNTGMN28V31EQ976P",
+            "title": "Up for renewal in March with CFO demanding an ROI case",
+            "state": "extracted",
+            "track": null,
+            "item_type": "key_insight",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "client_name": "Acme Corp",
+            "assignee_user_id": null,
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:53:39.796Z",
+            "updated_at": "2026-10-16T07:53:39.796Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-EQ976P",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51V7KPNBXC8TW7PE92XKN22",
+            "title": "Maya to send time-saved ROI report from Acme's own data by month-end",
+            "state": "extracted",
+            "track": null,
+            "item_type": "action_item_ours",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "client_name": "Acme Corp",
+            "assignee_user_id": null,
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:53:39.796Z",
+            "updated_at": "2026-10-16T07:53:39.796Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-2XKN22",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51V7KPNN5VCPCS5X9H3BM6P",
+            "title": "Jordan to send list of twelve regional managers to enable mobile approvals",
+            "state": "extracted",
+            "track": null,
+            "item_type": "commitment_theirs",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "client_name": "Acme Corp",
+            "assignee_user_id": null,
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:53:39.796Z",
+            "updated_at": "2026-10-16T07:53:39.796Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-H3BM6P",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          }
+        ]
+      }
+    },
+    "/api/clients": {
+      "status": 200,
+      "body": {
+        "clients": [
+          {
+            "id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "name": "Acme Corp",
+            "domain": "acme.example",
+            "crm_id": null,
+            "is_internal": 0,
+            "created_by": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "created_at": "2026-10-16T07:52:49.497Z",
+            "share_token": "01M51VBNVMENZET1SEJFK3ERR701M51VBNVMGPEJP3C2FTZ0GJDR",
+            "meetings_count": 1,
+            "open_insights_count": 5
+          },
+          {
+            "id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "name": "Globex",
+            "domain": "globex.example",
+            "crm_id": null,
+            "is_internal": 0,
+            "created_by": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "created_at": "2026-10-16T07:53:39.800Z",
+            "share_token": null,
+            "meetings_count": 1,
+            "open_insights_count": 6
+          },
+          {
+            "id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "name": "Initech",
+            "domain": "initech.example",
+            "crm_id": null,
+            "is_internal": 0,
+            "created_by": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "created_at": "2026-10-16T07:54:32.475Z",
+            "share_token": null,
+            "meetings_count": 1,
+            "open_insights_count": 6
+          }
+        ]
+      }
+    },
+    "/api/clients/01M51V62JSEC6ZCSVXQGDBAW5V": {
+      "status": 200,
+      "body": {
+        "client": {
+          "id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+          "name": "Acme Corp",
+          "domain": "acme.example",
+          "crm_id": null,
+          "is_internal": 0,
+          "created_by": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+          "created_at": "2026-10-16T07:52:49.497Z",
+          "share_token": "01M51VBNVMENZET1SEJFK3ERR701M51VBNVMGPEJP3C2FTZ0GJDR"
+        },
+        "contacts": [],
+        "meetings": [
+          {
+            "id": "01M51V62JYPFSDA5JAZ74V9FTA",
+            "seq": 1,
+            "title": "Acme: month-end close check-in",
+            "meeting_date": "2026-09-25",
+            "meeting_type": "qbr",
+            "source": "manual",
+            "status": "extracted",
+            "audio_asset_id": null,
+            "restricted": 0,
+            "created_at": "2026-10-16T07:52:49.502Z",
+            "has_transcript": 1
+          }
+        ],
+        "open_insights": [
+          {
+            "id": "01M51V7KPNZTXJKWCMRMJ1WWKQ",
+            "title": "NetSuite CSV export drops empty cost center column, failing the entire import",
+            "state": "client_notified",
+            "track": "engineering"
+          },
+          {
+            "id": "01M51V7KPNNTGMN28V31EQ976P",
+            "title": "Up for renewal in March with CFO demanding an ROI case",
+            "state": "extracted",
+            "track": null
+          },
+          {
+            "id": "01M51V7KPNBXC8TW7PE92XKN22",
+            "title": "Maya to send time-saved ROI report from Acme's own data by month-end",
+            "state": "extracted",
+            "track": null
+          },
+          {
+            "id": "01M51V7KPNN5VCPCS5X9H3BM6P",
+            "title": "Jordan to send list of twelve regional managers to enable mobile approvals",
+            "state": "extracted",
+            "track": null
+          },
+          {
+            "id": "01M51V7KPMHW9WXD130EYNTJR1",
+            "title": "Mobile receipt preview in approval notification is the lever on their month-end close",
+            "state": "finalized",
+            "track": "product_polish"
+          }
+        ]
+      }
+    },
+    "/api/clients/01M51V62JSEC6ZCSVXQGDBAW5V/brief": {
+      "status": 200,
+      "body": {
+        "markdown": "# Pre-call brief: Acme Corp\n\nLatest meeting on record: 2026-09-25\n\n## Open asks\n- INS-YNTJR1 Mobile receipt preview in approval notification is the lever on their month-end close (finalized, 0d old)\n- INS-J1WWKQ NetSuite CSV export drops empty cost center column, failing the entire import (client_notified, 0d old)\n- INS-EQ976P Up for renewal in March with CFO demanding an ROI case (extracted, 0d old)\n- INS-2XKN22 Maya to send time-saved ROI report from Acme's own data by month-end (extracted, 0d old)\n- INS-H3BM6P Jordan to send list of twelve regional managers to enable mobile approvals (extracted, 0d old)\n\n## Shipped since last meeting\n- INS-J1WWKQ NetSuite CSV export drops empty cost center column, failing the entire import (shipped 2026-10-16)\n\n## Follow-ups owed\n- INS-J1WWKQ NetSuite CSV export drops empty cost center column, failing the entire import (client notified, not yet closed)\n"
+      }
+    },
+    "/api/meetings?client_id=01M51V62JSEC6ZCSVXQGDBAW5V": {
+      "status": 200,
+      "body": {
+        "meetings": [
+          {
+            "id": "01M51V62JYPFSDA5JAZ74V9FTA",
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "client_name": "Acme Corp",
+            "seq": 1,
+            "title": "Acme: month-end close check-in",
+            "meeting_date": "2026-09-25",
+            "meeting_type": "qbr",
+            "source": "manual",
+            "status": "extracted",
+            "audio_asset_id": null,
+            "restricted": 0,
+            "created_at": "2026-10-16T07:52:49.502Z",
+            "has_transcript": 1
+          }
+        ]
+      }
+    },
+    "/api/insights?client_id=01M51V62JSEC6ZCSVXQGDBAW5V": {
+      "status": 200,
+      "body": {
+        "insights": [
+          {
+            "id": "01M51V7KPNZTXJKWCMRMJ1WWKQ",
+            "title": "NetSuite CSV export drops empty cost center column, failing the entire import",
+            "state": "client_notified",
+            "track": "engineering",
+            "item_type": "complaint",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "client_name": "Acme Corp",
+            "assignee_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:53:39.796Z",
+            "updated_at": "2026-10-16T07:55:53.076Z",
+            "mention_count": 2,
+            "requester_count": 1,
+            "handle": "INS-J1WWKQ",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": true
+          },
+          {
+            "id": "01M51V7KPNNTGMN28V31EQ976P",
+            "title": "Up for renewal in March with CFO demanding an ROI case",
+            "state": "extracted",
+            "track": null,
+            "item_type": "key_insight",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "client_name": "Acme Corp",
+            "assignee_user_id": null,
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:53:39.796Z",
+            "updated_at": "2026-10-16T07:53:39.796Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-EQ976P",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51V7KPNBXC8TW7PE92XKN22",
+            "title": "Maya to send time-saved ROI report from Acme's own data by month-end",
+            "state": "extracted",
+            "track": null,
+            "item_type": "action_item_ours",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "client_name": "Acme Corp",
+            "assignee_user_id": null,
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:53:39.796Z",
+            "updated_at": "2026-10-16T07:53:39.796Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-2XKN22",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51V7KPNN5VCPCS5X9H3BM6P",
+            "title": "Jordan to send list of twelve regional managers to enable mobile approvals",
+            "state": "extracted",
+            "track": null,
+            "item_type": "commitment_theirs",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "client_name": "Acme Corp",
+            "assignee_user_id": null,
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:53:39.796Z",
+            "updated_at": "2026-10-16T07:53:39.796Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-H3BM6P",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51V7KPMHW9WXD130EYNTJR1",
+            "title": "Mobile receipt preview in approval notification is the lever on their month-end close",
+            "state": "finalized",
+            "track": "product_polish",
+            "item_type": "feature_request",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "client_name": "Acme Corp",
+            "assignee_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:53:39.796Z",
+            "updated_at": "2026-10-16T07:55:31.449Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-YNTJR1",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          }
+        ]
+      }
+    },
+    "/api/clients/01M51V7KPRNCWBS23Z4AA2FWDJ": {
+      "status": 200,
+      "body": {
+        "client": {
+          "id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+          "name": "Globex",
+          "domain": "globex.example",
+          "crm_id": null,
+          "is_internal": 0,
+          "created_by": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+          "created_at": "2026-10-16T07:53:39.800Z",
+          "share_token": null
+        },
+        "contacts": [],
+        "meetings": [
+          {
+            "id": "01M51V7KPSCA8KXK09MQBFS7VE",
+            "seq": 1,
+            "title": "Globex: multi-entity rollout",
+            "meeting_date": "2026-10-02",
+            "meeting_type": "discovery",
+            "source": "manual",
+            "status": "extracted",
+            "audio_asset_id": null,
+            "restricted": 0,
+            "created_at": "2026-10-16T07:53:39.801Z",
+            "has_transcript": 1
+          }
+        ],
+        "open_insights": [
+          {
+            "id": "01M51V974QJNV35FKTD1EG2BBX",
+            "title": "Account churned-shopped over entity issue; renewal hinges on a date",
+            "state": "extracted",
+            "track": null
+          },
+          {
+            "id": "01M51V974QDFJYWSQV8AY06JG9",
+            "title": "Receipt scanner misreads totals ~1 in 10 for field-team photos",
+            "state": "extracted",
+            "track": null
+          },
+          {
+            "id": "01M51V974Q278AM6YGH8V56JH9",
+            "title": "Mobile approvals need the receipt visible on-screen",
+            "state": "extracted",
+            "track": null
+          },
+          {
+            "id": "01M51V974RE2AQQPGED2MBDQPB",
+            "title": "Tom to send 20 worst misread receipts by Friday",
+            "state": "extracted",
+            "track": null
+          },
+          {
+            "id": "01M51V974RC1B033JNN6DBE28K",
+            "title": "Sam to return with an entity-permissions date from product next week",
+            "state": "extracted",
+            "track": null
+          },
+          {
+            "id": "01M51V974P4RG14EQVNA4HKV6X",
+            "title": "Entity-level permissions block a 300-seat EU rollout",
+            "state": "finalized",
+            "track": "engineering"
+          }
+        ]
+      }
+    },
+    "/api/clients/01M51V7KPRNCWBS23Z4AA2FWDJ/brief": {
+      "status": 200,
+      "body": {
+        "markdown": "# Pre-call brief: Globex\n\nLatest meeting on record: 2026-10-02\n\n## Open asks\n- INS-4HKV6X Entity-level permissions block a 300-seat EU rollout (finalized, 0d old)\n- INS-EG2BBX Account churned-shopped over entity issue; renewal hinges on a date (extracted, 0d old)\n- INS-Y06JG9 Receipt scanner misreads totals ~1 in 10 for field-team photos (extracted, 0d old)\n- INS-V56JH9 Mobile approvals need the receipt visible on-screen (extracted, 0d old)\n- INS-MBDQPB Tom to send 20 worst misread receipts by Friday (extracted, 0d old)\n- INS-DBE28K Sam to return with an entity-permissions date from product next week (extracted, 0d old)\n\n## Shipped since last meeting\nNone.\n\n## Follow-ups owed\nNone.\n"
+      }
+    },
+    "/api/meetings?client_id=01M51V7KPRNCWBS23Z4AA2FWDJ": {
+      "status": 200,
+      "body": {
+        "meetings": [
+          {
+            "id": "01M51V7KPSCA8KXK09MQBFS7VE",
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "client_name": "Globex",
+            "seq": 1,
+            "title": "Globex: multi-entity rollout",
+            "meeting_date": "2026-10-02",
+            "meeting_type": "discovery",
+            "source": "manual",
+            "status": "extracted",
+            "audio_asset_id": null,
+            "restricted": 0,
+            "created_at": "2026-10-16T07:53:39.801Z",
+            "has_transcript": 1
+          }
+        ]
+      }
+    },
+    "/api/insights?client_id=01M51V7KPRNCWBS23Z4AA2FWDJ": {
+      "status": 200,
+      "body": {
+        "insights": [
+          {
+            "id": "01M51V974QJNV35FKTD1EG2BBX",
+            "title": "Account churned-shopped over entity issue; renewal hinges on a date",
+            "state": "extracted",
+            "track": null,
+            "item_type": "key_insight",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "client_name": "Globex",
+            "assignee_user_id": null,
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:54:32.470Z",
+            "updated_at": "2026-10-16T07:54:32.470Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-EG2BBX",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51V974QDFJYWSQV8AY06JG9",
+            "title": "Receipt scanner misreads totals ~1 in 10 for field-team photos",
+            "state": "extracted",
+            "track": null,
+            "item_type": "complaint",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "client_name": "Globex",
+            "assignee_user_id": null,
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:54:32.470Z",
+            "updated_at": "2026-10-16T07:54:32.470Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-Y06JG9",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51V974Q278AM6YGH8V56JH9",
+            "title": "Mobile approvals need the receipt visible on-screen",
+            "state": "extracted",
+            "track": null,
+            "item_type": "feature_request",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "client_name": "Globex",
+            "assignee_user_id": null,
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:54:32.470Z",
+            "updated_at": "2026-10-16T07:54:32.470Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-V56JH9",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51V974RE2AQQPGED2MBDQPB",
+            "title": "Tom to send 20 worst misread receipts by Friday",
+            "state": "extracted",
+            "track": null,
+            "item_type": "commitment_theirs",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "client_name": "Globex",
+            "assignee_user_id": null,
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:54:32.470Z",
+            "updated_at": "2026-10-16T07:54:32.470Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-MBDQPB",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51V974RC1B033JNN6DBE28K",
+            "title": "Sam to return with an entity-permissions date from product next week",
+            "state": "extracted",
+            "track": null,
+            "item_type": "action_item_ours",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "client_name": "Globex",
+            "assignee_user_id": null,
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:54:32.470Z",
+            "updated_at": "2026-10-16T07:54:32.470Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-DBE28K",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51V974P4RG14EQVNA4HKV6X",
+            "title": "Entity-level permissions block a 300-seat EU rollout",
+            "state": "finalized",
+            "track": "engineering",
+            "item_type": "feature_request",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "client_name": "Globex",
+            "assignee_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:54:32.470Z",
+            "updated_at": "2026-10-16T07:55:31.450Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-4HKV6X",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          }
+        ]
+      }
+    },
+    "/api/clients/01M51V974V2HK6MAAAVKGVDD3Q": {
+      "status": 200,
+      "body": {
+        "client": {
+          "id": "01M51V974V2HK6MAAAVKGVDD3Q",
+          "name": "Initech",
+          "domain": "initech.example",
+          "crm_id": null,
+          "is_internal": 0,
+          "created_by": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+          "created_at": "2026-10-16T07:54:32.475Z",
+          "share_token": null
+        },
+        "contacts": [],
+        "meetings": [
+          {
+            "id": "01M51V974WGS2ANQP8F86PTK9A",
+            "seq": 1,
+            "title": "Initech: first month review",
+            "meeting_date": "2026-10-09",
+            "meeting_type": "support",
+            "source": "manual",
+            "status": "extracted",
+            "audio_asset_id": null,
+            "restricted": 0,
+            "created_at": "2026-10-16T07:54:32.476Z",
+            "has_transcript": 1
+          }
+        ],
+        "open_insights": [
+          {
+            "id": "01M51VB0QJNSVM5ZDVNCN343B5",
+            "title": "Configurable Slack digest to stop notification fatigue killing approver adoption",
+            "state": "extracted",
+            "track": null
+          },
+          {
+            "id": "01M51VB0QJ7TKRJT078VHXJ7H3",
+            "title": "Auto-calculate mileage from start/end address to curb inflated reimbursements",
+            "state": "extracted",
+            "track": null
+          },
+          {
+            "id": "01M51VB0QJHS4FBRPEG19Y19GT",
+            "title": "NetSuite export breaks when a cost center is blank, repeat failure for finance",
+            "state": "extracted",
+            "track": null
+          },
+          {
+            "id": "01M51VB0QJRH1MYYAWJ9JM9K5H",
+            "title": "Maya to notify Initech when the NetSuite blank-cost-center export fix ships",
+            "state": "extracted",
+            "track": null
+          },
+          {
+            "id": "01M51VB0QKJ5GSJKC07BXMX608",
+            "title": "Maya to send approval-rules setup guide today (second approver over $5k)",
+            "state": "extracted",
+            "track": null
+          },
+          {
+            "id": "01M51VB0QKTBEME4EGBF60ZPS9",
+            "title": "Initech will run a formal review at the 90-day mark",
+            "state": "extracted",
+            "track": null
+          }
+        ]
+      }
+    },
+    "/api/clients/01M51V974V2HK6MAAAVKGVDD3Q/brief": {
+      "status": 200,
+      "body": {
+        "markdown": "# Pre-call brief: Initech\n\nLatest meeting on record: 2026-10-09\n\n## Open asks\n- INS-N343B5 Configurable Slack digest to stop notification fatigue killing approver adoption (extracted, 0d old)\n- INS-HXJ7H3 Auto-calculate mileage from start/end address to curb inflated reimbursements (extracted, 0d old)\n- INS-9Y19GT NetSuite export breaks when a cost center is blank, repeat failure for finance (extracted, 0d old)\n- INS-JM9K5H Maya to notify Initech when the NetSuite blank-cost-center export fix ships (extracted, 0d old)\n- INS-XMX608 Maya to send approval-rules setup guide today (second approver over $5k) (extracted, 0d old)\n- INS-60ZPS9 Initech will run a formal review at the 90-day mark (extracted, 0d old)\n\n## Shipped since last meeting\nNone.\n\n## Follow-ups owed\nNone.\n"
+      }
+    },
+    "/api/meetings?client_id=01M51V974V2HK6MAAAVKGVDD3Q": {
+      "status": 200,
+      "body": {
+        "meetings": [
+          {
+            "id": "01M51V974WGS2ANQP8F86PTK9A",
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "seq": 1,
+            "title": "Initech: first month review",
+            "meeting_date": "2026-10-09",
+            "meeting_type": "support",
+            "source": "manual",
+            "status": "extracted",
+            "audio_asset_id": null,
+            "restricted": 0,
+            "created_at": "2026-10-16T07:54:32.476Z",
+            "has_transcript": 1
+          }
+        ]
+      }
+    },
+    "/api/insights?client_id=01M51V974V2HK6MAAAVKGVDD3Q": {
+      "status": 200,
+      "body": {
+        "insights": [
+          {
+            "id": "01M51VB0QJNSVM5ZDVNCN343B5",
+            "title": "Configurable Slack digest to stop notification fatigue killing approver adoption",
+            "state": "extracted",
+            "track": null,
+            "item_type": "feature_request",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "assignee_user_id": null,
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:55:31.442Z",
+            "updated_at": "2026-10-16T07:55:31.442Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-N343B5",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51VB0QJ7TKRJT078VHXJ7H3",
+            "title": "Auto-calculate mileage from start/end address to curb inflated reimbursements",
+            "state": "extracted",
+            "track": null,
+            "item_type": "feature_request",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "assignee_user_id": null,
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:55:31.442Z",
+            "updated_at": "2026-10-16T07:55:31.442Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-HXJ7H3",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51VB0QJHS4FBRPEG19Y19GT",
+            "title": "NetSuite export breaks when a cost center is blank, repeat failure for finance",
+            "state": "extracted",
+            "track": null,
+            "item_type": "complaint",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "assignee_user_id": null,
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:55:31.442Z",
+            "updated_at": "2026-10-16T07:55:31.442Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-9Y19GT",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51VB0QJRH1MYYAWJ9JM9K5H",
+            "title": "Maya to notify Initech when the NetSuite blank-cost-center export fix ships",
+            "state": "extracted",
+            "track": null,
+            "item_type": "action_item_ours",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "assignee_user_id": null,
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:55:31.442Z",
+            "updated_at": "2026-10-16T07:55:31.442Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-JM9K5H",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51VB0QKJ5GSJKC07BXMX608",
+            "title": "Maya to send approval-rules setup guide today (second approver over $5k)",
+            "state": "extracted",
+            "track": null,
+            "item_type": "action_item_ours",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "assignee_user_id": null,
+            "ai_confidence": "high",
+            "created_at": "2026-10-16T07:55:31.442Z",
+            "updated_at": "2026-10-16T07:55:31.442Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-XMX608",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          },
+          {
+            "id": "01M51VB0QKTBEME4EGBF60ZPS9",
+            "title": "Initech will run a formal review at the 90-day mark",
+            "state": "extracted",
+            "track": null,
+            "item_type": "commitment_theirs",
+            "priority": 0,
+            "version": 1,
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "assignee_user_id": null,
+            "ai_confidence": "medium",
+            "created_at": "2026-10-16T07:55:31.442Z",
+            "updated_at": "2026-10-16T07:55:31.442Z",
+            "mention_count": 1,
+            "requester_count": 1,
+            "handle": "INS-60ZPS9",
+            "age_days": 0,
+            "has_ticket": false,
+            "has_evidence": false
+          }
+        ]
+      }
+    },
+    "/api/meetings": {
+      "status": 200,
+      "body": {
+        "meetings": [
+          {
+            "id": "01M51V974WGS2ANQP8F86PTK9A",
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "seq": 1,
+            "title": "Initech: first month review",
+            "meeting_date": "2026-10-09",
+            "meeting_type": "support",
+            "source": "manual",
+            "status": "extracted",
+            "audio_asset_id": null,
+            "restricted": 0,
+            "created_at": "2026-10-16T07:54:32.476Z",
+            "has_transcript": 1
+          },
+          {
+            "id": "01M51V7KPSCA8KXK09MQBFS7VE",
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "client_name": "Globex",
+            "seq": 1,
+            "title": "Globex: multi-entity rollout",
+            "meeting_date": "2026-10-02",
+            "meeting_type": "discovery",
+            "source": "manual",
+            "status": "extracted",
+            "audio_asset_id": null,
+            "restricted": 0,
+            "created_at": "2026-10-16T07:53:39.801Z",
+            "has_transcript": 1
+          },
+          {
+            "id": "01M51V62JYPFSDA5JAZ74V9FTA",
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "client_name": "Acme Corp",
+            "seq": 1,
+            "title": "Acme: month-end close check-in",
+            "meeting_date": "2026-09-25",
+            "meeting_type": "qbr",
+            "source": "manual",
+            "status": "extracted",
+            "audio_asset_id": null,
+            "restricted": 0,
+            "created_at": "2026-10-16T07:52:49.502Z",
+            "has_transcript": 1
+          }
+        ]
+      }
+    },
+    "/api/meetings/01M51V974WGS2ANQP8F86PTK9A": {
+      "status": 200,
+      "body": {
+        "meeting": {
+          "id": "01M51V974WGS2ANQP8F86PTK9A",
+          "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+          "seq": 1,
+          "title": "Initech: first month review",
+          "meeting_date": "2026-10-09",
+          "meeting_type": "support",
+          "source": "manual",
+          "attendees_json": null,
+          "audio_asset_id": null,
+          "consent_confirmed": 1,
+          "restricted": 0,
+          "allowed_users_json": null,
+          "status": "extracted",
+          "uploaded_by": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+          "created_at": "2026-10-16T07:54:32.476Z",
+          "deleted_at": null
+        },
+        "has_transcript": true,
+        "transcripts": [
+          {
+            "id": "01M51V974W12B42EQ8W8Z2X40P",
+            "source": "uploaded",
+            "quality_flag": null,
+            "created_at": "2026-10-16T07:54:32.476Z"
+          }
+        ],
+        "insights": [
+          {
+            "id": "01M51VB0QJNSVM5ZDVNCN343B5",
+            "title": "Configurable Slack digest to stop notification fatigue killing approver adoption",
+            "state": "extracted"
+          },
+          {
+            "id": "01M51VB0QJ7TKRJT078VHXJ7H3",
+            "title": "Auto-calculate mileage from start/end address to curb inflated reimbursements",
+            "state": "extracted"
+          },
+          {
+            "id": "01M51VB0QJHS4FBRPEG19Y19GT",
+            "title": "NetSuite export breaks when a cost center is blank, repeat failure for finance",
+            "state": "extracted"
+          },
+          {
+            "id": "01M51VB0QJRH1MYYAWJ9JM9K5H",
+            "title": "Maya to notify Initech when the NetSuite blank-cost-center export fix ships",
+            "state": "extracted"
+          },
+          {
+            "id": "01M51VB0QKJ5GSJKC07BXMX608",
+            "title": "Maya to send approval-rules setup guide today (second approver over $5k)",
+            "state": "extracted"
+          },
+          {
+            "id": "01M51VB0QKTBEME4EGBF60ZPS9",
+            "title": "Initech will run a formal review at the 90-day mark",
+            "state": "extracted"
+          }
+        ]
+      }
+    },
+    "/api/meetings/01M51V974WGS2ANQP8F86PTK9A/analysis": {
+      "status": 404,
+      "body": {
+        "error": "no analysis yet"
+      }
+    },
+    "/api/meetings/01M51V7KPSCA8KXK09MQBFS7VE": {
+      "status": 200,
+      "body": {
+        "meeting": {
+          "id": "01M51V7KPSCA8KXK09MQBFS7VE",
+          "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+          "seq": 1,
+          "title": "Globex: multi-entity rollout",
+          "meeting_date": "2026-10-02",
+          "meeting_type": "discovery",
+          "source": "manual",
+          "attendees_json": null,
+          "audio_asset_id": null,
+          "consent_confirmed": 1,
+          "restricted": 0,
+          "allowed_users_json": null,
+          "status": "extracted",
+          "uploaded_by": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+          "created_at": "2026-10-16T07:53:39.801Z",
+          "deleted_at": null
+        },
+        "has_transcript": true,
+        "transcripts": [
+          {
+            "id": "01M51V7KPSZS1K4A3307HEJCZR",
+            "source": "uploaded",
+            "quality_flag": null,
+            "created_at": "2026-10-16T07:53:39.801Z"
+          }
+        ],
+        "insights": [
+          {
+            "id": "01M51V974P4RG14EQVNA4HKV6X",
+            "title": "Entity-level permissions block a 300-seat EU rollout",
+            "state": "finalized"
+          },
+          {
+            "id": "01M51V974QJNV35FKTD1EG2BBX",
+            "title": "Account churned-shopped over entity issue; renewal hinges on a date",
+            "state": "extracted"
+          },
+          {
+            "id": "01M51V974QDFJYWSQV8AY06JG9",
+            "title": "Receipt scanner misreads totals ~1 in 10 for field-team photos",
+            "state": "extracted"
+          },
+          {
+            "id": "01M51V974Q278AM6YGH8V56JH9",
+            "title": "Mobile approvals need the receipt visible on-screen",
+            "state": "extracted"
+          },
+          {
+            "id": "01M51V974RE2AQQPGED2MBDQPB",
+            "title": "Tom to send 20 worst misread receipts by Friday",
+            "state": "extracted"
+          },
+          {
+            "id": "01M51V974RC1B033JNN6DBE28K",
+            "title": "Sam to return with an entity-permissions date from product next week",
+            "state": "extracted"
+          }
+        ]
+      }
+    },
+    "/api/meetings/01M51V7KPSCA8KXK09MQBFS7VE/analysis": {
+      "status": 404,
+      "body": {
+        "error": "no analysis yet"
+      }
+    },
+    "/api/meetings/01M51V62JYPFSDA5JAZ74V9FTA": {
+      "status": 200,
+      "body": {
+        "meeting": {
+          "id": "01M51V62JYPFSDA5JAZ74V9FTA",
+          "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+          "seq": 1,
+          "title": "Acme: month-end close check-in",
+          "meeting_date": "2026-09-25",
+          "meeting_type": "qbr",
+          "source": "manual",
+          "attendees_json": null,
+          "audio_asset_id": null,
+          "consent_confirmed": 1,
+          "restricted": 0,
+          "allowed_users_json": null,
+          "status": "extracted",
+          "uploaded_by": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+          "created_at": "2026-10-16T07:52:49.502Z",
+          "deleted_at": null
+        },
+        "has_transcript": true,
+        "transcripts": [
+          {
+            "id": "01M51V62JYY0V597ATKKVKB6C6",
+            "source": "uploaded",
+            "quality_flag": null,
+            "created_at": "2026-10-16T07:52:49.502Z"
+          }
+        ],
+        "insights": [
+          {
+            "id": "01M51V7KPMHW9WXD130EYNTJR1",
+            "title": "Mobile receipt preview in approval notification is the lever on their month-end close",
+            "state": "finalized"
+          },
+          {
+            "id": "01M51V7KPNZTXJKWCMRMJ1WWKQ",
+            "title": "NetSuite CSV export drops empty cost center column, failing the entire import",
+            "state": "client_notified"
+          },
+          {
+            "id": "01M51V7KPNNTGMN28V31EQ976P",
+            "title": "Up for renewal in March with CFO demanding an ROI case",
+            "state": "extracted"
+          },
+          {
+            "id": "01M51V7KPNBXC8TW7PE92XKN22",
+            "title": "Maya to send time-saved ROI report from Acme's own data by month-end",
+            "state": "extracted"
+          },
+          {
+            "id": "01M51V7KPNN5VCPCS5X9H3BM6P",
+            "title": "Jordan to send list of twelve regional managers to enable mobile approvals",
+            "state": "extracted"
+          }
+        ]
+      }
+    },
+    "/api/meetings/01M51V62JYPFSDA5JAZ74V9FTA/analysis": {
+      "status": 404,
+      "body": {
+        "error": "no analysis yet"
+      }
+    },
+    "/api/insights/01M51VB0QJNSVM5ZDVNCN343B5": {
+      "status": 200,
+      "body": {
+        "id": "01M51VB0QJNSVM5ZDVNCN343B5",
+        "meeting_id": "01M51V974WGS2ANQP8F86PTK9A",
+        "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+        "extraction_run_id": "01M51V974YDZYZPT78847VM67R",
+        "item_type": "feature_request",
+        "track": null,
+        "title": "Configurable Slack digest to stop notification fatigue killing approver adoption",
+        "body_original": "Bill reports that every single expense pings the approver in Slack, and people are muting the channel entirely, which defeats the purpose of the integration. He proposes a daily digest, but with anything over $500 still pinging in real time, as the ideal design. This is an adoption blocker in month one: if approvers mute the channel, approvals stall and the core workflow breaks. The threshold-plus-digest pattern is a concrete, buildable spec rather than a vague complaint, so it is low-risk to scope.",
+        "body_current": "Bill reports that every single expense pings the approver in Slack, and people are muting the channel entirely, which defeats the purpose of the integration. He proposes a daily digest, but with anything over $500 still pinging in real time, as the ideal design. This is an adoption blocker in month one: if approvers mute the channel, approvals stall and the core workflow breaks. The threshold-plus-digest pattern is a concrete, buildable spec rather than a vague complaint, so it is low-risk to scope.",
+        "state": "extracted",
+        "ai_confidence": "high",
+        "ai_suggested_json": "{\"track\":\"engineering\",\"owner\":\"product\",\"assignee\":\"Bill\"}",
+        "assignee_user_id": null,
+        "finalized_by": null,
+        "merged_into_insight_id": null,
+        "priority": 0,
+        "version": 1,
+        "editing_by": null,
+        "editing_at": null,
+        "created_at": "2026-10-16T07:55:31.442Z",
+        "updated_at": "2026-10-16T07:55:31.442Z",
+        "side": "client",
+        "sentiment": "mixed",
+        "intent": "keep approvers engaged instead of muting notifications",
+        "client_name": "Initech",
+        "handle": "INS-N343B5",
+        "editing_active": false,
+        "mentions": [
+          {
+            "id": "01M51VB0QJ3SDGRHG17703CTN3",
+            "meeting_id": "01M51V974WGS2ANQP8F86PTK9A",
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "quote": "A daily digest with anything over five hundred dollars still pinging right away. That would be ideal.",
+            "speaker": "Bill",
+            "char_start": 388,
+            "char_end": 489,
+            "created_at": "2026-10-16T07:55:31.442Z",
+            "meeting_date": "2026-10-09",
+            "meeting_seq": 1,
+            "client_name": "Initech"
+          }
+        ],
+        "requesters": [
+          {
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "first_requested_at": "2026-10-16T07:55:31.442Z",
+            "last_requested_at": "2026-10-16T07:55:31.442Z"
+          }
+        ],
+        "tags": [],
+        "tickets": [],
+        "completion_evidence": [],
+        "email_drafts": [],
+        "timeline": [
+          {
+            "id": 17,
+            "occurred_at": "2026-10-16T07:55:31.442Z",
+            "actor_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "event_type": "insight.state_changed",
+            "from_state": null,
+            "to_state": "extracted",
+            "payload": {
+              "run_id": "01M51V974YDZYZPT78847VM67R",
+              "handle": "INS-N343B5"
+            }
+          }
+        ]
+      }
+    },
+    "/api/insights/01M51VB0QJNSVM5ZDVNCN343B5/evidence": {
+      "status": 200,
+      "body": {
+        "evidence": []
+      }
+    },
+    "/api/insights/01M51VB0QJNSVM5ZDVNCN343B5/email-drafts": {
+      "status": 200,
+      "body": {
+        "drafts": []
+      }
+    },
+    "/api/insights/01M51VB0QJNSVM5ZDVNCN343B5/tickets": {
+      "status": 200,
+      "body": []
+    },
+    "/api/insights/01M51VB0QJ7TKRJT078VHXJ7H3": {
+      "status": 200,
+      "body": {
+        "id": "01M51VB0QJ7TKRJT078VHXJ7H3",
+        "meeting_id": "01M51V974WGS2ANQP8F86PTK9A",
+        "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+        "extraction_run_id": "01M51V974YDZYZPT78847VM67R",
+        "item_type": "feature_request",
+        "track": null,
+        "title": "Auto-calculate mileage from start/end address to curb inflated reimbursements",
+        "body_original": "Today employees type mileage distance by hand, and Bill notes the numbers are 'creative', i.e. people are inflating distances and finance is eating fraudulent or inaccurate reimbursements. He wants the distance computed automatically from a start and end address. The underlying job is finance control and accuracy, not convenience; this is a compliance and cost-leakage lever, which is why he says finance would 'love you.' Pitching it as a controls feature could strengthen the finance champion relationship on this account.",
+        "body_current": "Today employees type mileage distance by hand, and Bill notes the numbers are 'creative', i.e. people are inflating distances and finance is eating fraudulent or inaccurate reimbursements. He wants the distance computed automatically from a start and end address. The underlying job is finance control and accuracy, not convenience; this is a compliance and cost-leakage lever, which is why he says finance would 'love you.' Pitching it as a controls feature could strengthen the finance champion relationship on this account.",
+        "state": "extracted",
+        "ai_confidence": "high",
+        "ai_suggested_json": "{\"track\":\"engineering\",\"owner\":\"product\",\"assignee\":\"Bill\"}",
+        "assignee_user_id": null,
+        "finalized_by": null,
+        "merged_into_insight_id": null,
+        "priority": 0,
+        "version": 1,
+        "editing_by": null,
+        "editing_at": null,
+        "created_at": "2026-10-16T07:55:31.442Z",
+        "updated_at": "2026-10-16T07:55:31.442Z",
+        "side": "client",
+        "sentiment": "positive",
+        "intent": "stop employees inflating mileage reimbursements",
+        "client_name": "Initech",
+        "handle": "INS-HXJ7H3",
+        "editing_active": false,
+        "mentions": [
+          {
+            "id": "01M51VB0QJDWYRSXN1Y009T3VQ",
+            "meeting_id": "01M51V974WGS2ANQP8F86PTK9A",
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "quote": "If you could calculate it from start and end address, finance would love you.",
+            "speaker": "Bill",
+            "char_start": 699,
+            "char_end": 776,
+            "created_at": "2026-10-16T07:55:31.442Z",
+            "meeting_date": "2026-10-09",
+            "meeting_seq": 1,
+            "client_name": "Initech"
+          }
+        ],
+        "requesters": [
+          {
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "first_requested_at": "2026-10-16T07:55:31.442Z",
+            "last_requested_at": "2026-10-16T07:55:31.442Z"
+          }
+        ],
+        "tags": [],
+        "tickets": [],
+        "completion_evidence": [],
+        "email_drafts": [],
+        "timeline": [
+          {
+            "id": 18,
+            "occurred_at": "2026-10-16T07:55:31.442Z",
+            "actor_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "event_type": "insight.state_changed",
+            "from_state": null,
+            "to_state": "extracted",
+            "payload": {
+              "run_id": "01M51V974YDZYZPT78847VM67R",
+              "handle": "INS-HXJ7H3"
+            }
+          }
+        ]
+      }
+    },
+    "/api/insights/01M51VB0QJ7TKRJT078VHXJ7H3/evidence": {
+      "status": 200,
+      "body": {
+        "evidence": []
+      }
+    },
+    "/api/insights/01M51VB0QJ7TKRJT078VHXJ7H3/email-drafts": {
+      "status": 200,
+      "body": {
+        "drafts": []
+      }
+    },
+    "/api/insights/01M51VB0QJ7TKRJT078VHXJ7H3/tickets": {
+      "status": 200,
+      "body": []
+    },
+    "/api/insights/01M51VB0QJHS4FBRPEG19Y19GT": {
+      "status": 200,
+      "body": {
+        "id": "01M51VB0QJHS4FBRPEG19Y19GT",
+        "meeting_id": "01M51V974WGS2ANQP8F86PTK9A",
+        "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+        "extraction_run_id": "01M51V974YDZYZPT78847VM67R",
+        "item_type": "complaint",
+        "track": null,
+        "title": "NetSuite export breaks when a cost center is blank, repeat failure for finance",
+        "body_original": "Lena from finance reports the NetSuite export broke twice, both times with the same error, triggered when a cost center field was blank. This hits the finance team directly and has now failed repeatedly, which erodes trust in a core integration they depend on for close. Maya acknowledged it is a known issue already in flight, but the fact it recurred identically means the blank-cost-center edge case needs a real guardrail, not just a patch. As the finance-side stakeholder, Lena's confidence in the export matters for renewal.",
+        "body_current": "Lena from finance reports the NetSuite export broke twice, both times with the same error, triggered when a cost center field was blank. This hits the finance team directly and has now failed repeatedly, which erodes trust in a core integration they depend on for close. Maya acknowledged it is a known issue already in flight, but the fact it recurred identically means the blank-cost-center edge case needs a real guardrail, not just a patch. As the finance-side stakeholder, Lena's confidence in the export matters for renewal.",
+        "state": "extracted",
+        "ai_confidence": "high",
+        "ai_suggested_json": "{\"track\":\"engineering\",\"owner\":\"engineering\",\"assignee\":\"Lena\"}",
+        "assignee_user_id": null,
+        "finalized_by": null,
+        "merged_into_insight_id": null,
+        "priority": 0,
+        "version": 1,
+        "editing_by": null,
+        "editing_at": null,
+        "created_at": "2026-10-16T07:55:31.442Z",
+        "updated_at": "2026-10-16T07:55:31.442Z",
+        "side": "client",
+        "sentiment": "negative",
+        "intent": "get reliable exports into NetSuite for close",
+        "client_name": "Initech",
+        "handle": "INS-9Y19GT",
+        "editing_active": false,
+        "mentions": [
+          {
+            "id": "01M51VB0QJSSTW0SJ6A4ZPXEHY",
+            "meeting_id": "01M51V974WGS2ANQP8F86PTK9A",
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "quote": "the NetSuite export also broke for us twice when a cost center was blank. Same error both times.",
+            "speaker": "Lena",
+            "char_start": 827,
+            "char_end": 923,
+            "created_at": "2026-10-16T07:55:31.442Z",
+            "meeting_date": "2026-10-09",
+            "meeting_seq": 1,
+            "client_name": "Initech"
+          }
+        ],
+        "requesters": [
+          {
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "first_requested_at": "2026-10-16T07:55:31.442Z",
+            "last_requested_at": "2026-10-16T07:55:31.442Z"
+          }
+        ],
+        "tags": [],
+        "tickets": [],
+        "completion_evidence": [],
+        "email_drafts": [],
+        "timeline": [
+          {
+            "id": 19,
+            "occurred_at": "2026-10-16T07:55:31.442Z",
+            "actor_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "event_type": "insight.state_changed",
+            "from_state": null,
+            "to_state": "extracted",
+            "payload": {
+              "run_id": "01M51V974YDZYZPT78847VM67R",
+              "handle": "INS-9Y19GT"
+            }
+          }
+        ]
+      }
+    },
+    "/api/insights/01M51VB0QJHS4FBRPEG19Y19GT/evidence": {
+      "status": 200,
+      "body": {
+        "evidence": []
+      }
+    },
+    "/api/insights/01M51VB0QJHS4FBRPEG19Y19GT/email-drafts": {
+      "status": 200,
+      "body": {
+        "drafts": []
+      }
+    },
+    "/api/insights/01M51VB0QJHS4FBRPEG19Y19GT/tickets": {
+      "status": 200,
+      "body": []
+    },
+    "/api/insights/01M51VB0QJRH1MYYAWJ9JM9K5H": {
+      "status": 200,
+      "body": {
+        "id": "01M51VB0QJRH1MYYAWJ9JM9K5H",
+        "meeting_id": "01M51V974WGS2ANQP8F86PTK9A",
+        "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+        "extraction_run_id": "01M51V974YDZYZPT78847VM67R",
+        "item_type": "action_item_ours",
+        "track": null,
+        "title": "Maya to notify Initech when the NetSuite blank-cost-center export fix ships",
+        "body_original": "Maya confirmed the NetSuite export failure is a known bug currently being fixed and committed to telling Initech as soon as the fix ships. This is an explicit commitment on our side tied to a repeat failure that has damaged finance's trust, so closing the loop promptly matters for the relationship. Letting this slip would compound the frustration of a bug that already recurred twice.",
+        "body_current": "Maya confirmed the NetSuite export failure is a known bug currently being fixed and committed to telling Initech as soon as the fix ships. This is an explicit commitment on our side tied to a repeat failure that has damaged finance's trust, so closing the loop promptly matters for the relationship. Letting this slip would compound the frustration of a bug that already recurred twice.",
+        "state": "extracted",
+        "ai_confidence": "high",
+        "ai_suggested_json": "{\"track\":\"other\",\"owner\":\"customer_success\",\"assignee\":\"Maya\"}",
+        "assignee_user_id": null,
+        "finalized_by": null,
+        "merged_into_insight_id": null,
+        "priority": 0,
+        "version": 1,
+        "editing_by": null,
+        "editing_at": null,
+        "created_at": "2026-10-16T07:55:31.442Z",
+        "updated_at": "2026-10-16T07:55:31.442Z",
+        "side": "ours",
+        "sentiment": "neutral",
+        "intent": "restore finance's confidence in the integration",
+        "client_name": "Initech",
+        "handle": "INS-JM9K5H",
+        "editing_active": false,
+        "mentions": [
+          {
+            "id": "01M51VB0QKHSFTM69H5C5EF7GE",
+            "meeting_id": "01M51V974WGS2ANQP8F86PTK9A",
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "quote": "That one is known, we're fixing it now. I'll tell you as soon as it ships.",
+            "speaker": "Maya",
+            "char_start": 953,
+            "char_end": 1027,
+            "created_at": "2026-10-16T07:55:31.442Z",
+            "meeting_date": "2026-10-09",
+            "meeting_seq": 1,
+            "client_name": "Initech"
+          }
+        ],
+        "requesters": [
+          {
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "first_requested_at": "2026-10-16T07:55:31.442Z",
+            "last_requested_at": "2026-10-16T07:55:31.442Z"
+          }
+        ],
+        "tags": [],
+        "tickets": [],
+        "completion_evidence": [],
+        "email_drafts": [],
+        "timeline": [
+          {
+            "id": 20,
+            "occurred_at": "2026-10-16T07:55:31.443Z",
+            "actor_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "event_type": "insight.state_changed",
+            "from_state": null,
+            "to_state": "extracted",
+            "payload": {
+              "run_id": "01M51V974YDZYZPT78847VM67R",
+              "handle": "INS-JM9K5H"
+            }
+          }
+        ]
+      }
+    },
+    "/api/insights/01M51VB0QJRH1MYYAWJ9JM9K5H/evidence": {
+      "status": 200,
+      "body": {
+        "evidence": []
+      }
+    },
+    "/api/insights/01M51VB0QJRH1MYYAWJ9JM9K5H/email-drafts": {
+      "status": 200,
+      "body": {
+        "drafts": []
+      }
+    },
+    "/api/insights/01M51VB0QJRH1MYYAWJ9JM9K5H/tickets": {
+      "status": 200,
+      "body": []
+    },
+    "/api/insights/01M51VB0QKJ5GSJKC07BXMX608": {
+      "status": 200,
+      "body": {
+        "id": "01M51VB0QKJ5GSJKC07BXMX608",
+        "meeting_id": "01M51V974WGS2ANQP8F86PTK9A",
+        "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+        "extraction_run_id": "01M51V974YDZYZPT78847VM67R",
+        "item_type": "action_item_ours",
+        "track": null,
+        "title": "Maya to send approval-rules setup guide today (second approver over $5k)",
+        "body_original": "Lena asked for the setup guide for approval rules because she wants to add a second approver for anything over $5,000, and Maya committed to sending it today. Beyond the document, the real signal is that Lena is configuring tighter spend controls, so making the guide self-serve-clear supports deeper adoption. Delivering same-day as promised keeps momentum with the finance stakeholder.",
+        "body_current": "Lena asked for the setup guide for approval rules because she wants to add a second approver for anything over $5,000, and Maya committed to sending it today. Beyond the document, the real signal is that Lena is configuring tighter spend controls, so making the guide self-serve-clear supports deeper adoption. Delivering same-day as promised keeps momentum with the finance stakeholder.",
+        "state": "extracted",
+        "ai_confidence": "high",
+        "ai_suggested_json": "{\"track\":\"other\",\"owner\":\"customer_success\",\"assignee\":\"Maya\"}",
+        "assignee_user_id": null,
+        "finalized_by": null,
+        "merged_into_insight_id": null,
+        "priority": 0,
+        "version": 1,
+        "editing_by": null,
+        "editing_at": null,
+        "created_at": "2026-10-16T07:55:31.442Z",
+        "updated_at": "2026-10-16T07:55:31.442Z",
+        "side": "ours",
+        "sentiment": "neutral",
+        "intent": "set up tiered approval controls for large expenses",
+        "client_name": "Initech",
+        "handle": "INS-XMX608",
+        "editing_active": false,
+        "mentions": [
+          {
+            "id": "01M51VB0QKT6AF6RJ39KMDVMAM",
+            "meeting_id": "01M51V974WGS2ANQP8F86PTK9A",
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "quote": "can you send me the setup guide for the approval rules? I want to add a second approver for anything over five thousand.",
+            "speaker": "Lena",
+            "char_start": 1067,
+            "char_end": 1187,
+            "created_at": "2026-10-16T07:55:31.442Z",
+            "meeting_date": "2026-10-09",
+            "meeting_seq": 1,
+            "client_name": "Initech"
+          }
+        ],
+        "requesters": [
+          {
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "first_requested_at": "2026-10-16T07:55:31.442Z",
+            "last_requested_at": "2026-10-16T07:55:31.442Z"
+          }
+        ],
+        "tags": [],
+        "tickets": [],
+        "completion_evidence": [],
+        "email_drafts": [],
+        "timeline": [
+          {
+            "id": 21,
+            "occurred_at": "2026-10-16T07:55:31.443Z",
+            "actor_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "event_type": "insight.state_changed",
+            "from_state": null,
+            "to_state": "extracted",
+            "payload": {
+              "run_id": "01M51V974YDZYZPT78847VM67R",
+              "handle": "INS-XMX608"
+            }
+          }
+        ]
+      }
+    },
+    "/api/insights/01M51VB0QKJ5GSJKC07BXMX608/evidence": {
+      "status": 200,
+      "body": {
+        "evidence": []
+      }
+    },
+    "/api/insights/01M51VB0QKJ5GSJKC07BXMX608/email-drafts": {
+      "status": 200,
+      "body": {
+        "drafts": []
+      }
+    },
+    "/api/insights/01M51VB0QKJ5GSJKC07BXMX608/tickets": {
+      "status": 200,
+      "body": []
+    },
+    "/api/insights/01M51VB0QKTBEME4EGBF60ZPS9": {
+      "status": 200,
+      "body": {
+        "id": "01M51VB0QKTBEME4EGBF60ZPS9",
+        "meeting_id": "01M51V974WGS2ANQP8F86PTK9A",
+        "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+        "extraction_run_id": "01M51V974YDZYZPT78847VM67R",
+        "item_type": "commitment_theirs",
+        "track": null,
+        "title": "Initech will run a formal review at the 90-day mark",
+        "body_original": "Bill said they'll do a proper review at the ninety-day mark, setting an explicit evaluation checkpoint for the account. This matters because the open items raised on this call, Slack noise, mileage fraud, the NetSuite bug, will likely be judged at that review, making it an informal go/no-go on expansion or continued commitment. We should make sure the digest and NetSuite fix are resolved and the mileage request has a roadmap answer before that date.",
+        "body_current": "Bill said they'll do a proper review at the ninety-day mark, setting an explicit evaluation checkpoint for the account. This matters because the open items raised on this call, Slack noise, mileage fraud, the NetSuite bug, will likely be judged at that review, making it an informal go/no-go on expansion or continued commitment. We should make sure the digest and NetSuite fix are resolved and the mileage request has a roadmap answer before that date.",
+        "state": "extracted",
+        "ai_confidence": "medium",
+        "ai_suggested_json": "{\"track\":\"other\",\"owner\":\"customer_success\",\"assignee\":\"Bill\"}",
+        "assignee_user_id": null,
+        "finalized_by": null,
+        "merged_into_insight_id": null,
+        "priority": 0,
+        "version": 1,
+        "editing_by": null,
+        "editing_at": null,
+        "created_at": "2026-10-16T07:55:31.442Z",
+        "updated_at": "2026-10-16T07:55:31.442Z",
+        "side": "client",
+        "sentiment": "neutral",
+        "intent": "evaluate whether Tallyhall is delivering before committing further",
+        "client_name": "Initech",
+        "handle": "INS-60ZPS9",
+        "editing_active": false,
+        "mentions": [
+          {
+            "id": "01M51VB0QK6M0CMHJVGESTFXZ0",
+            "meeting_id": "01M51V974WGS2ANQP8F86PTK9A",
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "quote": "We'll do a proper review at the ninety-day mark.",
+            "speaker": "Bill",
+            "char_start": 1271,
+            "char_end": 1319,
+            "created_at": "2026-10-16T07:55:31.442Z",
+            "meeting_date": "2026-10-09",
+            "meeting_seq": 1,
+            "client_name": "Initech"
+          }
+        ],
+        "requesters": [
+          {
+            "client_id": "01M51V974V2HK6MAAAVKGVDD3Q",
+            "client_name": "Initech",
+            "first_requested_at": "2026-10-16T07:55:31.442Z",
+            "last_requested_at": "2026-10-16T07:55:31.442Z"
+          }
+        ],
+        "tags": [],
+        "tickets": [],
+        "completion_evidence": [],
+        "email_drafts": [],
+        "timeline": [
+          {
+            "id": 22,
+            "occurred_at": "2026-10-16T07:55:31.443Z",
+            "actor_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "event_type": "insight.state_changed",
+            "from_state": null,
+            "to_state": "extracted",
+            "payload": {
+              "run_id": "01M51V974YDZYZPT78847VM67R",
+              "handle": "INS-60ZPS9"
+            }
+          }
+        ]
+      }
+    },
+    "/api/insights/01M51VB0QKTBEME4EGBF60ZPS9/evidence": {
+      "status": 200,
+      "body": {
+        "evidence": []
+      }
+    },
+    "/api/insights/01M51VB0QKTBEME4EGBF60ZPS9/email-drafts": {
+      "status": 200,
+      "body": {
+        "drafts": []
+      }
+    },
+    "/api/insights/01M51VB0QKTBEME4EGBF60ZPS9/tickets": {
+      "status": 200,
+      "body": []
+    },
+    "/api/insights/01M51V974P4RG14EQVNA4HKV6X": {
+      "status": 200,
+      "body": {
+        "id": "01M51V974P4RG14EQVNA4HKV6X",
+        "meeting_id": "01M51V7KPSCA8KXK09MQBFS7VE",
+        "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+        "extraction_run_id": "01M51V7KPTR1JQYDCNRMZWRTFC",
+        "item_type": "feature_request",
+        "track": "engineering",
+        "title": "Entity-level permissions block a 300-seat EU rollout",
+        "body_original": "Globex runs four legal entities, two in the EU, and today spend is visible across all of them. Their German works council will not accept cross-entity visibility, so finance users and approvers in Germany must be scoped to their own entity's spend only. This is a hard gate: the entire EU rollout of roughly 300 seats is blocked until it ships. Given the labour-council requirement, this is a compliance-driven blocker, not a nice-to-have, and it directly gates expansion revenue.",
+        "body_current": "Globex runs four legal entities, two in the EU, and today spend is visible across all of them. Their German works council will not accept cross-entity visibility, so finance users and approvers in Germany must be scoped to their own entity's spend only. This is a hard gate: the entire EU rollout of roughly 300 seats is blocked until it ships. Given the labour-council requirement, this is a compliance-driven blocker, not a nice-to-have, and it directly gates expansion revenue.",
+        "state": "finalized",
+        "ai_confidence": "high",
+        "ai_suggested_json": "{\"track\":\"engineering\",\"owner\":\"product\",\"assignee\":\"Elena\"}",
+        "assignee_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+        "finalized_by": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+        "merged_into_insight_id": null,
+        "priority": 0,
+        "version": 1,
+        "editing_by": null,
+        "editing_at": null,
+        "created_at": "2026-10-16T07:54:32.470Z",
+        "updated_at": "2026-10-16T07:55:31.450Z",
+        "side": "client",
+        "sentiment": "negative",
+        "intent": "satisfy German works council to unblock EU rollout",
+        "client_name": "Globex",
+        "handle": "INS-4HKV6X",
+        "editing_active": false,
+        "mentions": [
+          {
+            "id": "01M51V974QFVYVAPQA19NCRZY5",
+            "meeting_id": "01M51V7KPSCA8KXK09MQBFS7VE",
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "quote": "We have four legal entities, two in the EU, and right now everyone sees everyone's spend. Our German works council will not accept that. We need entity-level permissions before we can roll out to the EU teams.",
+            "speaker": "Elena, Globex",
+            "char_start": 151,
+            "char_end": 360,
+            "created_at": "2026-10-16T07:54:32.470Z",
+            "meeting_date": "2026-10-02",
+            "meeting_seq": 1,
+            "client_name": "Globex"
+          }
+        ],
+        "requesters": [
+          {
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "client_name": "Globex",
+            "first_requested_at": "2026-10-16T07:54:32.470Z",
+            "last_requested_at": "2026-10-16T07:54:32.470Z"
+          }
+        ],
+        "tags": [
+          {
+            "id": "01M51VB0QQ2ER4FQ3PEBDD0F1W",
+            "name": "demo",
+            "kind": "freeform"
+          }
+        ],
+        "tickets": [],
+        "completion_evidence": [],
+        "email_drafts": [],
+        "timeline": [
+          {
+            "id": 9,
+            "occurred_at": "2026-10-16T07:54:32.471Z",
+            "actor_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "event_type": "insight.state_changed",
+            "from_state": null,
+            "to_state": "extracted",
+            "payload": {
+              "run_id": "01M51V7KPTR1JQYDCNRMZWRTFC",
+              "handle": "INS-4HKV6X"
+            }
+          },
+          {
+            "id": 28,
+            "occurred_at": "2026-10-16T07:55:31.449Z",
+            "actor_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "event_type": "insight.state_changed",
+            "from_state": "extracted",
+            "to_state": "triaged",
+            "payload": {
+              "track": "engineering",
+              "assignee_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z"
+            }
+          },
+          {
+            "id": 29,
+            "occurred_at": "2026-10-16T07:55:31.450Z",
+            "actor_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "event_type": "insight.state_changed",
+            "from_state": "triaged",
+            "to_state": "finalized",
+            "payload": null
+          }
+        ]
+      }
+    },
+    "/api/insights/01M51V974P4RG14EQVNA4HKV6X/evidence": {
+      "status": 200,
+      "body": {
+        "evidence": []
+      }
+    },
+    "/api/insights/01M51V974P4RG14EQVNA4HKV6X/email-drafts": {
+      "status": 200,
+      "body": {
+        "drafts": []
+      }
+    },
+    "/api/insights/01M51V974P4RG14EQVNA4HKV6X/tickets": {
+      "status": 200,
+      "body": []
+    },
+    "/api/insights/01M51V974QJNV35FKTD1EG2BBX": {
+      "status": 200,
+      "body": {
+        "id": "01M51V974QJNV35FKTD1EG2BBX",
+        "meeting_id": "01M51V7KPSCA8KXK09MQBFS7VE",
+        "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+        "extraction_run_id": "01M51V7KPTR1JQYDCNRMZWRTFC",
+        "item_type": "key_insight",
+        "track": null,
+        "title": "Account churned-shopped over entity issue; renewal hinges on a date",
+        "body_original": "Elena disclosed they evaluated a competitor last quarter specifically because of the missing entity permissions, and stayed only because Tallyhall's approvals are stronger. She now explicitly needs a committed delivery date for entity permissions to justify keeping that decision internally. This turns the feature gap into an active retention and competitive risk, not just a roadmap request. Without a credible date next week, the account is a live flight risk despite preferring our product.",
+        "body_current": "Elena disclosed they evaluated a competitor last quarter specifically because of the missing entity permissions, and stayed only because Tallyhall's approvals are stronger. She now explicitly needs a committed delivery date for entity permissions to justify keeping that decision internally. This turns the feature gap into an active retention and competitive risk, not just a roadmap request. Without a credible date next week, the account is a live flight risk despite preferring our product.",
+        "state": "extracted",
+        "ai_confidence": "high",
+        "ai_suggested_json": "{\"track\":\"other\",\"owner\":\"leadership\",\"assignee\":\"Elena\"}",
+        "assignee_user_id": null,
+        "finalized_by": null,
+        "merged_into_insight_id": null,
+        "priority": 0,
+        "version": 1,
+        "editing_by": null,
+        "editing_at": null,
+        "created_at": "2026-10-16T07:54:32.470Z",
+        "updated_at": "2026-10-16T07:54:32.470Z",
+        "side": "client",
+        "sentiment": "mixed",
+        "intent": "defend her decision to stay with us internally",
+        "client_name": "Globex",
+        "handle": "INS-EG2BBX",
+        "editing_active": false,
+        "mentions": [
+          {
+            "id": "01M51V974QG7EDG44FZC27052N",
+            "meeting_id": "01M51V7KPSCA8KXK09MQBFS7VE",
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "quote": "And I'll be honest, we looked at a competitor last quarter because of the entity issue. We stayed because your approvals are better, but I need a date for entity permissions to keep that decision.",
+            "speaker": "Elena, Globex",
+            "char_start": 954,
+            "char_end": 1150,
+            "created_at": "2026-10-16T07:54:32.470Z",
+            "meeting_date": "2026-10-02",
+            "meeting_seq": 1,
+            "client_name": "Globex"
+          }
+        ],
+        "requesters": [
+          {
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "client_name": "Globex",
+            "first_requested_at": "2026-10-16T07:54:32.470Z",
+            "last_requested_at": "2026-10-16T07:54:32.470Z"
+          }
+        ],
+        "tags": [],
+        "tickets": [],
+        "completion_evidence": [],
+        "email_drafts": [],
+        "timeline": [
+          {
+            "id": 10,
+            "occurred_at": "2026-10-16T07:54:32.471Z",
+            "actor_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "event_type": "insight.state_changed",
+            "from_state": null,
+            "to_state": "extracted",
+            "payload": {
+              "run_id": "01M51V7KPTR1JQYDCNRMZWRTFC",
+              "handle": "INS-EG2BBX"
+            }
+          }
+        ]
+      }
+    },
+    "/api/insights/01M51V974QJNV35FKTD1EG2BBX/evidence": {
+      "status": 200,
+      "body": {
+        "evidence": []
+      }
+    },
+    "/api/insights/01M51V974QJNV35FKTD1EG2BBX/email-drafts": {
+      "status": 200,
+      "body": {
+        "drafts": []
+      }
+    },
+    "/api/insights/01M51V974QJNV35FKTD1EG2BBX/tickets": {
+      "status": 200,
+      "body": []
+    },
+    "/api/insights/01M51V974QDFJYWSQV8AY06JG9": {
+      "status": 200,
+      "body": {
+        "id": "01M51V974QDFJYWSQV8AY06JG9",
+        "meeting_id": "01M51V7KPSCA8KXK09MQBFS7VE",
+        "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+        "extraction_run_id": "01M51V7KPTR1JQYDCNRMZWRTFC",
+        "item_type": "complaint",
+        "track": null,
+        "title": "Receipt scanner misreads totals ~1 in 10 for field-team photos",
+        "body_original": "Tom reports that their field team photographs receipts in poor lighting and the OCR scanner reads the totals wrong roughly one time in ten. The errors then fall to finance to catch manually, creating a trust and workload problem at scale. A 10% error rate on totals undermines confidence in automated capture, which is a core value proposition. Tom is sending 20 of the worst examples to help diagnose, so there is concrete data to act on.",
+        "body_current": "Tom reports that their field team photographs receipts in poor lighting and the OCR scanner reads the totals wrong roughly one time in ten. The errors then fall to finance to catch manually, creating a trust and workload problem at scale. A 10% error rate on totals undermines confidence in automated capture, which is a core value proposition. Tom is sending 20 of the worst examples to help diagnose, so there is concrete data to act on.",
+        "state": "extracted",
+        "ai_confidence": "high",
+        "ai_suggested_json": "{\"track\":\"engineering\",\"owner\":\"engineering\",\"assignee\":\"Tom\"}",
+        "assignee_user_id": null,
+        "finalized_by": null,
+        "merged_into_insight_id": null,
+        "priority": 0,
+        "version": 1,
+        "editing_by": null,
+        "editing_at": null,
+        "created_at": "2026-10-16T07:54:32.470Z",
+        "updated_at": "2026-10-16T07:54:32.470Z",
+        "side": "client",
+        "sentiment": "negative",
+        "intent": "reduce manual finance rework from bad OCR",
+        "client_name": "Globex",
+        "handle": "INS-Y06JG9",
+        "editing_active": false,
+        "mentions": [
+          {
+            "id": "01M51V974QKDMXA08TVNBPCRFS",
+            "meeting_id": "01M51V7KPSCA8KXK09MQBFS7VE",
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "quote": "Our field team photographs receipts in bad light and the scanner reads the totals wrong maybe one time in ten. Then finance has to catch it.",
+            "speaker": "Tom, Globex",
+            "char_start": 641,
+            "char_end": 781,
+            "created_at": "2026-10-16T07:54:32.470Z",
+            "meeting_date": "2026-10-02",
+            "meeting_seq": 1,
+            "client_name": "Globex"
+          }
+        ],
+        "requesters": [
+          {
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "client_name": "Globex",
+            "first_requested_at": "2026-10-16T07:54:32.470Z",
+            "last_requested_at": "2026-10-16T07:54:32.470Z"
+          }
+        ],
+        "tags": [],
+        "tickets": [],
+        "completion_evidence": [],
+        "email_drafts": [],
+        "timeline": [
+          {
+            "id": 11,
+            "occurred_at": "2026-10-16T07:54:32.471Z",
+            "actor_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "event_type": "insight.state_changed",
+            "from_state": null,
+            "to_state": "extracted",
+            "payload": {
+              "run_id": "01M51V7KPTR1JQYDCNRMZWRTFC",
+              "handle": "INS-Y06JG9"
+            }
+          }
+        ]
+      }
+    },
+    "/api/insights/01M51V974QDFJYWSQV8AY06JG9/evidence": {
+      "status": 200,
+      "body": {
+        "evidence": []
+      }
+    },
+    "/api/insights/01M51V974QDFJYWSQV8AY06JG9/email-drafts": {
+      "status": 200,
+      "body": {
+        "drafts": []
+      }
+    },
+    "/api/insights/01M51V974QDFJYWSQV8AY06JG9/tickets": {
+      "status": 200,
+      "body": []
+    },
+    "/api/insights/01M51V974Q278AM6YGH8V56JH9": {
+      "status": 200,
+      "body": {
+        "id": "01M51V974Q278AM6YGH8V56JH9",
+        "meeting_id": "01M51V7KPSCA8KXK09MQBFS7VE",
+        "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+        "extraction_run_id": "01M51V7KPTR1JQYDCNRMZWRTFC",
+        "item_type": "feature_request",
+        "track": null,
+        "title": "Mobile approvals need the receipt visible on-screen",
+        "body_original": "Elena raised that their managers approve expenses from their phones but cannot see the receipt while doing so, which she calls a problem. Approving blind forces managers either to defer approvals or rubber-stamp without verification. Sam noted they are not the first to ask, signaling repeat demand across the base and a likely high-leverage roadmap item. Solving it would make mobile approval a trustworthy daily habit rather than a workaround.",
+        "body_current": "Elena raised that their managers approve expenses from their phones but cannot see the receipt while doing so, which she calls a problem. Approving blind forces managers either to defer approvals or rubber-stamp without verification. Sam noted they are not the first to ask, signaling repeat demand across the base and a likely high-leverage roadmap item. Solving it would make mobile approval a trustworthy daily habit rather than a workaround.",
+        "state": "extracted",
+        "ai_confidence": "high",
+        "ai_suggested_json": "{\"track\":\"engineering\",\"owner\":\"product\",\"assignee\":\"Elena\"}",
+        "assignee_user_id": null,
+        "finalized_by": null,
+        "merged_into_insight_id": null,
+        "priority": 0,
+        "version": 1,
+        "editing_by": null,
+        "editing_at": null,
+        "created_at": "2026-10-16T07:54:32.470Z",
+        "updated_at": "2026-10-16T07:54:32.470Z",
+        "side": "client",
+        "sentiment": "negative",
+        "intent": "let managers verify before approving on mobile",
+        "client_name": "Globex",
+        "handle": "INS-V56JH9",
+        "editing_active": false,
+        "mentions": [
+          {
+            "id": "01M51V974RE741ZARX73EQA2DP",
+            "meeting_id": "01M51V7KPSCA8KXK09MQBFS7VE",
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "quote": "Also, on the mobile side, approving from a phone without seeing the receipt is a problem for our managers too.",
+            "speaker": "Elena, Globex",
+            "char_start": 1264,
+            "char_end": 1374,
+            "created_at": "2026-10-16T07:54:32.470Z",
+            "meeting_date": "2026-10-02",
+            "meeting_seq": 1,
+            "client_name": "Globex"
+          }
+        ],
+        "requesters": [
+          {
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "client_name": "Globex",
+            "first_requested_at": "2026-10-16T07:54:32.470Z",
+            "last_requested_at": "2026-10-16T07:54:32.470Z"
+          }
+        ],
+        "tags": [],
+        "tickets": [],
+        "completion_evidence": [],
+        "email_drafts": [],
+        "timeline": [
+          {
+            "id": 12,
+            "occurred_at": "2026-10-16T07:54:32.472Z",
+            "actor_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "event_type": "insight.state_changed",
+            "from_state": null,
+            "to_state": "extracted",
+            "payload": {
+              "run_id": "01M51V7KPTR1JQYDCNRMZWRTFC",
+              "handle": "INS-V56JH9"
+            }
+          }
+        ]
+      }
+    },
+    "/api/insights/01M51V974Q278AM6YGH8V56JH9/evidence": {
+      "status": 200,
+      "body": {
+        "evidence": []
+      }
+    },
+    "/api/insights/01M51V974Q278AM6YGH8V56JH9/email-drafts": {
+      "status": 200,
+      "body": {
+        "drafts": []
+      }
+    },
+    "/api/insights/01M51V974Q278AM6YGH8V56JH9/tickets": {
+      "status": 200,
+      "body": []
+    },
+    "/api/insights/01M51V974RE2AQQPGED2MBDQPB": {
+      "status": 200,
+      "body": {
+        "id": "01M51V974RE2AQQPGED2MBDQPB",
+        "meeting_id": "01M51V7KPSCA8KXK09MQBFS7VE",
+        "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+        "extraction_run_id": "01M51V7KPTR1JQYDCNRMZWRTFC",
+        "item_type": "commitment_theirs",
+        "track": null,
+        "title": "Tom to send 20 worst misread receipts by Friday",
+        "body_original": "Tom committed to sending over twenty of the worst-case receipt images where the scanner misread totals, by Friday. This gives engineering concrete failure samples to reproduce and tune the OCR against. It is a clear client-side commitment with a deadline, so we should be ready to receive and triage them promptly to keep momentum on the scanner complaint.",
+        "body_current": "Tom committed to sending over twenty of the worst-case receipt images where the scanner misread totals, by Friday. This gives engineering concrete failure samples to reproduce and tune the OCR against. It is a clear client-side commitment with a deadline, so we should be ready to receive and triage them promptly to keep momentum on the scanner complaint.",
+        "state": "extracted",
+        "ai_confidence": "high",
+        "ai_suggested_json": "{\"track\":\"engineering\",\"owner\":\"engineering\",\"assignee\":\"Tom\"}",
+        "assignee_user_id": null,
+        "finalized_by": null,
+        "merged_into_insight_id": null,
+        "priority": 0,
+        "version": 1,
+        "editing_by": null,
+        "editing_at": null,
+        "created_at": "2026-10-16T07:54:32.470Z",
+        "updated_at": "2026-10-16T07:54:32.470Z",
+        "side": "client",
+        "sentiment": "neutral",
+        "intent": "help us fix the OCR errors they face",
+        "client_name": "Globex",
+        "handle": "INS-MBDQPB",
+        "editing_active": false,
+        "mentions": [
+          {
+            "id": "01M51V974RXT450DB290GZPH3Y",
+            "meeting_id": "01M51V7KPSCA8KXK09MQBFS7VE",
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "quote": "I'll send you twenty of the worst ones by Friday.",
+            "speaker": "Tom, Globex",
+            "char_start": 877,
+            "char_end": 926,
+            "created_at": "2026-10-16T07:54:32.470Z",
+            "meeting_date": "2026-10-02",
+            "meeting_seq": 1,
+            "client_name": "Globex"
+          }
+        ],
+        "requesters": [
+          {
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "client_name": "Globex",
+            "first_requested_at": "2026-10-16T07:54:32.470Z",
+            "last_requested_at": "2026-10-16T07:54:32.470Z"
+          }
+        ],
+        "tags": [],
+        "tickets": [],
+        "completion_evidence": [],
+        "email_drafts": [],
+        "timeline": [
+          {
+            "id": 13,
+            "occurred_at": "2026-10-16T07:54:32.472Z",
+            "actor_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "event_type": "insight.state_changed",
+            "from_state": null,
+            "to_state": "extracted",
+            "payload": {
+              "run_id": "01M51V7KPTR1JQYDCNRMZWRTFC",
+              "handle": "INS-MBDQPB"
+            }
+          }
+        ]
+      }
+    },
+    "/api/insights/01M51V974RE2AQQPGED2MBDQPB/evidence": {
+      "status": 200,
+      "body": {
+        "evidence": []
+      }
+    },
+    "/api/insights/01M51V974RE2AQQPGED2MBDQPB/email-drafts": {
+      "status": 200,
+      "body": {
+        "drafts": []
+      }
+    },
+    "/api/insights/01M51V974RE2AQQPGED2MBDQPB/tickets": {
+      "status": 200,
+      "body": []
+    },
+    "/api/insights/01M51V974RC1B033JNN6DBE28K": {
+      "status": 200,
+      "body": {
+        "id": "01M51V974RC1B033JNN6DBE28K",
+        "meeting_id": "01M51V7KPSCA8KXK09MQBFS7VE",
+        "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+        "extraction_run_id": "01M51V7KPTR1JQYDCNRMZWRTFC",
+        "item_type": "action_item_ours",
+        "track": null,
+        "title": "Sam to return with an entity-permissions date from product next week",
+        "body_original": "Sam committed to come back to Elena next week with a delivery date for entity-level permissions, sourced from product. This is the explicit ask tied to the competitive/retention risk Elena raised, so the commitment carries real weight. Missing it would reinforce the churn risk, since Elena said she needs the date to justify staying. Product needs to be engaged immediately to produce a credible, defensible date.",
+        "body_current": "Sam committed to come back to Elena next week with a delivery date for entity-level permissions, sourced from product. This is the explicit ask tied to the competitive/retention risk Elena raised, so the commitment carries real weight. Missing it would reinforce the churn risk, since Elena said she needs the date to justify staying. Product needs to be engaged immediately to produce a credible, defensible date.",
+        "state": "extracted",
+        "ai_confidence": "high",
+        "ai_suggested_json": "{\"track\":\"other\",\"owner\":\"customer_success\",\"assignee\":\"Sam\"}",
+        "assignee_user_id": null,
+        "finalized_by": null,
+        "merged_into_insight_id": null,
+        "priority": 0,
+        "version": 1,
+        "editing_by": null,
+        "editing_at": null,
+        "created_at": "2026-10-16T07:54:32.470Z",
+        "updated_at": "2026-10-16T07:54:32.470Z",
+        "side": "ours",
+        "sentiment": "neutral",
+        "intent": "give the client a date to retain the account",
+        "client_name": "Globex",
+        "handle": "INS-DBE28K",
+        "editing_active": false,
+        "mentions": [
+          {
+            "id": "01M51V974RSZ6BZNCZAY7X8YW0",
+            "meeting_id": "01M51V7KPSCA8KXK09MQBFS7VE",
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "quote": "I'll come back to you with a date from product next week.",
+            "speaker": "Sam, Tallyhall",
+            "char_start": 1179,
+            "char_end": 1236,
+            "created_at": "2026-10-16T07:54:32.470Z",
+            "meeting_date": "2026-10-02",
+            "meeting_seq": 1,
+            "client_name": "Globex"
+          }
+        ],
+        "requesters": [
+          {
+            "client_id": "01M51V7KPRNCWBS23Z4AA2FWDJ",
+            "client_name": "Globex",
+            "first_requested_at": "2026-10-16T07:54:32.470Z",
+            "last_requested_at": "2026-10-16T07:54:32.470Z"
+          }
+        ],
+        "tags": [],
+        "tickets": [],
+        "completion_evidence": [],
+        "email_drafts": [],
+        "timeline": [
+          {
+            "id": 14,
+            "occurred_at": "2026-10-16T07:54:32.472Z",
+            "actor_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "event_type": "insight.state_changed",
+            "from_state": null,
+            "to_state": "extracted",
+            "payload": {
+              "run_id": "01M51V7KPTR1JQYDCNRMZWRTFC",
+              "handle": "INS-DBE28K"
+            }
+          }
+        ]
+      }
+    },
+    "/api/insights/01M51V974RC1B033JNN6DBE28K/evidence": {
+      "status": 200,
+      "body": {
+        "evidence": []
+      }
+    },
+    "/api/insights/01M51V974RC1B033JNN6DBE28K/email-drafts": {
+      "status": 200,
+      "body": {
+        "drafts": []
+      }
+    },
+    "/api/insights/01M51V974RC1B033JNN6DBE28K/tickets": {
+      "status": 200,
+      "body": []
+    },
+    "/api/insights/01M51V7KPMHW9WXD130EYNTJR1": {
+      "status": 200,
+      "body": {
+        "id": "01M51V7KPMHW9WXD130EYNTJR1",
+        "meeting_id": "01M51V62JYPFSDA5JAZ74V9FTA",
+        "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+        "extraction_run_id": "01M51V62K3HFHW4CWGCXPZ74PT",
+        "item_type": "feature_request",
+        "track": "product_polish",
+        "title": "Mobile receipt preview in approval notification is the lever on their month-end close",
+        "body_original": "Acme's regional managers approve expenses from their phones, but the approval screen shows only a total with no way to see the receipt image without opening a laptop, so they defer approvals until Monday. Jordan believes showing the receipt image directly in the approval notification would cut two days off close. This is the exact metric his CFO is judging the account on, so this single capability carries the ROI case tied to their March renewal. Solving it would also convert twelve regional managers into daily mobile approvers, deepening adoption and retention.",
+        "body_current": "Acme's regional managers approve expenses from their phones, but the approval screen shows only a total with no way to see the receipt image without opening a laptop, so they defer approvals until Monday. Jordan believes showing the receipt image directly in the approval notification would cut two days off close. This is the exact metric his CFO is judging the account on, so this single capability carries the ROI case tied to their March renewal. Solving it would also convert twelve regional managers into daily mobile approvers, deepening adoption and retention.",
+        "state": "finalized",
+        "ai_confidence": "high",
+        "ai_suggested_json": "{\"track\":\"engineering\",\"owner\":\"product\",\"assignee\":null}",
+        "assignee_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+        "finalized_by": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+        "merged_into_insight_id": null,
+        "priority": 0,
+        "version": 1,
+        "editing_by": null,
+        "editing_at": null,
+        "created_at": "2026-10-16T07:53:39.796Z",
+        "updated_at": "2026-10-16T07:55:31.449Z",
+        "side": "client",
+        "sentiment": "neutral",
+        "intent": "prove ROI to their CFO before March renewal",
+        "client_name": "Acme Corp",
+        "handle": "INS-YNTJR1",
+        "editing_active": false,
+        "mentions": [
+          {
+            "id": "01M51V7KPMXHJ9VSR3NVNPD8SE",
+            "meeting_id": "01M51V62JYPFSDA5JAZ74V9FTA",
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "quote": "If they could see the receipt image right in the approval notification, I think we'd cut two days off close. That's the number my CFO cares about.",
+            "speaker": "Jordan, Acme",
+            "char_start": 498,
+            "char_end": 644,
+            "created_at": "2026-10-16T07:53:39.796Z",
+            "meeting_date": "2026-09-25",
+            "meeting_seq": 1,
+            "client_name": "Acme Corp"
+          }
+        ],
+        "requesters": [
+          {
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "client_name": "Acme Corp",
+            "first_requested_at": "2026-10-16T07:53:39.796Z",
+            "last_requested_at": "2026-10-16T07:53:39.796Z"
+          }
+        ],
+        "tags": [
+          {
+            "id": "01M51VB0QQ2ER4FQ3PEBDD0F1W",
+            "name": "demo",
+            "kind": "freeform"
+          }
+        ],
+        "tickets": [],
+        "completion_evidence": [],
+        "email_drafts": [],
+        "timeline": [
+          {
+            "id": 2,
+            "occurred_at": "2026-10-16T07:53:39.797Z",
+            "actor_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "event_type": "insight.state_changed",
+            "from_state": null,
+            "to_state": "extracted",
+            "payload": {
+              "run_id": "01M51V62K3HFHW4CWGCXPZ74PT",
+              "handle": "INS-YNTJR1"
+            }
+          },
+          {
+            "id": 26,
+            "occurred_at": "2026-10-16T07:55:31.449Z",
+            "actor_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "event_type": "insight.state_changed",
+            "from_state": "extracted",
+            "to_state": "triaged",
+            "payload": {
+              "track": "product_polish",
+              "assignee_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z"
+            }
+          },
+          {
+            "id": 27,
+            "occurred_at": "2026-10-16T07:55:31.449Z",
+            "actor_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "event_type": "insight.state_changed",
+            "from_state": "triaged",
+            "to_state": "finalized",
+            "payload": null
+          }
+        ]
+      }
+    },
+    "/api/insights/01M51V7KPMHW9WXD130EYNTJR1/evidence": {
+      "status": 200,
+      "body": {
+        "evidence": []
+      }
+    },
+    "/api/insights/01M51V7KPMHW9WXD130EYNTJR1/email-drafts": {
+      "status": 200,
+      "body": {
+        "drafts": []
+      }
+    },
+    "/api/insights/01M51V7KPMHW9WXD130EYNTJR1/tickets": {
+      "status": 200,
+      "body": []
+    },
+    "/api/insights/01M51V7KPNZTXJKWCMRMJ1WWKQ": {
+      "status": 200,
+      "body": {
+        "id": "01M51V7KPNZTXJKWCMRMJ1WWKQ",
+        "meeting_id": "01M51V62JYPFSDA5JAZ74V9FTA",
+        "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+        "extraction_run_id": "01M51V62K3HFHW4CWGCXPZ74PT",
+        "item_type": "complaint",
+        "track": "engineering",
+        "title": "NetSuite CSV export drops empty cost center column, failing the entire import",
+        "body_original": "Priya reports that the CSV export to NetSuite drops the cost center column whenever it is empty, which causes the import to fail for the whole file. Her team fixes this by hand every close, roughly forty minutes each month. Crucially, she framed it as the kind of recurring friction that makes their controller question why they are paying for Tallyhall, a trust and value-perception risk heading into a renewal where ROI is already under scrutiny. Maya classified it as a bug and committed engineering to it this week.",
+        "body_current": "Priya reports that the CSV export to NetSuite drops the cost center column whenever it is empty, which causes the import to fail for the whole file. Her team fixes this by hand every close, roughly forty minutes each month. Crucially, she framed it as the kind of recurring friction that makes their controller question why they are paying for Tallyhall, a trust and value-perception risk heading into a renewal where ROI is already under scrutiny. Maya classified it as a bug and committed engineering to it this week.",
+        "state": "client_notified",
+        "ai_confidence": "high",
+        "ai_suggested_json": "{\"track\":\"engineering\",\"owner\":\"engineering\",\"assignee\":null}",
+        "assignee_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+        "finalized_by": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+        "merged_into_insight_id": null,
+        "priority": 0,
+        "version": 1,
+        "editing_by": null,
+        "editing_at": null,
+        "created_at": "2026-10-16T07:53:39.796Z",
+        "updated_at": "2026-10-16T07:55:53.076Z",
+        "side": "client",
+        "sentiment": "negative",
+        "intent": "stop manual rework and justify the spend to their controller",
+        "client_name": "Acme Corp",
+        "handle": "INS-J1WWKQ",
+        "editing_active": false,
+        "mentions": [
+          {
+            "id": "01M51V7KPN3CNDYWERS7V47GSC",
+            "meeting_id": "01M51V62JYPFSDA5JAZ74V9FTA",
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "quote": "That's a bug, not a feature request. I'll get engineering on it this week.",
+            "speaker": "Maya, Tallyhall",
+            "char_start": 870,
+            "char_end": 944,
+            "created_at": "2026-10-16T07:53:39.796Z",
+            "meeting_date": "2026-09-25",
+            "meeting_seq": 1,
+            "client_name": "Acme Corp"
+          },
+          {
+            "id": "01M51V7KPNSKDX265P7P5RYJTD",
+            "meeting_id": "01M51V62JYPFSDA5JAZ74V9FTA",
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "quote": "The CSV export to NetSuite drops the cost center column when it's empty, and then the import fails for the whole file. We fix it by hand every month.",
+            "speaker": "Priya, Acme",
+            "char_start": 691,
+            "char_end": 840,
+            "created_at": "2026-10-16T07:53:39.796Z",
+            "meeting_date": "2026-09-25",
+            "meeting_seq": 1,
+            "client_name": "Acme Corp"
+          }
+        ],
+        "requesters": [
+          {
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "client_name": "Acme Corp",
+            "first_requested_at": "2026-10-16T07:53:39.796Z",
+            "last_requested_at": "2026-10-16T07:53:39.796Z"
+          }
+        ],
+        "tags": [
+          {
+            "id": "01M51VB0QQ2ER4FQ3PEBDD0F1W",
+            "name": "demo",
+            "kind": "freeform"
+          }
+        ],
+        "tickets": [],
+        "completion_evidence": [
+          {
+            "id": "01M51VBFQV04YCZVGTRB6A3RJ6",
+            "insight_id": "01M51V7KPNZTXJKWCMRMJ1WWKQ",
+            "kind": "release_match",
+            "ref_match_id": "01M51VBB5BBD31J1ZXDHC8R7Y2",
+            "url": null,
+            "url_verified_at": null,
+            "asset_id": null,
+            "confidence": 100,
+            "status": "confirmed",
+            "attested_by": null,
+            "confirmed_by": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "confirmed_at": "2026-10-16T07:55:46.811Z",
+            "created_at": "2026-10-16T07:55:46.811Z"
+          }
+        ],
+        "email_drafts": [
+          {
+            "id": "01M51VBNVHEBJ972CK9MC1CTE8",
+            "insight_id": "01M51V7KPNZTXJKWCMRMJ1WWKQ",
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "contact_id": null,
+            "subject": "The NetSuite cost center bug is fixed",
+            "body_md": "Hi Priya,\n\nOn 2026-09-25 you told us, \"The CSV export to NetSuite drops the cost center column when it's empty, and then the import fails for the whole file. We fix it by hand every month.\"\n\nThat's fixed. The change shipped in v2.4.0 on 2026-10-16.\n\nThe export now keeps the cost center column even when it's empty, so your NetSuite import no longer fails and your team gets back the forty minutes each close.\n\nWant to see it in action, or have a question? Just reply and I'll walk you through it.\n\nBest,\n{sender}",
+            "generated_by": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "version": 1,
+            "superseded_by_id": null,
+            "sent_confirmed_at": null,
+            "sent_final_text": null,
+            "created_at": "2026-10-16T07:55:53.073Z"
+          }
+        ],
+        "timeline": [
+          {
+            "id": 3,
+            "occurred_at": "2026-10-16T07:53:39.797Z",
+            "actor_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "event_type": "insight.state_changed",
+            "from_state": null,
+            "to_state": "extracted",
+            "payload": {
+              "run_id": "01M51V62K3HFHW4CWGCXPZ74PT",
+              "handle": "INS-J1WWKQ"
+            }
+          },
+          {
+            "id": 24,
+            "occurred_at": "2026-10-16T07:55:31.448Z",
+            "actor_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "event_type": "insight.state_changed",
+            "from_state": "extracted",
+            "to_state": "triaged",
+            "payload": {
+              "track": "engineering",
+              "assignee_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z"
+            }
+          },
+          {
+            "id": 25,
+            "occurred_at": "2026-10-16T07:55:31.448Z",
+            "actor_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "event_type": "insight.state_changed",
+            "from_state": "triaged",
+            "to_state": "finalized",
+            "payload": null
+          },
+          {
+            "id": 35,
+            "occurred_at": "2026-10-16T07:55:46.811Z",
+            "actor_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "event_type": "insight.state_changed",
+            "from_state": "finalized",
+            "to_state": "shipped",
+            "payload": {
+              "evidence_id": "01M51VBFQV04YCZVGTRB6A3RJ6",
+              "evidence_kind": "release_match",
+              "match_id": "01M51VBB5BBD31J1ZXDHC8R7Y2"
+            }
+          },
+          {
+            "id": 38,
+            "occurred_at": "2026-10-16T07:55:53.075Z",
+            "actor_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "event_type": "insight.state_changed",
+            "from_state": "shipped",
+            "to_state": "client_notified",
+            "payload": {
+              "email_draft_id": "01M51VBNVHEBJ972CK9MC1CTE8",
+              "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V"
+            }
+          }
+        ]
+      }
+    },
+    "/api/insights/01M51V7KPNZTXJKWCMRMJ1WWKQ/evidence": {
+      "status": 200,
+      "body": {
+        "evidence": [
+          {
+            "id": "01M51VBFQV04YCZVGTRB6A3RJ6",
+            "insight_id": "01M51V7KPNZTXJKWCMRMJ1WWKQ",
+            "kind": "release_match",
+            "ref_match_id": "01M51VBB5BBD31J1ZXDHC8R7Y2",
+            "url": null,
+            "url_verified_at": null,
+            "asset_id": null,
+            "confidence": 100,
+            "status": "confirmed",
+            "attested_by": null,
+            "confirmed_by": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "confirmed_at": "2026-10-16T07:55:46.811Z",
+            "created_at": "2026-10-16T07:55:46.811Z"
+          }
+        ]
+      }
+    },
+    "/api/insights/01M51V7KPNZTXJKWCMRMJ1WWKQ/email-drafts": {
+      "status": 200,
+      "body": {
+        "drafts": [
+          {
+            "id": "01M51VBNVHEBJ972CK9MC1CTE8",
+            "insight_id": "01M51V7KPNZTXJKWCMRMJ1WWKQ",
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "contact_id": null,
+            "subject": "The NetSuite cost center bug is fixed",
+            "body_md": "Hi Priya,\n\nOn 2026-09-25 you told us, \"The CSV export to NetSuite drops the cost center column when it's empty, and then the import fails for the whole file. We fix it by hand every month.\"\n\nThat's fixed. The change shipped in v2.4.0 on 2026-10-16.\n\nThe export now keeps the cost center column even when it's empty, so your NetSuite import no longer fails and your team gets back the forty minutes each close.\n\nWant to see it in action, or have a question? Just reply and I'll walk you through it.\n\nBest,\n{sender}",
+            "generated_by": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "version": 1,
+            "superseded_by_id": null,
+            "sent_confirmed_at": null,
+            "sent_final_text": null,
+            "created_at": "2026-10-16T07:55:53.073Z"
+          }
+        ]
+      }
+    },
+    "/api/insights/01M51V7KPNZTXJKWCMRMJ1WWKQ/tickets": {
+      "status": 200,
+      "body": []
+    },
+    "/api/insights/01M51V7KPNNTGMN28V31EQ976P": {
+      "status": 200,
+      "body": {
+        "id": "01M51V7KPNNTGMN28V31EQ976P",
+        "meeting_id": "01M51V62JYPFSDA5JAZ74V9FTA",
+        "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+        "extraction_run_id": "01M51V62K3HFHW4CWGCXPZ74PT",
+        "item_type": "key_insight",
+        "track": null,
+        "title": "Up for renewal in March with CFO demanding an ROI case",
+        "body_original": "Jordan confirmed Acme is up for renewal in March and, while he says he is not shopping around, his CFO has asked him to show ROI this time, specifically time saved. This raises the stakes on both the mobile receipt preview (his stated two-days-saved metric) and the NetSuite export bug (which undermines perceived value with their controller). The renewal is winnable but conditional on us arming Jordan with hard ROI evidence. Treat every open item on this account as renewal-critical through March.",
+        "body_current": "Jordan confirmed Acme is up for renewal in March and, while he says he is not shopping around, his CFO has asked him to show ROI this time, specifically time saved. This raises the stakes on both the mobile receipt preview (his stated two-days-saved metric) and the NetSuite export bug (which undermines perceived value with their controller). The renewal is winnable but conditional on us arming Jordan with hard ROI evidence. Treat every open item on this account as renewal-critical through March.",
+        "state": "extracted",
+        "ai_confidence": "high",
+        "ai_suggested_json": "{\"track\":\"other\",\"owner\":\"customer_success\",\"assignee\":\"Jordan\"}",
+        "assignee_user_id": null,
+        "finalized_by": null,
+        "merged_into_insight_id": null,
+        "priority": 0,
+        "version": 1,
+        "editing_by": null,
+        "editing_at": null,
+        "created_at": "2026-10-16T07:53:39.796Z",
+        "updated_at": "2026-10-16T07:53:39.796Z",
+        "side": "client",
+        "sentiment": "mixed",
+        "intent": "secure internal buy-in to renew",
+        "client_name": "Acme Corp",
+        "handle": "INS-EQ976P",
+        "editing_active": false,
+        "mentions": [
+          {
+            "id": "01M51V7KPNCGQ8NN58NFQMHD3V",
+            "meeting_id": "01M51V62JYPFSDA5JAZ74V9FTA",
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "quote": "we're up for renewal in March. I'm not shopping around, but our CFO asked me to show the ROI this time, so anything you can give me on time saved would help me make the case.",
+            "speaker": "Jordan, Acme",
+            "char_start": 1143,
+            "char_end": 1317,
+            "created_at": "2026-10-16T07:53:39.796Z",
+            "meeting_date": "2026-09-25",
+            "meeting_seq": 1,
+            "client_name": "Acme Corp"
+          }
+        ],
+        "requesters": [
+          {
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "client_name": "Acme Corp",
+            "first_requested_at": "2026-10-16T07:53:39.796Z",
+            "last_requested_at": "2026-10-16T07:53:39.796Z"
+          }
+        ],
+        "tags": [],
+        "tickets": [],
+        "completion_evidence": [],
+        "email_drafts": [],
+        "timeline": [
+          {
+            "id": 4,
+            "occurred_at": "2026-10-16T07:53:39.797Z",
+            "actor_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "event_type": "insight.state_changed",
+            "from_state": null,
+            "to_state": "extracted",
+            "payload": {
+              "run_id": "01M51V62K3HFHW4CWGCXPZ74PT",
+              "handle": "INS-EQ976P"
+            }
+          }
+        ]
+      }
+    },
+    "/api/insights/01M51V7KPNNTGMN28V31EQ976P/evidence": {
+      "status": 200,
+      "body": {
+        "evidence": []
+      }
+    },
+    "/api/insights/01M51V7KPNNTGMN28V31EQ976P/email-drafts": {
+      "status": 200,
+      "body": {
+        "drafts": []
+      }
+    },
+    "/api/insights/01M51V7KPNNTGMN28V31EQ976P/tickets": {
+      "status": 200,
+      "body": []
+    },
+    "/api/insights/01M51V7KPNBXC8TW7PE92XKN22": {
+      "status": 200,
+      "body": {
+        "id": "01M51V7KPNBXC8TW7PE92XKN22",
+        "meeting_id": "01M51V62JYPFSDA5JAZ74V9FTA",
+        "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+        "extraction_run_id": "01M51V62K3HFHW4CWGCXPZ74PT",
+        "item_type": "action_item_ours",
+        "track": null,
+        "title": "Maya to send time-saved ROI report from Acme's own data by month-end",
+        "body_original": "Maya committed to producing a time-saved report drawn from Acme's own usage data before the end of the month, directly supporting Jordan's need to make the ROI case to his CFO. This is the primary deliverable underpinning the March renewal, so it must be accurate and compelling. Tying the report to the two-days-off-close narrative Jordan cares about would strengthen it.",
+        "body_current": "Maya committed to producing a time-saved report drawn from Acme's own usage data before the end of the month, directly supporting Jordan's need to make the ROI case to his CFO. This is the primary deliverable underpinning the March renewal, so it must be accurate and compelling. Tying the report to the two-days-off-close narrative Jordan cares about would strengthen it.",
+        "state": "extracted",
+        "ai_confidence": "high",
+        "ai_suggested_json": "{\"track\":\"other\",\"owner\":\"customer_success\",\"assignee\":\"Maya\"}",
+        "assignee_user_id": null,
+        "finalized_by": null,
+        "merged_into_insight_id": null,
+        "priority": 0,
+        "version": 1,
+        "editing_by": null,
+        "editing_at": null,
+        "created_at": "2026-10-16T07:53:39.796Z",
+        "updated_at": "2026-10-16T07:53:39.796Z",
+        "side": "ours",
+        "sentiment": "positive",
+        "intent": "equip the champion to win the renewal",
+        "client_name": "Acme Corp",
+        "handle": "INS-2XKN22",
+        "editing_active": false,
+        "mentions": [
+          {
+            "id": "01M51V7KPNECC4S14GHQDVZPA7",
+            "meeting_id": "01M51V62JYPFSDA5JAZ74V9FTA",
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "quote": "I'll send you a time-saved report from your own data before the end of the month.",
+            "speaker": "Maya, Tallyhall",
+            "char_start": 1359,
+            "char_end": 1440,
+            "created_at": "2026-10-16T07:53:39.796Z",
+            "meeting_date": "2026-09-25",
+            "meeting_seq": 1,
+            "client_name": "Acme Corp"
+          }
+        ],
+        "requesters": [
+          {
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "client_name": "Acme Corp",
+            "first_requested_at": "2026-10-16T07:53:39.796Z",
+            "last_requested_at": "2026-10-16T07:53:39.796Z"
+          }
+        ],
+        "tags": [],
+        "tickets": [],
+        "completion_evidence": [],
+        "email_drafts": [],
+        "timeline": [
+          {
+            "id": 5,
+            "occurred_at": "2026-10-16T07:53:39.797Z",
+            "actor_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "event_type": "insight.state_changed",
+            "from_state": null,
+            "to_state": "extracted",
+            "payload": {
+              "run_id": "01M51V62K3HFHW4CWGCXPZ74PT",
+              "handle": "INS-2XKN22"
+            }
+          }
+        ]
+      }
+    },
+    "/api/insights/01M51V7KPNBXC8TW7PE92XKN22/evidence": {
+      "status": 200,
+      "body": {
+        "evidence": []
+      }
+    },
+    "/api/insights/01M51V7KPNBXC8TW7PE92XKN22/email-drafts": {
+      "status": 200,
+      "body": {
+        "drafts": []
+      }
+    },
+    "/api/insights/01M51V7KPNBXC8TW7PE92XKN22/tickets": {
+      "status": 200,
+      "body": []
+    },
+    "/api/insights/01M51V7KPNN5VCPCS5X9H3BM6P": {
+      "status": 200,
+      "body": {
+        "id": "01M51V7KPNN5VCPCS5X9H3BM6P",
+        "meeting_id": "01M51V62JYPFSDA5JAZ74V9FTA",
+        "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+        "extraction_run_id": "01M51V62K3HFHW4CWGCXPZ74PT",
+        "item_type": "commitment_theirs",
+        "track": null,
+        "title": "Jordan to send list of twelve regional managers to enable mobile approvals",
+        "body_original": "Jordan committed to providing the list of twelve regional managers so Tallyhall can enable mobile approvals for them. This is the activation step that would put the mobile approval workflow into daily use and make the two-days-saved outcome real. Following up to ensure the list arrives matters, since it gates both adoption and the ROI story for renewal.",
+        "body_current": "Jordan committed to providing the list of twelve regional managers so Tallyhall can enable mobile approvals for them. This is the activation step that would put the mobile approval workflow into daily use and make the two-days-saved outcome real. Following up to ensure the list arrives matters, since it gates both adoption and the ROI story for renewal.",
+        "state": "extracted",
+        "ai_confidence": "high",
+        "ai_suggested_json": "{\"track\":\"other\",\"owner\":\"customer_success\",\"assignee\":\"Jordan\"}",
+        "assignee_user_id": null,
+        "finalized_by": null,
+        "merged_into_insight_id": null,
+        "priority": 0,
+        "version": 1,
+        "editing_by": null,
+        "editing_at": null,
+        "created_at": "2026-10-16T07:53:39.796Z",
+        "updated_at": "2026-10-16T07:53:39.796Z",
+        "side": "client",
+        "sentiment": "positive",
+        "intent": "roll out mobile approvals to cut close time",
+        "client_name": "Acme Corp",
+        "handle": "INS-H3BM6P",
+        "editing_active": false,
+        "mentions": [
+          {
+            "id": "01M51V7KPNG43WQQBC2NPF3D1F",
+            "meeting_id": "01M51V62JYPFSDA5JAZ74V9FTA",
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "quote": "I'll get you the list of the twelve regional managers so you can enable mobile approvals for them.",
+            "speaker": "Jordan, Acme",
+            "char_start": 1480,
+            "char_end": 1578,
+            "created_at": "2026-10-16T07:53:39.796Z",
+            "meeting_date": "2026-09-25",
+            "meeting_seq": 1,
+            "client_name": "Acme Corp"
+          }
+        ],
+        "requesters": [
+          {
+            "client_id": "01M51V62JSEC6ZCSVXQGDBAW5V",
+            "client_name": "Acme Corp",
+            "first_requested_at": "2026-10-16T07:53:39.796Z",
+            "last_requested_at": "2026-10-16T07:53:39.796Z"
+          }
+        ],
+        "tags": [],
+        "tickets": [],
+        "completion_evidence": [],
+        "email_drafts": [],
+        "timeline": [
+          {
+            "id": 6,
+            "occurred_at": "2026-10-16T07:53:39.797Z",
+            "actor_user_id": "01M51V62JRX4NQB1ZCCWWBFF2Z",
+            "event_type": "insight.state_changed",
+            "from_state": null,
+            "to_state": "extracted",
+            "payload": {
+              "run_id": "01M51V62K3HFHW4CWGCXPZ74PT",
+              "handle": "INS-H3BM6P"
+            }
+          }
+        ]
+      }
+    },
+    "/api/insights/01M51V7KPNN5VCPCS5X9H3BM6P/evidence": {
+      "status": 200,
+      "body": {
+        "evidence": []
+      }
+    },
+    "/api/insights/01M51V7KPNN5VCPCS5X9H3BM6P/email-drafts": {
+      "status": 200,
+      "body": {
+        "drafts": []
+      }
+    },
+    "/api/insights/01M51V7KPNN5VCPCS5X9H3BM6P/tickets": {
+      "status": 200,
+      "body": []
+    }
+  },
+  "ask": {
+    "What did we promise Acme?": {
+      "answer": "We promised Acme a time-saved ROI report drawn from their own usage data, to be delivered by month-end, specifically to support Jordan's ROI case to his CFO ahead of the March renewal [1][2]. This ties to the key goal of showing time saved, centered on the mobile receipt preview capability Jordan believes would cut two days off their close [2][3].",
+      "sources": [
+        {
+          "n": 1,
+          "kind": "insight",
+          "handle": "INS-2XKN22",
+          "insight_id": "01M51V7KPNBXC8TW7PE92XKN22",
+          "client_name": "Acme Corp",
+          "title": "Maya to send time-saved ROI report from Acme's own data by month-end",
+          "excerpt": "Maya committed to producing a time-saved report drawn from Acme's own usage data before the end of the month, directly supporting Jordan's need to make the ROI case to his CFO. This is the primary deliverable underpinning the March renewal, so it must be accurate and compelling. Tying the report to the two-days-off-close narrative Jordan cares about would strengthen it."
+        },
+        {
+          "n": 2,
+          "kind": "insight",
+          "handle": "INS-EQ976P",
+          "insight_id": "01M51V7KPNNTGMN28V31EQ976P",
+          "client_name": "Acme Corp",
+          "title": "Up for renewal in March with CFO demanding an ROI case",
+          "excerpt": "Jordan confirmed Acme is up for renewal in March and, while he says he is not shopping around, his CFO has asked him to show ROI this time, specifically time saved. This raises the stakes on both the mobile receipt preview (his stated two-days-saved metric) and the NetSuite export bug (which undermines perceived value with their controller). The renewal is winnable but conditional on us arming Jordan with hard ROI evidence. Treat every open item on this account as renewal-critical through March."
+        },
+        {
+          "n": 3,
+          "kind": "insight",
+          "handle": "INS-YNTJR1",
+          "insight_id": "01M51V7KPMHW9WXD130EYNTJR1",
+          "client_name": "Acme Corp",
+          "title": "Mobile receipt preview in approval notification is the lever on their month-end close",
+          "excerpt": "Acme's regional managers approve expenses from their phones, but the approval screen shows only a total with no way to see the receipt image without opening a laptop, so they defer approvals until Monday. Jordan believes showing the receipt image directly in the approval notification would cut two days off close. This is the exact metric his CFO is judging the account on, so this single capability carries the ROI case tied to their March renewal. Solving it would also convert twelve regional managers into daily mobile approvers, deepening adoption and retention."
+        },
+        {
+          "n": 4,
+          "kind": "transcript",
+          "meeting_id": "01M51V62JYPFSDA5JAZ74V9FTA",
+          "client_name": "Acme Corp",
+          "title": "Meeting 1",
+          "excerpt": " … Where are you now?\nSpeaker 1 (Jordan, Acme): Honestly, better, but approvals are the bottleneck. Our regional managers approve from their phones and the approval screen just shows a total. They can't see the receipt without opening a laptop, so they wait until Monday.\nSpeaker 0 (Maya, Tallyhall): So the receipt preview on mobile is the gap.\nSpeaker 1 (Jordan, Acme): Exactly. If … "
+        }
+      ]
+    },
+    "What is blocking the Globex rollout?": {
+      "answer": "The Globex EU rollout of roughly 300 seats is blocked by entity-level permissions: their German works council will not accept cross-entity spend visibility, so finance users and approvers in Germany must be scoped to only their own entity's spend [1][2]. This is a compliance-driven hard gate tied to the labour-council requirement, and it gates expansion revenue until it ships [1].",
+      "sources": [
+        {
+          "n": 1,
+          "kind": "insight",
+          "handle": "INS-4HKV6X",
+          "insight_id": "01M51V974P4RG14EQVNA4HKV6X",
+          "client_name": "Globex",
+          "title": "Entity-level permissions block a 300-seat EU rollout",
+          "excerpt": "Globex runs four legal entities, two in the EU, and today spend is visible across all of them. Their German works council will not accept cross-entity visibility, so finance users and approvers in Germany must be scoped to their own entity's spend only. This is a hard gate: the entire EU rollout of roughly 300 seats is blocked until it ships. Given the labour-council requirement, this is a compliance-driven blocker, not a nice-to-have, and it directly gates expansion revenue."
+        },
+        {
+          "n": 2,
+          "kind": "transcript",
+          "meeting_id": "01M51V7KPSCA8KXK09MQBFS7VE",
+          "client_name": "Globex",
+          "title": "Meeting 1",
+          "excerpt": " … Speaker 1 (Elena, Globex): Correct, and approvers too. Without that, the EU rollout is blocked, which is about three hundred seats.\nSpeaker 2 (Tom, Globex): The other thing is receipts. Our field team photographs receipts in bad light and the scanner reads the totals wrong maybe one time in ten. Then finance has to catch it.\nSpeaker 0 (Sam, Tallyhall): Do you have examples … "
+        }
+      ]
+    },
+    "What did Initech complain about?": {
+      "answer": "Initech raised three issues: the Slack notifications were too noisy because every expense pinged the approver, causing people to mute the channel [3]; a recurring NetSuite blank-cost-center export bug that has damaged finance's trust [1][2]; and a mileage fraud concern [2].",
+      "sources": [
+        {
+          "n": 1,
+          "kind": "insight",
+          "handle": "INS-JM9K5H",
+          "insight_id": "01M51VB0QJRH1MYYAWJ9JM9K5H",
+          "client_name": "Initech",
+          "title": "Maya to notify Initech when the NetSuite blank-cost-center export fix ships",
+          "excerpt": "Maya confirmed the NetSuite export failure is a known bug currently being fixed and committed to telling Initech as soon as the fix ships. This is an explicit commitment on our side tied to a repeat failure that has damaged finance's trust, so closing the loop promptly matters for the relationship. Letting this slip would compound the frustration of a bug that already recurred twice."
+        },
+        {
+          "n": 2,
+          "kind": "insight",
+          "handle": "INS-60ZPS9",
+          "insight_id": "01M51VB0QKTBEME4EGBF60ZPS9",
+          "client_name": "Initech",
+          "title": "Initech will run a formal review at the 90-day mark",
+          "excerpt": "Bill said they'll do a proper review at the ninety-day mark, setting an explicit evaluation checkpoint for the account. This matters because the open items raised on this call, Slack noise, mileage fraud, the NetSuite bug, will likely be judged at that review, making it an informal go/no-go on expansion or continued commitment. We should make sure the digest and NetSuite fix are resolved and the mileage request has a roadmap answer before that date."
+        },
+        {
+          "n": 3,
+          "kind": "transcript",
+          "meeting_id": "01M51V974WGS2ANQP8F86PTK9A",
+          "client_name": "Initech",
+          "title": "Meeting 1",
+          "excerpt": " … How's the first month going?\nSpeaker 1 (Bill, Initech): Mostly good. The team likes it. Two things. First, the Slack notifications are too noisy. Every single expense pings the approver. People are muting the channel, which defeats the point.\nSpeaker 0 (Maya, Tallyhall): Would a daily digest work better?\nSpeaker 1 (Bill, Initech): A daily digest with anything over five hundred dollars still … "
+        }
+      ]
+    }
+  }
+}
