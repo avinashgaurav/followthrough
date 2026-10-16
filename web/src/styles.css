@@ -2109,6 +2109,22 @@ select.ctrl {
 /* ================================================================ Meeting page */
 .meet-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start;
 }
+@media (max-width: 900px) {
+  .meet-grid { grid-template-columns: minmax(0, 1fr); }
+}
+/* ================================================================ Insight detail */
+/* Work area + side panel. Embedded (Review queue pane) is always one column;
+   standalone stacks to one column on narrow screens so the side panel never
+   overlaps the main column. */
+.detail-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.9fr); gap: 28px; align-items: start;
+}
+.detail-grid.embedded { grid-template-columns: minmax(0, 1fr);
+}
+.detail-grid > * { min-width: 0;
+}
+@media (max-width: 900px) {
+  .detail-grid { grid-template-columns: minmax(0, 1fr); }
+}
 .meet-side { border: 1px solid var(--line); background: var(--p1); border-radius: var(--r); padding: 16px;
 }
 
