@@ -96,10 +96,26 @@ for (const question of ASK_QUESTIONS) {
   console.log("ask", question);
 }
 
+// The read-only demo has no /share route, so a recorded share token would
+// render a client share link that 404s. Null every share_token before writing.
+function stripShareTokens(v: unknown): unknown {
+  if (Array.isArray(v)) return v.map(stripShareTokens);
+  if (v && typeof v === "object") {
+    const o: Record<string, unknown> = {};
+    for (const [k, x] of Object.entries(v)) o[k] = k === "share_token" ? null : stripShareTokens(x);
+    return o;
+  }
+  return v;
+}
+
 // Model prose sometimes uses a dash as a sentence break; the project style bans
 // it, so it becomes a comma here. The demo transcripts contain none, so quoted
 // transcript text is untouched.
-const json = JSON.stringify({ generated_at: new Date().toISOString(), responses, ask }, null, 2)
+const json = JSON.stringify(
+  stripShareTokens({ generated_at: new Date().toISOString(), responses, ask }),
+  null,
+  2,
+)
   .replace(/\s*\u2014\s*/g, ", ")
   .replace(/ \u2013 /g, ", ");
 await Bun.write(out, json + "\n");

@@ -4,10 +4,11 @@
 // closed for one client. Every company and person here is fictional.
 //
 // Usage: bun run seed:demo [--force] [--if-demo]
-// Needs ANTHROPIC_API_KEY (or OPENROUTER_API_KEY, or LLM_PROVIDER=claude-cli). Skips a database that already
-// has meetings unless --force. The seed is all-or-nothing: it builds into a
-// temporary database and only swaps it in once every step has succeeded, so a
-// failed LLM call never leaves a half-populated demo behind.
+// Needs ANTHROPIC_API_KEY (or OPENROUTER_API_KEY, or LLM_PROVIDER=claude-cli,
+// eval-only). Skips a database that already has meetings unless --force. The
+// seed is all-or-nothing: it builds into a temporary database and only swaps
+// it in once every step has succeeded, so a failed LLM call never leaves a
+// half-populated demo behind.
 import { Database } from "bun:sqlite";
 import { existsSync, mkdirSync, renameSync, rmSync } from "node:fs";
 import { join } from "node:path";
@@ -71,7 +72,10 @@ if (process.argv.includes("--if-demo") && !demoMode()) abort("", 0);
 // LLM_PROVIDER=claude-cli (the eval route) is accepted so the static demo
 // fixtures can be regenerated without an API key; see web/src/demo/README.md.
 if (!env.ANTHROPIC_API_KEY && !env.OPENROUTER_API_KEY && process.env.LLM_PROVIDER !== "claude-cli") {
-  abort("seed:demo needs ANTHROPIC_API_KEY or OPENROUTER_API_KEY: the demo shows real AI output.");
+  abort(
+    "seed:demo needs ANTHROPIC_API_KEY or OPENROUTER_API_KEY (or LLM_PROVIDER=claude-cli, eval-only): " +
+      "the demo shows real AI output.",
+  );
 }
 
 const db = getDb();

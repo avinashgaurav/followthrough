@@ -432,7 +432,7 @@ function DetailBody({
 
   return (
     <div className={wrapClass}>
-      <div style={detailGrid(embedded)}>
+      <div className={embedded ? "detail-grid embedded" : "detail-grid"}>
         {/* ============================ LEFT: editorial work area ============================ */}
         <div>
           {/* state stepper */}
@@ -892,15 +892,6 @@ function DetailBody({
       />
     </div>
   );
-}
-
-function detailGrid(embedded: boolean): React.CSSProperties {
-  return {
-    display: "grid",
-    gridTemplateColumns: embedded ? "minmax(0,1fr)" : "minmax(0,1.4fr) minmax(300px,0.9fr)",
-    gap: 28,
-    alignItems: "start",
-  };
 }
 
 // =================================================================== state stepper
