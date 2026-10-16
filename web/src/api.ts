@@ -13,6 +13,9 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  // Static read-only demo build (bun run build:demo): answer from recorded
+  // fixtures, refuse every write. Compiled out of the normal build.
+  if (__STATIC_DEMO__) return (await import("./demo/static-api")).demoRequest<T>(path, init);
   let res: Response;
   try {
     res = await fetch(path, { credentials: "include", ...init });

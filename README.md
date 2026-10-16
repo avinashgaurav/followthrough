@@ -12,6 +12,8 @@
 
 A client asks for a feature on a call, it ships weeks later, and nobody tells the client; Followthrough tracks each ask from the client's exact words to "shipped" to "client told".
 
+**Live demo:** https://followthrough-demo-neon.vercel.app (read-only, fictional meetings; run it yourself to process your own calls).
+
 > [!TIP]
 > **In pilot:** a sales team is trying followthrough on its own client calls.
 

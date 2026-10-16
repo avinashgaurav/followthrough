@@ -12,3 +12,4 @@ web/dist/
 .DS_Store
 .gstack/
 .design-shots/
+.vercel/

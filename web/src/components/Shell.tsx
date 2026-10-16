@@ -176,7 +176,16 @@ export function Shell() {
         </div>
         {demo && (
           <div className="demo-banner" role="status">
-            <b>Live demo</b> with fictional clients. Browse anything and try Ask; changes are off.{" "}
+            {__STATIC_DEMO__ ? (
+              <>
+                <b>Read-only demo</b> on fictional meetings, showing recorded Followthrough output. Browse
+                anything; changes and new calls are off. Run it yourself to process your own calls.{" "}
+              </>
+            ) : (
+              <>
+                <b>Live demo</b> with fictional clients. Browse anything and try Ask; changes are off.{" "}
+              </>
+            )}
             <a href="https://github.com/avinashgaurav/followthrough" target="_blank" rel="noreferrer">
               Self-host it free
             </a>
