@@ -20,18 +20,18 @@ A client asks for a feature on a call, it ships weeks later, and nobody tells th
 ![Demo: Home, Review and Capture screens on fictional data](docs/demo.gif)
 
 > [!NOTE]
-> **Evals.** 4 fictional calls with 24 expected asks, complaints and commitments, including a nothing-actionable call and a transcript carrying a prompt injection.
+> **How well it works.** It was tested on 4 made-up calls with 24 expected requests, complaints and commitments. One call has nothing to act on. One transcript contains planted instructions for the AI (a prompt injection).
 >
 > | Measure | Prompt v5 | Prompt v6 |
 > |---|---|---|
-> | Extracted items that are real (precision) | 24 / 34 (71%) | **22 / 22 (100%)** |
-> | Expected items found (recall) | 24 / 24 (100%) | **22 / 24 (92%)** |
-> | Items from the nothing-actionable call | 4 | **0** |
-> | Injected instruction turned into an item | Yes (reported, not obeyed) | **No** |
+> | Of the items it flagged, how many were right (precision) | 24 / 34 (71%) | **22 / 22 (100%)** |
+> | Of the items it should have found, how many it found (recall) | 24 / 24 (100%) | **22 / 24 (92%)** |
+> | Items pulled from the call with nothing to act on | 4 | **0** |
+> | Planted instruction turned into an item | Yes (reported, not followed) | **No** |
 >
-> **Held-out check** (4 new fictional calls, 38 expected items, key committed before any model call, prompt frozen, 3 runs): precision **100%** in every run, recall **76%** (71% to 79%), nothing extracted from the nothing-actionable call, and the injected instruction never became an item. The recall gap is one known weakness: when one person makes two commitments, v6 often merges the second into the first.
+> **Test on new calls** (4 new made-up calls the tool had never been tuned on, 38 expected items; the correct answers were saved before the AI saw any call, the prompt was not changed, and the test ran 3 times): every item it flagged was right in every run (**100%**). It found **76%** of expected items (71% to 79%). It pulled nothing from the call with nothing to act on, and the planted instruction never became an item. The missed items come from one known weakness: when one person makes two commitments, v6 often merges the second into the first.
 >
-> Caveat: fictional data; run through the Claude Code CLI, not the production API path; the v5 and v6 columns are on the 4 calls the prompt was tuned on; the held-out key was written by the author. Method and every miss: [EVALS.md](EVALS.md).
+> Limits: the data is made up. The tests ran through the Claude Code command-line tool, not the way the live app calls the AI. The v5 and v6 columns use the 4 calls used while building the prompt. The correct answers for the new calls were written by the author. How it was tested, and every miss: [EVALS.md](EVALS.md).
 
 ## Why AI here, why code there
 
@@ -56,7 +56,7 @@ bun run build:web && bun run start   # http://localhost:4500, open by default: t
 ## More
 
 - [docs/PRD.md](docs/PRD.md): product brief: user, problem, metrics, cost per meeting.
-- [EVALS.md](EVALS.md): eval method, results and every miss.
+- [EVALS.md](EVALS.md): how the tests were run, the results and every miss.
 - [docs/DESIGN-NOTES.md](docs/DESIGN-NOTES.md): screenshots, how it differs from a summarizer, and what each screen is for.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): the pipeline, multi-pass extraction, runtime and safety rules.
 - [docs/SETUP.md](docs/SETUP.md): full setup, every env var, public demo mode, development.
