@@ -31,7 +31,7 @@ A client asks for a feature on a call, it ships weeks later, and nobody tells th
 >
 > **Test on new calls** (4 new made-up calls the tool had never been tuned on, 38 expected items; the correct answers were saved before the AI saw any call, the prompt was not changed, and the test ran 3 times): every item it flagged was right in every run (**100%**). It found **76%** of expected items (71% to 79%). It pulled nothing from the call with nothing to act on, and the planted instruction never became an item. The missed items come from one known weakness: when one person makes two commitments, v6 often merges the second into the first.
 >
-> Limits: the data is made up. The tests ran through the Claude Code command-line tool, not the way the live app calls the AI. The v5 and v6 columns use the 4 calls used while building the prompt. The correct answers for the new calls were written by the author. How it was tested, and every miss: [EVALS.md](EVALS.md).
+> Limits: the data is made up. The tests ran through the Claude Code command-line tool, not the way the live app calls the AI. The v5 and v6 columns use the 4 calls the prompt was tuned on. The correct answers for the new calls were written by the author. How it was tested, and every miss: [EVALS.md](EVALS.md).
 
 ## Why AI here, why code there
 

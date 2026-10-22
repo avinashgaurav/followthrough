@@ -72,7 +72,7 @@ After review, I added these 3 commitments to the answer list. Each is a clear ac
 | Found items that were right (precision) | 24/34 (71%) | 21/21 (100%) | 22/22 (100%) |
 | Right kind of item | 24/24 | 21/21 | 22/22 |
 
-The test setup can only score a run while it happens. Saved results keep item titles, but not the quotes and bodies the grading AI needs. So the two saved runs were scored again by hand. Each of the 3 items above shows up by title among that run's unmatched items (all 3 in v5, only Maya's in v6). Each was counted as a match for its new answer. No other pair changed. The new run is a fresh v6 run, graded by the other AI against the new answer list. Its quotes all appeared word for word in the transcript: 22/22.
+The test setup can only score a run while it happens. Saved results keep item titles, but not the quotes and bodies the grading AI needs. So the two saved runs were scored again by hand. Each of the 3 items above shows up by title among that run's unmatched items (all 3 in v5, only Maya's in v6). Each was counted as a match for its new answer. No other pair changed. The new run is a fresh v6 run, graded by the grading AI against the new answer list. Its quotes all appeared word for word in the transcript: 22/22.
 
 In the new run, v6 still did not produce 2 of the 3 new items as separate items. Arjun's GSTIN escalation was not pulled out at all. The phone-model list was folded into Sneha's sample-invoices commitment ("Sneha to send 20 sample invoices (incl. handwritten GSTIN) and Android model list by Friday"). The first v6 run missed the month-end spreadsheet complaint, but this run found it. That is the normal ups and downs between runs, on a single item.
 
@@ -179,7 +179,7 @@ For each case, the share of expected items found was the same in all 3 runs, exc
 
 ### Every miss
 
-In no run did it flag something that was fine. Every miss is a commitment it should have caught but did not. 7 of the 11 missed items are a person's second commitment on the same topic. "Folded" means the title of a found item names the missed commitment next to another one, and that found item was matched to the other one. The grading AI pairs one found item with one expected item, so the second commitment counts as a miss. Results keep titles only, so "no title" means no found item's title mentions it (it may sit in an item's body).
+In no run did it return an item that was not in the answer list. Every miss is a commitment it should have caught but did not. 7 of the 11 missed items are a person's second commitment on the same topic. "Folded" means the title of a found item names the missed commitment next to another one, and that found item was matched to the other one. The grading AI pairs one found item with one expected item, so the second commitment counts as a miss. Results keep titles only, so "no title" means no found item's title mentions it (it may sit in an item's body).
 
 | # | Case | Expected item (type) | Missed in | What went wrong |
 |---|---|---|---|---|
