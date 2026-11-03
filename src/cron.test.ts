@@ -23,6 +23,14 @@ describe("Vercel entry", () => {
     expect(u.searchParams.get("client_id")).toBe("c1");
     expect(u.searchParams.has("__path")).toBe(false);
   });
+  test("a client-supplied __path after the rewrite's is ignored and stripped", () => {
+    const r = restorePath(new Request("https://app.example/api/server?__path=/api/health&__path=/api/admin&x=1"));
+    const u = new URL(r.url);
+    expect(u.pathname).toBe("/api/health");
+    expect(u.searchParams.getAll("__path")).toEqual([]);
+    expect(u.searchParams.get("x")).toBe("1");
+  });
+
   test("leaves a request without __path alone", () => {
     const req = new Request("https://app.example/api/health");
     expect(restorePath(req)).toBe(req);

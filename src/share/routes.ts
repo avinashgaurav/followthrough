@@ -67,7 +67,7 @@ route("GET", "/share/:token", "public", async (_req, _user, params) => {
               ) AS asked_at,
               (SELECT MAX(e.occurred_at) FROM events e
                 WHERE e.entity_id = i.id AND e.event_type = 'insight.state_changed'
-                  AND (e.payload_json::jsonb ->> 'to_state') = 'shipped') AS shipped_at
+                  AND e.to_state = 'shipped') AS shipped_at
        FROM insights i
        WHERE i.client_id = ? AND i.state IN ('shipped','client_notified','closed')
        ORDER BY shipped_at DESC, i.created_at DESC`,

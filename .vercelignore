@@ -9,3 +9,7 @@ web/dist/
 extension/node_modules/
 .gstack/
 .design-shots/
+# Not used by the build or at runtime (seed-demo reads demo/ from a local checkout).
+design-reference/
+evals/
+demo/

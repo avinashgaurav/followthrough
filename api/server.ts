@@ -14,6 +14,9 @@ export default {
 
 export function restorePath(req: Request): Request {
   const url = new URL(req.url);
+  // Vercel puts the rewrite's own __path first, ahead of any the client sent
+  // (checked on a deployment), so the first value is the real path. Every
+  // __path is then removed, so a client-supplied one never reaches the app.
   const original = url.searchParams.get("__path");
   if (!original) return req;
   url.searchParams.delete("__path");
