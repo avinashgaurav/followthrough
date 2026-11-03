@@ -1,9 +1,9 @@
 import type { Database } from "../db.ts";
-import { existsSync } from "node:fs";
 import { z } from "zod";
 import { json } from "../router.ts";
 import { nowIso } from "../db.ts";
 import { ulid } from "../ids.ts";
+import { storeFor } from "../storage.ts";
 import { appendEvent } from "../events.ts";
 import type { AuthedUser } from "../auth.ts";
 import { cleanTranscript } from "../extract/segment.ts";
@@ -12,7 +12,10 @@ import {
   IngestError,
   MAX_TRANSCRIPT_BYTES,
   assertSizeOk,
-  getBlobPath,
+  blobResponse,
+  newBlobKey,
+  registerUploadedBlob,
+  type DirectUpload,
   saveBlob,
   sha256Hex,
   type MediaAsset,
@@ -178,6 +181,8 @@ export interface MeetingUploadInput {
   transcriptText?: string;
   transcriptFile?: UploadedFile;
   audioFile?: UploadedFile;
+  /** Audio the browser already uploaded to a signed storage URL (POST /api/uploads). */
+  audioUpload?: DirectUpload;
 }
 
 export interface MeetingUploadResult {
@@ -218,19 +223,24 @@ export async function createMeeting(
 ): Promise<MeetingUploadResult> {
   const client = await db.query("SELECT id FROM clients WHERE id = ?").get(input.client_id);
   if (!client) throw new IngestError("Client not found", 404);
-  if (!input.transcriptText && !input.transcriptFile && !input.audioFile) {
+  if (!input.transcriptText && !input.transcriptFile && !input.audioFile && !input.audioUpload) {
     throw new IngestError("Provide transcript_text, transcript_file, or audio_file", 400);
   }
 
   // size caps before any hashing or writes
   if (input.audioFile) assertSizeOk("audio", input.audioFile.bytes.byteLength);
+  if (input.audioUpload) assertSizeOk("audio", input.audioUpload.sizeBytes);
   if (input.transcriptFile) assertSizeOk("transcript_file", input.transcriptFile.bytes.byteLength);
   const textBytes = input.transcriptText ? new TextEncoder().encode(input.transcriptText) : null;
   if (textBytes && textBytes.byteLength > MAX_TRANSCRIPT_BYTES) {
     throw new IngestError("Transcript text is capped at 10MB", 413);
   }
 
-  const audioSha = input.audioFile ? sha256Hex(input.audioFile.bytes) : null;
+  const audioSha = input.audioFile
+    ? sha256Hex(input.audioFile.bytes)
+    : input.audioUpload
+      ? input.audioUpload.sha256.toLowerCase()
+      : null;
   const transcriptFileSha = input.transcriptFile ? sha256Hex(input.transcriptFile.bytes) : null;
   const textSha = textBytes ? sha256Hex(textBytes) : null;
   const shas = [audioSha, transcriptFileSha, textSha].filter((s): s is string => s !== null);
@@ -250,7 +260,9 @@ export async function createMeeting(
     }
   }
 
-  const audioAsset = input.audioFile
+  const audioAsset = input.audioUpload
+    ? await registerUploadedBlob(db, "audio", { ...input.audioUpload, sha256: audioSha! }, actor.id, opts)
+    : input.audioFile
     ? await saveBlob(
         db,
         {
@@ -452,14 +464,7 @@ export async function downloadMedia(
     }
   }
 
-  const path = getBlobPath(asset, opts.blobDir);
-  if (!existsSync(path)) return json({ error: "Blob missing from storage" }, 404);
-  return new Response(Bun.file(path), {
-    headers: {
-      "content-type": asset.content_type ?? "application/octet-stream",
-      "content-disposition": `attachment; filename="${asset.filename.replace(/["\\\r\n]/g, "")}"`,
-    },
-  });
+  return (await blobResponse(asset, opts)) ?? json({ error: "Blob missing from storage" }, 404);
 }
 
 // ---------------------------------------------------------------- HTTP handlers
@@ -475,6 +480,51 @@ async function readJsonBody(req: Request): Promise<unknown | Response> {
   } catch {
     return json({ error: "Request body must be valid JSON" }, 400);
   }
+}
+
+/** audio_upload_key + audio_sha256/filename/content_type/size, sent after a direct upload. */
+function directUploadFromForm(form: FormData, prefix: string): DirectUpload | null {
+  const field = (k: string) => {
+    const v = form.get(`${prefix}_${k}`);
+    return typeof v === "string" && v !== "" ? v : null;
+  };
+  const key = field("upload_key");
+  if (!key) return null;
+  return {
+    key,
+    sha256: field("sha256") ?? "",
+    filename: field("filename") ?? key.split("/").pop() ?? "audio",
+    contentType: field("content_type"),
+    sizeBytes: Number(field("size") ?? "0"),
+  };
+}
+
+const UploadRequestSchema = z.object({
+  filename: z.string().min(1).max(255),
+  content_type: z.string().max(200).optional(),
+  size_bytes: z.number().int().positive(),
+});
+
+/**
+ * Start a direct upload: returns a signed URL the browser PUTs the file to, then
+ * the client creates the meeting with audio_upload_key. When the store cannot
+ * sign uploads (local disk), mode is "inline" and the client sends the file in
+ * the multipart form as before.
+ */
+export async function handleStartUpload(req: Request, opts: { blobDir?: string } = {}): Promise<Response> {
+  const body = await readJsonBody(req);
+  if (body instanceof Response) return body;
+  const parsed = UploadRequestSchema.safeParse(body);
+  if (!parsed.success) return json({ error: "Invalid request", issues: parsed.error.issues }, 400);
+  try {
+    assertSizeOk("audio", parsed.data.size_bytes);
+  } catch (e) {
+    return errorResponse(e);
+  }
+  const key = newBlobKey(parsed.data.filename);
+  const url = await storeFor(opts).signedUploadUrl(key);
+  if (!url) return json({ mode: "inline" });
+  return json({ mode: "direct", key, upload_url: url, method: "PUT" });
 }
 
 function asUploadedFile(v: FormDataEntryValue | null): Promise<UploadedFile | null> {
@@ -562,6 +612,7 @@ export async function handleCreateMeeting(
   const transcriptText = typeof rawText === "string" && rawText.trim() !== "" ? rawText : undefined;
   const transcriptFile = await asUploadedFile(form.get("transcript_file"));
   const audioFile = await asUploadedFile(form.get("audio_file"));
+  const audioUpload = directUploadFromForm(form, "audio");
 
   try {
     const result = await createMeeting(
@@ -572,6 +623,7 @@ export async function handleCreateMeeting(
         transcriptText,
         transcriptFile: transcriptFile ?? undefined,
         audioFile: audioFile ?? undefined,
+        audioUpload: audioUpload ?? undefined,
       },
       opts,
     );

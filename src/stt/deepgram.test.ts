@@ -27,6 +27,18 @@ describe("transcribeViaDeepgram", () => {
     expect(text).toBe("para one.\n\npara two.");
   });
 
+  test("sends a signed storage URL as JSON so Deepgram fetches the file itself", async () => {
+    let sent: { body: unknown; type: string | null } | null = null;
+    const fetchImpl = (async (_url: string, init: RequestInit) => {
+      sent = { body: JSON.parse(String(init.body)), type: new Headers(init.headers).get("content-type") };
+      return jsonResponse({ results: { channels: [{ alternatives: [{ transcript: "hello" }] }] } });
+    }) as unknown as typeof fetch;
+    const text = await transcribeViaDeepgram({ url: "https://store.example/signed?token=abc" }, { fetchImpl, key: "k" });
+    expect(text).toBe("hello");
+    expect(sent!.type).toBe("application/json");
+    expect(sent!.body).toEqual({ url: "https://store.example/signed?token=abc" });
+  });
+
   test("builds a speaker-labeled transcript from diarized utterances", async () => {
     const fetchImpl = (async () =>
       jsonResponse({

@@ -7,6 +7,7 @@ import { nowIso } from "../db.ts";
 import { appendEvent } from "../events.ts";
 import type { AuthedUser } from "../auth.ts";
 import { getBlobPath, type MediaAsset } from "../ingest/media.ts";
+import { getStore } from "../storage.ts";
 import type { MeetingRow } from "../ingest/service.ts";
 import { syncInsightFts } from "../insights/search.ts";
 
@@ -84,13 +85,13 @@ export async function purgeMeeting(
   const blobPaths = assets
     .filter((a) => a.storage_backend === "local")
     .map((a) => getBlobPath(a, opts.blobDir));
+  const storedKeys = assets.filter((a) => a.storage_backend === "supabase").map((a) => a.storage_ref);
 
   const affectedInsights = await db
     .query("SELECT DISTINCT insight_id FROM insight_mentions WHERE meeting_id = ?")
     .all(meetingId) as { insight_id: string }[];
 
-  // counted up front: .changes is unreliable inside transactions that also
-  // touch FTS5 virtual tables (shadow-table writes pollute the counter)
+  // counted up front, before the rows change
   const transcriptsDeleted = (
     await db.query("SELECT COUNT(*) AS n FROM transcripts WHERE meeting_id = ?").get(meetingId) as { n: number }
   ).n;
@@ -161,6 +162,13 @@ export async function purgeMeeting(
       }
     } catch (err) {
       console.warn(`retention: could not remove blob file ${path}:`, err);
+    }
+  }
+  if (storedKeys.length > 0) {
+    try {
+      await getStore().remove(storedKeys);
+    } catch (err) {
+      console.warn(`retention: could not remove ${storedKeys.length} stored object(s):`, err);
     }
   }
 

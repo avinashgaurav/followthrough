@@ -1,7 +1,6 @@
 import type { Database } from "../db.ts";
-import { mkdirSync, renameSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { env } from "../config.ts";
+import { createHash } from "node:crypto";
+import { storeFor } from "../storage.ts";
 import { nowIso } from "../db.ts";
 import { appendEvent } from "../events.ts";
 import { insightHandle, ulid } from "../ids.ts";
@@ -138,24 +137,20 @@ export async function generateCsvExport(
   const storageRef = `exports/${exportId}.csv`;
   const filename = clientId ? `insights-${clientId}-${exportId}.csv` : `insights-all-${exportId}.csv`;
 
-  // Atomic write: tmp file in the same directory, then rename.
-  const blobDir = opts.blobDir ?? env.BLOB_DIR;
-  const finalPath = join(blobDir, "exports", `${exportId}.csv`);
-  mkdirSync(dirname(finalPath), { recursive: true });
-  const tmpPath = `${finalPath}.tmp-${ulid()}`;
-  writeFileSync(tmpPath, csv, "utf8");
-  renameSync(tmpPath, finalPath);
+  const bytes = new TextEncoder().encode(csv);
+  const store = storeFor(opts);
+  await store.put(storageRef, bytes, "text/csv; charset=utf-8");
 
-  const sha256 = new Bun.CryptoHasher("sha256").update(csv).digest("hex");
-  const sizeBytes = new TextEncoder().encode(csv).length;
+  const sha256 = createHash("sha256").update(bytes).digest("hex");
+  const sizeBytes = bytes.length;
   const t = nowIso();
 
   const tx = () => db.transaction(async () => {
     await db.query(
       `INSERT INTO media_assets (id, kind, storage_backend, storage_ref, filename, content_type,
                                  size_bytes, sha256, uploaded_by, status, created_at)
-       VALUES (?, 'csv', 'local', ?, ?, 'text/csv', ?, ?, ?, 'uploaded', ?)`,
-    ).run(assetId, storageRef, filename, sizeBytes, sha256, opts.requestedBy, t);
+       VALUES (?, 'csv', ?, ?, ?, 'text/csv', ?, ?, ?, 'uploaded', ?)`,
+    ).run(assetId, store.backend, storageRef, filename, sizeBytes, sha256, opts.requestedBy, t);
     await db.query(
       `INSERT INTO csv_exports (id, client_id, requested_by, filter_json, row_count, asset_id, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,

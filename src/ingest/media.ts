@@ -1,14 +1,15 @@
 import type { Database } from "../db.ts";
-import { mkdirSync, renameSync } from "node:fs";
-import { dirname, join, resolve, sep } from "node:path";
+import { createHash } from "node:crypto";
+import { join } from "node:path";
 import { env } from "../config.ts";
 import { nowIso } from "../db.ts";
 import { ulid } from "../ids.ts";
+import { storeFor, type BlobStore } from "../storage.ts";
 
 /**
  * Blob storage behind the media_assets abstraction (SPEC.md section 9).
- * v1 backend is local disk; storage_ref is always a relative key so an S3
- * migration is a per-row backend flip.
+ * Bytes live in the blob store (src/storage.ts: Supabase Storage when deployed,
+ * local disk in tests); storage_ref is always a relative key.
  */
 
 export class IngestError extends Error {
@@ -25,7 +26,7 @@ export type MediaKind = "audio" | "video" | "transcript_file" | "screenshot" | "
 export interface MediaAsset {
   id: string;
   kind: MediaKind;
-  storage_backend: "local" | "s3";
+  storage_backend: "local" | "s3" | "supabase";
   storage_ref: string;
   filename: string;
   content_type: string | null;
@@ -61,7 +62,7 @@ export function sanitizeFilename(name: string): string {
 }
 
 export function sha256Hex(bytes: Uint8Array): string {
-  return new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
+  return createHash("sha256").update(bytes).digest("hex");
 }
 
 export interface SaveBlobInput {
@@ -72,9 +73,30 @@ export interface SaveBlobInput {
   uploadedBy: string | null;
 }
 
+/** A fresh storage key for an upload: "<ulid>/<sanitized name>". */
+export function newBlobKey(filename: string): string {
+  return `${ulid()}/${sanitizeFilename(filename)}`;
+}
+
+const BLOB_KEY = /^[0-9A-HJKMNP-TV-Z]{26}\/[^/]+$/;
+
+async function insertAsset(
+  db: Database,
+  store: BlobStore,
+  row: { id?: string; kind: MediaKind; key: string; filename: string; contentType: string | null; size: number; sha: string; uploadedBy: string | null },
+): Promise<MediaAsset> {
+  const id = row.id ?? ulid();
+  await db.query(
+    `INSERT INTO media_assets (id, kind, storage_backend, storage_ref, filename, content_type,
+                               size_bytes, sha256, uploaded_by, status, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'uploaded', ?)`,
+  ).run(id, row.kind, store.backend, row.key, row.filename, row.contentType, row.size, row.sha, row.uploadedBy, nowIso());
+  return (await db.query("SELECT * FROM media_assets WHERE id = ?").get(id)) as MediaAsset;
+}
+
 /**
- * Write bytes to the blob dir atomically (tmp file then rename) and insert the
- * media_assets row. Bytes are treated as opaque binary; nothing is decoded here.
+ * Store bytes in the blob store and insert the media_assets row. Bytes are
+ * treated as opaque binary; nothing is decoded here.
  */
 export async function saveBlob(
   db: Database,
@@ -82,42 +104,95 @@ export async function saveBlob(
   opts: { blobDir?: string } = {},
 ): Promise<MediaAsset> {
   assertSizeOk(input.kind, input.bytes.byteLength);
-
-  const blobDir = opts.blobDir ?? env.BLOB_DIR;
-  const id = ulid();
+  const store = storeFor(opts);
   const safeName = sanitizeFilename(input.filename);
-  const storageRef = `${id}/${safeName}`;
-  const finalPath = join(blobDir, storageRef);
-  // belt and braces: the sanitized key must resolve inside the blob dir
-  if (!resolve(finalPath).startsWith(resolve(blobDir) + sep)) {
-    throw new IngestError("Invalid filename", 400);
+  const id = ulid();
+  const key = `${id}/${safeName}`;
+  try {
+    await store.put(key, input.bytes, input.contentType);
+  } catch (e) {
+    if (e instanceof Error && e.message.startsWith("Invalid storage key")) throw new IngestError("Invalid filename", 400);
+    throw e;
   }
-
-  mkdirSync(dirname(finalPath), { recursive: true });
-  const tmpPath = `${finalPath}.${ulid().slice(-8)}.tmp`;
-  await Bun.write(tmpPath, input.bytes);
-  renameSync(tmpPath, finalPath);
-
-  const sha = sha256Hex(input.bytes);
-  await db.query(
-    `INSERT INTO media_assets (id, kind, storage_backend, storage_ref, filename, content_type,
-                               size_bytes, sha256, uploaded_by, status, created_at)
-     VALUES (?, ?, 'local', ?, ?, ?, ?, ?, ?, 'uploaded', ?)`,
-  ).run(
+  return insertAsset(db, store, {
     id,
-    input.kind,
-    storageRef,
-    safeName,
-    input.contentType,
-    input.bytes.byteLength,
-    sha,
-    input.uploadedBy,
-    nowIso(),
-  );
-  return await db.query("SELECT * FROM media_assets WHERE id = ?").get(id) as MediaAsset;
+    kind: input.kind,
+    key,
+    filename: safeName,
+    contentType: input.contentType,
+    size: input.bytes.byteLength,
+    sha: sha256Hex(input.bytes),
+    uploadedBy: input.uploadedBy,
+  });
 }
 
-/** Absolute filesystem path for a local asset. */
+export interface DirectUpload {
+  key: string;
+  filename: string;
+  contentType: string | null;
+  sizeBytes: number;
+  sha256: string;
+}
+
+/**
+ * Record a file the browser already uploaded to a signed URL (see
+ * POST /api/uploads). The object must exist under a key this server issued.
+ * The sha256 is computed by the browser and only used for duplicate detection.
+ */
+export async function registerUploadedBlob(
+  db: Database,
+  kind: MediaKind,
+  upload: DirectUpload,
+  uploadedBy: string | null,
+  opts: { blobDir?: string } = {},
+): Promise<MediaAsset> {
+  if (!BLOB_KEY.test(upload.key)) throw new IngestError("Invalid upload key", 400);
+  if (!/^[0-9a-f]{64}$/.test(upload.sha256)) throw new IngestError("Invalid sha256 for the uploaded file", 400);
+  assertSizeOk(kind, upload.sizeBytes);
+  const store = storeFor(opts);
+  if (!(await store.exists(upload.key))) throw new IngestError("The uploaded file was not found in storage. Upload it again.", 400);
+  return insertAsset(db, store, {
+    kind,
+    key: upload.key,
+    filename: sanitizeFilename(upload.filename),
+    contentType: upload.contentType,
+    size: upload.sizeBytes,
+    sha: upload.sha256,
+    uploadedBy,
+  });
+}
+
+/** The asset's bytes, or null if the object is missing. */
+export async function readBlob(
+  asset: Pick<MediaAsset, "storage_backend" | "storage_ref">,
+  opts: { blobDir?: string } = {},
+): Promise<Uint8Array | null> {
+  return storeFor(opts).get(asset.storage_ref);
+}
+
+/**
+ * Serve a stored file: a redirect to a short-lived signed URL when the store
+ * supports it (Supabase), otherwise the bytes. Null when the object is missing.
+ */
+export async function blobResponse(
+  asset: Pick<MediaAsset, "storage_backend" | "storage_ref" | "filename" | "content_type">,
+  opts: { blobDir?: string } = {},
+): Promise<Response | null> {
+  const store = storeFor(opts);
+  const filename = asset.filename.replace(/["\\\r\n]/g, "");
+  const signed = await store.signedDownloadUrl(asset.storage_ref, filename);
+  if (signed) return new Response(null, { status: 302, headers: { location: signed, "cache-control": "no-store" } });
+  const bytes = await store.get(asset.storage_ref);
+  if (!bytes) return null;
+  return new Response(bytes as BodyInit, {
+    headers: {
+      "content-type": asset.content_type ?? "application/octet-stream",
+      "content-disposition": `attachment; filename="${filename}"`,
+    },
+  });
+}
+
+/** Absolute filesystem path for a local asset (tests and local dev). */
 export function getBlobPath(
   asset: Pick<MediaAsset, "storage_backend" | "storage_ref">,
   blobDir: string = env.BLOB_DIR,

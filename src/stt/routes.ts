@@ -1,23 +1,24 @@
 import type { Database } from "../db.ts";
-import { join } from "node:path";
 import { route, json } from "../router.ts";
 import { getDb, nowIso } from "../db.ts";
 import { appendEvent } from "../events.ts";
 import { ulid } from "../ids.ts";
-import { env } from "../config.ts";
-import { sttAvailable, transcribeAudio, type TranscribeOpts } from "./whisper.ts";
-import { deepgramConfigured, transcribeViaDeepgram } from "./deepgram.ts";
+import { storeFor } from "../storage.ts";
+import { deepgramConfigured, transcribeViaDeepgram, type AudioSource } from "./deepgram.ts";
 import { cleanTranscript } from "../extract/segment.ts";
 import { syncTranscriptFts } from "../insights/search.ts";
 
 /**
  * STT routes (SPEC.md section 2 step 2): meeting audio to transcript via
- * local whisper.cpp. States: uploaded -> transcribing -> transcribed |
+ * Deepgram. States: uploaded -> transcribing -> transcribed |
  * transcription_failed. Retry = call the route again after a failure; the
  * route resets a transcription_failed meeting back through transcribing.
+ * (Local whisper.cpp was removed with the move to Vercel: functions cannot run
+ * native binaries or keep large files on disk.)
  */
 
-const QUALITY_FLAG = "machine_no_diarization";
+export const DEEPGRAM_MISSING =
+  "Transcription needs a Deepgram key. Set DEEPGRAM_API_KEY, or paste the transcript instead.";
 
 interface MeetingRow {
   id: string;
@@ -44,17 +45,25 @@ async function userNameKeyterms(db: Database): Promise<string[]> {
 interface AssetRow {
   storage_backend: string;
   storage_ref: string;
+  filename: string;
+}
+
+export interface TranscribeOpts {
+  fetchImpl?: typeof fetch;
+  /** Overrides DEEPGRAM_API_KEY (tests). */
+  deepgramKey?: string;
+  blobDir?: string;
 }
 
 /**
  * Core transcription flow, separated from route registration so tests can run
- * it against openTestDb() with a stubbed runner (opts.runner / opts.which).
+ * it against openTestDb() with a stubbed Deepgram (opts.fetchImpl).
  */
 export async function transcribeMeeting(
   db: Database,
   meetingId: string,
   actor: { id: string },
-  opts: TranscribeOpts & { useDeepgram?: boolean } = {},
+  opts: TranscribeOpts = {},
 ): Promise<Response> {
   const meeting = await db
     .query("SELECT id, status, audio_asset_id FROM meetings WHERE id = ? AND deleted_at IS NULL")
@@ -74,30 +83,33 @@ export async function transcribeMeeting(
   }
 
   const asset = await db
-    .query("SELECT storage_backend, storage_ref FROM media_assets WHERE id = ?")
+    .query("SELECT storage_backend, storage_ref, filename FROM media_assets WHERE id = ?")
     .get(meeting.audio_asset_id) as AssetRow | null;
   if (!asset) return json({ error: "Audio asset record is missing for this meeting." }, 500);
-  if (asset.storage_backend !== "local") {
-    return json({ error: `Local transcription supports the local storage backend only (got ${asset.storage_backend}).` }, 400);
-  }
-  const audioPath = join(env.BLOB_DIR, asset.storage_ref);
+  if (!opts.deepgramKey && !deepgramConfigured()) return json({ error: DEEPGRAM_MISSING }, 503);
 
   // Covers both the fresh path (uploaded -> transcribing) and the retry path
   // (transcription_failed -> transcribing).
   await db.query("UPDATE meetings SET status = 'transcribing' WHERE id = ?").run(meetingId);
 
   try {
-    // Prefer cloud STT when a Deepgram key is set (the deployed path); otherwise
-    // transcribe locally with whisper.cpp. opts.useDeepgram lets tests pin the path.
-    const useDeepgram = opts.useDeepgram ?? deepgramConfigured();
+    // Deepgram fetches the recording from a signed URL when the store can sign
+    // (Supabase); with local storage the bytes are sent directly.
+    const store = storeFor(opts);
+    const signed = await store.signedDownloadUrl(asset.storage_ref, asset.filename, 3600);
+    let source: AudioSource;
+    if (signed) source = { url: signed };
+    else {
+      const bytes = await store.get(asset.storage_ref);
+      if (!bytes) throw new Error("The recording is missing from storage.");
+      source = { bytes };
+    }
     // Auto-boost every active user's name (full + first) so the transcript spells
     // people right (e.g. "Maria" not "Marina") without hand-maintaining them.
-    const keyterms = useDeepgram ? await userNameKeyterms(db) : [];
-    const text = useDeepgram
-      ? await transcribeViaDeepgram(audioPath, { keyterms })
-      : await transcribeAudio(audioPath, opts);
-    // Deepgram diarizes (speaker-labeled), so it's good-quality; local whisper does not.
-    const qualityFlag = useDeepgram ? "ok" : QUALITY_FLAG;
+    const keyterms = await userNameKeyterms(db);
+    const text = await transcribeViaDeepgram(source, { keyterms, fetchImpl: opts.fetchImpl, key: opts.deepgramKey });
+    // Deepgram diarizes (speaker-labeled), so the transcript is good quality.
+    const qualityFlag = "ok";
     const transcriptId = ulid();
     await db.transaction(async () => {
       await db.query(
@@ -111,7 +123,7 @@ export async function transcribeMeeting(
         entityType: "meeting",
         entityId: meetingId,
         eventType: "meeting.transcript_added",
-        payload: { via: useDeepgram ? "deepgram" : "whisper", transcript_id: transcriptId, quality_flag: qualityFlag },
+        payload: { via: "deepgram", transcript_id: transcriptId, quality_flag: qualityFlag },
       });
     });
     return json({
@@ -137,12 +149,10 @@ export async function transcribeMeeting(
   }
 }
 
-/** Shape: { ok: boolean, missing: string[], provider }. Used by the upload UI preflight.
- *  Deepgram (when configured) satisfies STT on its own; otherwise we report local
- *  whisper availability. */
+/** Shape: { ok: boolean, missing: string[], provider }. Used by the upload UI preflight. */
 export function sttStatus(): Response {
   if (deepgramConfigured()) return json({ ok: true, missing: [], provider: "deepgram" });
-  return json({ ...sttAvailable(), provider: "whisper" });
+  return json({ ok: false, missing: ["DEEPGRAM_API_KEY"], provider: "deepgram" });
 }
 
 route("POST", "/api/meetings/:id/transcribe", "user", (_req, user, params) =>
