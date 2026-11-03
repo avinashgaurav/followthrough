@@ -504,8 +504,10 @@ export const api = {
   // Public probe used on app load; returns { user: null } (200) when signed out.
   session: () => get<{ user: User | null }>("/api/auth/session"),
 
-  // ---------------- access mode (admin): open by default, login optional
-  getAccess: () => get<{ require_login: boolean; can_require: boolean }>("/api/settings/access"),
+  // ---------------- access mode (admin): open by default, login optional,
+  // unless the server forces login (REQUIRE_LOGIN or a public deployment)
+  getAccess: () =>
+    get<{ require_login: boolean; can_require: boolean; forced_by_server?: boolean }>("/api/settings/access"),
   setAccess: (require_login: boolean) =>
     post<{ require_login: boolean }>("/api/settings/access", { require_login }),
 

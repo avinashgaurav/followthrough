@@ -81,9 +81,15 @@ route("GET", "/api/auth/config", "public", () =>
 );
 
 // Access mode: read + toggle whether login is required (admin only).
+// forced_by_server: login is on because of the environment (REQUIRE_LOGIN or a
+// public deployment), so the in-app toggle cannot open the app.
 route("GET", "/api/settings/access", "admin", async () => {
   const db = getDb();
-  return json({ require_login: await authRequired(db), can_require: await hasLoginCapableUser(db) });
+  return json({
+    require_login: await authRequired(db),
+    can_require: await hasLoginCapableUser(db),
+    forced_by_server: loginForcedByEnv(),
+  });
 });
 
 const AccessSchema = z.object({ require_login: z.boolean() });
