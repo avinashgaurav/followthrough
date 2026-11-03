@@ -80,3 +80,19 @@ describe("Supabase bucket limits", () => {
     expect(store.maxBytes).toBe(1234);
   });
 });
+
+describe("media_assets storage_ref", () => {
+  test("is unique (purged markers excepted)", async () => {
+    const { db, userId } = await seedUser();
+    const insert = (id: string, ref: string) =>
+      db.query(
+        `INSERT INTO media_assets (id, kind, storage_backend, storage_ref, filename, sha256, uploaded_by, created_at)
+         VALUES (?, 'audio', 'local', ?, 'a.webm', 'x', ?, ?)`,
+      ).run(id, ref, userId, nowIso());
+    await insert(ulid(), "K/a.webm");
+    const err = await insert(ulid(), "K/a.webm").then(() => null, (e) => e);
+    expect((err as { code?: string }).code).toBe("23505");
+    await insert(ulid(), "[purged]");
+    await insert(ulid(), "[purged]"); // many purged rows are fine
+  });
+});

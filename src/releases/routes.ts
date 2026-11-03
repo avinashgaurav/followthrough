@@ -5,7 +5,7 @@ import { route, json } from "../router.ts";
 import { getDb, nowIso } from "../db.ts";
 import { ulid, insightHandle } from "../ids.ts";
 import { appendEvent, transitionInsight, TransitionError, type Role } from "../events.ts";
-import { getLLM, type LLM } from "../llm/provider.ts";
+import { getLLM, LLMBudgetError, LLMRateLimitError, type LLM } from "../llm/provider.ts";
 import { addManualRelease, fetchReleases, upsertReleases, type FetchLike } from "./poller.ts";
 import { matchRelease } from "./matcher.ts";
 
@@ -252,9 +252,11 @@ route("POST", "/api/releases/manual", "admin", async (req, user) => {
     return json({ release_id: rel.id, entry_count: rel.entry_count, matches_proposed: run.proposed }, 201);
   } catch (e) {
     // The changelog is saved even when matching fails; the admin can re-poll later.
+    if (e instanceof LLMBudgetError || e instanceof LLMRateLimitError) throw e;
+    console.error("release matching failed:", e);
     return json(
       { release_id: rel.id, entry_count: rel.entry_count, matches_proposed: 0,
-        match_error: e instanceof Error ? e.message : "matching failed" },
+        match_error: "Matching failed; the changelog was saved. Try matching again later.", code: "match_failed" },
       201,
     );
   }
@@ -271,14 +273,14 @@ route("POST", "/api/releases/poll", "admin", async () => {
     const counts = await runPollPipeline(getDb(), getLLM());
     return json(counts);
   } catch (err) {
+    if (err instanceof LLMBudgetError || err instanceof LLMRateLimitError) throw err;
     console.warn("release poll failed:", err);
-    const message = err instanceof Error ? err.message : "release poll failed";
     // A private RELEASE_REPO 404s without auth; tell the admin what to fix.
     const hint = env.GITHUB_READ_TOKEN
-      ? ""
-      : ` No GITHUB_READ_TOKEN is configured — add a read-only token for ${env.RELEASE_REPO} to .env and restart.`;
+      ? " Check that the token can read the repo."
+      : ` No GITHUB_READ_TOKEN is configured: add a read-only token for ${env.RELEASE_REPO} and redeploy.`;
     return json(
-      { error: message + hint, github_token_configured: Boolean(env.GITHUB_READ_TOKEN) },
+      { error: `Checking GitHub releases failed.${hint}`, code: "release_poll_failed", github_token_configured: Boolean(env.GITHUB_READ_TOKEN) },
       502,
     );
   }

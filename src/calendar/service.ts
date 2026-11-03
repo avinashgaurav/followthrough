@@ -114,8 +114,8 @@ async function fetchParsedFeed(url: string, fetchImpl: typeof fetch): Promise<Ic
   try {
     res = await fetchImpl(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
   } catch (err) {
-    const detail = err instanceof Error ? err.message : String(err);
-    throw new CalendarFetchError(`Could not reach the calendar feed: ${detail}`);
+    console.warn("calendar feed fetch failed:", err);
+    throw new CalendarFetchError("Could not reach the calendar feed. Check the link and try again.");
   }
   if (!res.ok) {
     throw new CalendarFetchError(`Calendar feed responded with status ${res.status}.`);

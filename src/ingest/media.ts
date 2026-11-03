@@ -86,11 +86,19 @@ async function insertAsset(
   row: { id?: string; kind: MediaKind; key: string; filename: string; contentType: string | null; size: number; sha: string; uploadedBy: string | null },
 ): Promise<MediaAsset> {
   const id = row.id ?? ulid();
-  await db.query(
-    `INSERT INTO media_assets (id, kind, storage_backend, storage_ref, filename, content_type,
-                               size_bytes, sha256, uploaded_by, status, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'uploaded', ?)`,
-  ).run(id, row.kind, store.backend, row.key, row.filename, row.contentType, row.size, row.sha, row.uploadedBy, nowIso());
+  try {
+    await db.query(
+      `INSERT INTO media_assets (id, kind, storage_backend, storage_ref, filename, content_type,
+                                 size_bytes, sha256, uploaded_by, status, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'uploaded', ?)`,
+    ).run(id, row.kind, store.backend, row.key, row.filename, row.contentType, row.size, row.sha, row.uploadedBy, nowIso());
+  } catch (err) {
+    // uq_media_assets_storage_ref: two requests raced to register the same upload.
+    if (err && typeof err === "object" && (err as { code?: unknown }).code === "23505") {
+      throw new IngestError("That upload was already used. Upload the file again.", 409);
+    }
+    throw err;
+  }
   return (await db.query("SELECT * FROM media_assets WHERE id = ?").get(id)) as MediaAsset;
 }
 
