@@ -51,6 +51,11 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
+  // Keys that were absent before must be removed, not left at test values:
+  // other test files share this env object.
+  for (const k of Object.keys(env) as (keyof typeof env)[]) {
+    if (!(k in saved)) delete (env as Record<string, unknown>)[k];
+  }
   Object.assign(env, saved);
   setAuthFetch(undefined);
   setDb(null);
