@@ -4,49 +4,18 @@
 // closed for one client. Every company and person here is fictional.
 //
 // Usage: bun run seed:demo [--force] [--if-demo]
-// Needs ANTHROPIC_API_KEY (or OPENROUTER_API_KEY, or LLM_PROVIDER=claude-cli,
-// eval-only). Skips a database that already has meetings unless --force. The
-// seed is all-or-nothing: it builds into a temporary database and only swaps
-// it in once every step has succeeded, so a failed LLM call never leaves a
-// half-populated demo behind.
-import type { Database } from "../src/db.ts";
-import { existsSync, mkdirSync, renameSync, rmSync } from "node:fs";
-import { join } from "node:path";
+// Needs an AI key (GEMINI_API_KEY, ANTHROPIC_API_KEY or OPENROUTER_API_KEY, or
+// LLM_PROVIDER=claude-cli, eval-only). Skips a database that already has
+// meetings unless --force. The seed is all-or-nothing: it runs in one
+// transaction, so a failed LLM call never leaves a half-populated demo behind.
 
 // Prompts read PRODUCT_NAME when their modules load, so set it before importing.
 process.env.PRODUCT_NAME ||= "Tallyhall";
 process.env.PRODUCT_DESCRIPTION ||= "an expense management platform for mid-size companies";
 
 const force = process.argv.includes("--force");
-const realDir = process.env.DATA_DIR || "./data";
-const realDb = join(realDir, "insights.sqlite");
 
-function meetingCount(path: string): number {
-  if (!existsSync(path)) return 0;
-  const db = new Database(path, { readonly: true });
-  try {
-    return (db.query("SELECT COUNT(*) AS n FROM meetings").get() as { n: number }).n;
-  } catch {
-    return 0; // file exists but schema not created yet
-  } finally {
-    db.close();
-  }
-}
-
-const existing = meetingCount(realDb);
-if (existing > 0 && !force) {
-  console.log(`Database already has ${existing} meeting(s); skipping demo seed (use --force to replace).`);
-  process.exit(0);
-}
-
-// Build into a scratch DATA_DIR; config.ts reads it at import time.
-const tmpDir = join(realDir, `.seed-demo-${process.pid}`);
-rmSync(tmpDir, { recursive: true, force: true });
-mkdirSync(tmpDir, { recursive: true });
-process.env.DATA_DIR = tmpDir;
-process.env.BLOB_DIR ||= join(realDir, "blobs"); // content-addressed; orphans on failure are harmless
-
-const { getDb, nowIso } = await import("../src/db.ts");
+const { getDb, migrate, nowIso } = await import("../src/db.ts");
 const { ulid } = await import("../src/ids.ts");
 const { env, demoMode } = await import("../src/config.ts");
 const { getLLM } = await import("../src/llm/provider.ts");
@@ -62,7 +31,6 @@ const dir = new URL("../demo/", import.meta.url);
 const read = (name: string) => Bun.file(new URL(name, dir)).text();
 
 function abort(message: string, code = 1): never {
-  rmSync(tmpDir, { recursive: true, force: true });
   if (message) console.error(message);
   process.exit(code);
 }
@@ -71,15 +39,25 @@ function abort(message: string, code = 1): never {
 if (process.argv.includes("--if-demo") && !demoMode()) abort("", 0);
 // LLM_PROVIDER=claude-cli (the eval route) is accepted so the static demo
 // fixtures can be regenerated without an API key; see web/src/demo/README.md.
-if (!env.ANTHROPIC_API_KEY && !env.OPENROUTER_API_KEY && process.env.LLM_PROVIDER !== "claude-cli") {
+if (!env.ANTHROPIC_API_KEY && !env.OPENROUTER_API_KEY && !env.GEMINI_API_KEY && process.env.LLM_PROVIDER !== "claude-cli") {
   abort(
-    "seed:demo needs ANTHROPIC_API_KEY or OPENROUTER_API_KEY (or LLM_PROVIDER=claude-cli, eval-only): " +
+    "seed:demo needs GEMINI_API_KEY, ANTHROPIC_API_KEY or OPENROUTER_API_KEY (or LLM_PROVIDER=claude-cli, eval-only): " +
       "the demo shows real AI output.",
   );
 }
 
 const db = getDb();
+await migrate(db);
+const existing = ((await db.query("SELECT COUNT(*) AS n FROM meetings").get()) as { n: number }).n;
+if (existing > 0 && !force) {
+  console.log(`Database already has ${existing} meeting(s); skipping demo seed (use --force to replace).`);
+  await db.close();
+  process.exit(0);
+}
+
+let shareToken = "";
 try {
+  await db.transaction(async () => {
 
   const llm = getLLM();
   const actorId = ulid();
@@ -166,16 +144,11 @@ try {
   if (acmeMobile) console.log("  Acme mobile receipt preview: left for you to confirm in Proof");
 
   // Public "you asked, we shipped" page for Acme.
-  const token = ulid() + ulid();
-  await db.query("UPDATE clients SET share_token = ? WHERE id = ?").run(token, clientIds["Acme Corp"]!);
-
-  // Fold the WAL into the main file, then swap the finished database into place.
-  await db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+  shareToken = ulid() + ulid();
+  await db.query("UPDATE clients SET share_token = ? WHERE id = ?").run(shareToken, clientIds["Acme Corp"]!);
+  });
   await db.close();
-  for (const suffix of ["", "-wal", "-shm"]) rmSync(realDb + suffix, { force: true });
-  renameSync(join(tmpDir, "insights.sqlite"), realDb);
-  rmSync(tmpDir, { recursive: true, force: true });
-  console.log(`\nDemo seeded. Acme's share page: /share/${token}`);
+  console.log(`\nDemo seeded. Acme's share page: /share/${shareToken}`);
 } catch (err) {
-  abort(`seed:demo failed, nothing was written to ${realDb}: ${err instanceof Error ? err.message : String(err)}`);
+  abort(`seed:demo failed, nothing was written: ${err instanceof Error ? err.message : String(err)}`);
 }

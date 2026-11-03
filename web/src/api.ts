@@ -69,6 +69,42 @@ function postForm<T>(path: string, form: FormData): Promise<T> {
   return request<T>(path, { method: "POST", body: form });
 }
 
+async function sha256Hex(blob: Blob): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Put an audio file on a meeting form. When the server can sign uploads
+ * (Supabase Storage on the hosted app), the file goes straight to storage and
+ * the form carries its key; otherwise it is attached to the form as before.
+ * Hosted functions cap request bodies at 4.5 MB, so recordings must not pass
+ * through the API.
+ */
+export async function attachAudio(form: FormData, file: Blob, filename: string): Promise<void> {
+  const start = await post<{ mode: "direct" | "inline"; key?: string; upload_url?: string }>("/api/uploads", {
+    filename,
+    content_type: file.type || undefined,
+    size_bytes: file.size,
+  });
+  if (start.mode !== "direct" || !start.key || !start.upload_url) {
+    form.set("audio_file", file, filename);
+    return;
+  }
+  const sha = await sha256Hex(file);
+  const put = await fetch(start.upload_url, {
+    method: "PUT",
+    headers: { "content-type": file.type || "application/octet-stream" },
+    body: file,
+  });
+  if (!put.ok) throw new ApiError(put.status, "The recording could not be uploaded. Try again.");
+  form.set("audio_upload_key", start.key);
+  form.set("audio_sha256", sha);
+  form.set("audio_filename", filename);
+  if (file.type) form.set("audio_content_type", file.type);
+  form.set("audio_size", String(file.size));
+}
+
 // ---------------------------------------------------------------- domain constants
 
 export const STATES = [

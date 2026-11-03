@@ -12,5 +12,5 @@
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["src", "evals", "scripts"]
+  "include": ["src", "evals", "scripts", "api"]
 }

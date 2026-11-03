@@ -257,6 +257,15 @@ async function insertNewInsight(
  * already_running guard. Fail any run older than the threshold. Run at startup
  * and periodically.
  */
+/**
+ * A run can never outlive its function (300s on Vercel), so anything still
+ * 'running' after STALE_RUN_MINUTES (default 10) was cut off.
+ */
+export function staleRunMinutes(): number {
+  const n = Number(process.env.STALE_RUN_MINUTES ?? 10);
+  return n > 0 ? n : 10;
+}
+
 export async function failStaleExtractionRuns(db: Database, maxAgeMinutes = 30): Promise<number> {
   const cutoff = new Date(Date.now() - maxAgeMinutes * 60_000).toISOString();
   const stale = await db
@@ -291,6 +300,9 @@ export async function runExtraction(
   const transcript = await latestTranscript(db, meetingId);
   if (!transcript) throw new ExtractionError("no_transcript", "Meeting has no transcript");
 
+  // A run cut off by the function time limit would block the meeting until the
+  // daily sweep; clear such runs first.
+  await failStaleExtractionRuns(db, staleRunMinutes());
   // Guard against concurrent and accidental re-runs (a timed-out client retry
   // must not spawn a second run that the dedup pass cannot see).
   const running = await db
@@ -335,6 +347,26 @@ export async function runExtraction(
   }
 }
 
+/** Chunks processed at once in passes 1-2. Tests pin 1 (MockLLM replays in call order). */
+function extractConcurrency(): number {
+  const n = Number(process.env.EXTRACT_CONCURRENCY ?? 4);
+  return Number.isInteger(n) && n > 0 ? n : 4;
+}
+
+/** fn(0..count-1) with at most `limit` in flight; results in index order. */
+async function mapLimit<T>(count: number, limit: number, fn: (i: number) => Promise<T>): Promise<T[]> {
+  const results = new Array<T>(count);
+  let next = 0;
+  const worker = async () => {
+    while (next < count) {
+      const i = next++;
+      results[i] = await fn(i);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, count) }, worker));
+  return results;
+}
+
 async function execute(
   db: Database,
   llm: LLM,
@@ -362,14 +394,19 @@ async function execute(
   let droppedInjection = 0;
   const survivors: Candidate[] = [];
 
-  for (let i = 0; i < chunks.length; i++) {
+  // Pass 1 + 2 per chunk (extract, then verify that chunk's cited items). Chunks
+  // run EXTRACT_CONCURRENCY at a time so long meetings fit a serverless
+  // function's time limit; results merge in chunk order, so output is the same
+  // as a sequential run.
+  const perChunk = async (i: number) => {
     const chunk = chunks[i]!;
+    const out = { survivors: [] as Candidate[], citations: 0, verifier: 0, injection: 0, usage: [] as Array<{ tokensIn: number; tokensOut: number; costUsd: number }> };
     const ext = await llm.completeJSON({
       system: EXTRACTION_SYSTEM_PROMPT,
       prompt: extractionUserPrompt(chunk.text, i, chunks.length, attendees),
       schema: ExtractionResponseSchema,
     });
-    addUsage(ext);
+    out.usage.push(ext);
 
     // Citation gate: no citation, no insight. The quote must be an exact
     // substring of the FULL cleaned transcript after whitespace normalization.
@@ -378,17 +415,17 @@ async function execute(
       // Injection guard: a quote that instructs the tool is never an insight,
       // whatever the model made of it. See guards.ts.
       if (isInstructionToTool(item.quote)) {
-        droppedInjection++;
+        out.injection++;
         continue;
       }
       const match = findQuote(item.quote);
       if (!match) {
-        droppedCitations++;
+        out.citations++;
         continue;
       }
       cited.push({ item, match });
     }
-    if (cited.length === 0) continue;
+    if (cited.length === 0) return out;
 
     // Verifier judge: one call per chunk, batching its surviving items.
     const ver = await llm.completeJSON({
@@ -406,14 +443,23 @@ async function execute(
       ),
       schema: VerifierResponseSchema,
     });
-    addUsage(ver);
+    out.usage.push(ver);
     // Missing verdict defaults to keep: the citation gate already passed and
     // the verifier is strictly a drop filter.
     const dropped = new Set(ver.data.verdicts.filter((v) => !v.keep).map((v) => v.index));
     cited.forEach((c, index) => {
-      if (dropped.has(index)) droppedVerifier++;
-      else survivors.push(c);
+      if (dropped.has(index)) out.verifier++;
+      else out.survivors.push(c);
     });
+    return out;
+  };
+  const perChunkResults = await mapLimit(chunks.length, extractConcurrency(), perChunk);
+  for (const r of perChunkResults) {
+    r.usage.forEach(addUsage);
+    droppedCitations += r.citations;
+    droppedVerifier += r.verifier;
+    droppedInjection += r.injection;
+    survivors.push(...r.survivors);
   }
 
   // Re-run idempotency + within-run dedup on the exact verbatim quote.

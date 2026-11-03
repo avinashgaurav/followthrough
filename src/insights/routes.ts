@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { route, json } from "../router.ts";
-import { getDb } from "../db.ts";
+import { getDb, type Database } from "../db.ts";
 import type { AuthedUser } from "../auth.ts";
 import {
   ListFiltersSchema,
@@ -177,40 +177,31 @@ const AskSchema = z.object({
 // Lightweight per-user rate limit: the ask endpoint calls the LLM on every hit,
 // so cap it to keep a runaway client (or a loop) from draining the API budget.
 // In DEMO_MODE every visitor is the same guest, so the key is the client IP and
-// the cap is DEMO_ASK_PER_HOUR instead.
+// the cap is DEMO_ASK_PER_HOUR instead. Hits live in the database (rate_hits)
+// so the limit holds across serverless instances.
 const ASK_LIMIT = 30;
 const ASK_WINDOW_MS = 60 * 60 * 1000;
-const askHits = new Map<string, number[]>();
-function askRateLimited(key: string, limit = ASK_LIMIT): boolean {
-  const now = Date.now();
-  const recent = (askHits.get(key) ?? []).filter((t) => now - t < ASK_WINDOW_MS);
-  if (recent.length >= limit) {
-    askHits.set(key, recent);
-    return true;
-  }
-  recent.push(now);
-  askHits.set(key, recent);
-  return false;
-}
 
-// Drop idle users so the map can't grow unbounded over a long-lived process.
-function pruneAskHits(now: number): void {
-  for (const [uid, hits] of askHits) {
-    if (hits.every((t) => now - t >= ASK_WINDOW_MS)) askHits.delete(uid);
-  }
+export async function askRateLimited(db: Database, key: string, limit = ASK_LIMIT, now = Date.now()): Promise<boolean> {
+  const since = now - ASK_WINDOW_MS;
+  await db.query("DELETE FROM rate_hits WHERE at < ?").run(since);
+  const { n } = (await db.query("SELECT COUNT(*) AS n FROM rate_hits WHERE key = ? AND at >= ?").get(key, since)) as { n: number };
+  if (n >= limit) return true;
+  await db.query("INSERT INTO rate_hits (key, at) VALUES (?, ?)").run(key, now);
+  return false;
 }
 
 route("POST", "/api/ask", "user", async (req, user) => {
   const parsed = AskSchema.safeParse(await readBody(req));
   if (!parsed.success) return invalid(parsed.error.issues);
   const actor = actorOf(user);
-  pruneAskHits(Date.now());
+  const db = getDb();
   // Demo: per-IP first, then a global cap so total spend is bounded even if
   // IPs are unknown or rotated.
   const limited = demoMode()
-    ? askRateLimited(`ip:${clientIp(req) ?? "unknown"}`, env.DEMO_ASK_PER_HOUR) ||
-      askRateLimited("demo:global", env.DEMO_ASK_GLOBAL_PER_HOUR)
-    : askRateLimited(actor.id);
+    ? (await askRateLimited(db, `ip:${clientIp(req) ?? "unknown"}`, env.DEMO_ASK_PER_HOUR)) ||
+      (await askRateLimited(db, "demo:global", env.DEMO_ASK_GLOBAL_PER_HOUR))
+    : await askRateLimited(db, actor.id);
   if (limited) {
     return json({ error: "Too many questions in a short window. Wait a bit and try again." }, 429);
   }

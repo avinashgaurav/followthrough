@@ -25,7 +25,11 @@ function errorResponse(err: unknown): Response {
   return json({ error: err instanceof Error ? err.message : "extraction failed" }, 502);
 }
 
+/** After this long, the meeting brief is left for a separate /analyze call, so the request stays inside the function limit. */
+const ANALYSIS_INLINE_BUDGET_MS = 120_000;
+
 route("POST", "/api/meetings/:id/extract", "user", async (req, user, params) => {
+  const started = Date.now();
   try {
     const db = getDb();
     const force = new URL(req.url).searchParams.get("force") === "true";
@@ -49,10 +53,13 @@ route("POST", "/api/meetings/:id/extract", "user", async (req, user, params) => 
     // Pass 4: the meeting-level brief. Extraction success matters more than the
     // brief, so a brief failure degrades to a warning instead of failing the run.
     let analysis: string | null = null;
-    try {
-      analysis = (await runMeetingAnalysis(db, getLLM(), params.id ?? "")).markdown;
-    } catch (err) {
-      console.warn("meeting analysis failed:", err);
+    const analysisPending = Date.now() - started > ANALYSIS_INLINE_BUDGET_MS;
+    if (!analysisPending) {
+      try {
+        analysis = (await runMeetingAnalysis(db, getLLM(), params.id ?? "")).markdown;
+      } catch (err) {
+        console.warn("meeting analysis failed:", err);
+      }
     }
     return json({
       run_id: r.runId,
@@ -60,6 +67,8 @@ route("POST", "/api/meetings/:id/extract", "user", async (req, user, params) => 
       mentions_added: r.mentionsAdded,
       dropped: r.droppedCitations + r.droppedVerifier,
       analysis_md: analysis,
+      // true: call POST /api/meetings/:id/analyze to generate the brief
+      analysis_pending: analysisPending,
     });
   } catch (err) {
     return errorResponse(err);

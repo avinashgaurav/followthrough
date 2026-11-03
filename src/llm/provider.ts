@@ -3,6 +3,7 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { tmpdir } from "node:os";
 import { z } from "zod";
 import { env, llmDailyBudgetUsd } from "../config.ts";
+import { databaseUrl, getDb } from "../db.ts";
 
 /**
  * LLM layer (SPEC.md sections 5, 10). Providers, in order of preference:
@@ -67,11 +68,33 @@ export class LLMOutputError extends Error {}
 /** Thrown before any provider call once the daily LLM_DAILY_BUDGET_USD is spent. */
 export class LLMBudgetError extends Error {}
 
+/** Where the day's spend is kept. The default is process memory. */
+export interface SpendLedger {
+  spent(day: string): Promise<number>;
+  add(day: string, usd: number): Promise<void>;
+}
+
+/** The llm_spend table: one shared tally for every serverless instance. */
+export function dbSpendLedger(db: () => import("../db.ts").Database): SpendLedger {
+  return {
+    async spent(day) {
+      const row = (await db().query("SELECT usd FROM llm_spend WHERE day = ?").get(day)) as { usd: number } | null;
+      return row?.usd ?? 0;
+    },
+    async add(day, usd) {
+      await db()
+        .query("INSERT INTO llm_spend (day, usd) VALUES (?, ?) ON CONFLICT (day) DO UPDATE SET usd = llm_spend.usd + EXCLUDED.usd")
+        .run(day, usd);
+    },
+  };
+}
+
 /**
  * Hard daily spend cap around any LLM. Checks before each call and records the
  * reported cost after it, so calls already in flight can overshoot by their own
- * cost. Failed calls (and inner retries) are not counted. In-memory per
- * process: a restart resets the day's tally.
+ * cost. Failed calls (and inner retries) are not counted. With a ledger (the
+ * database, on Vercel) the tally is shared across instances; without one it is
+ * in process memory and a restart resets the day's tally.
  */
 export class BudgetedLLM implements LLM {
   private day = "";
@@ -81,6 +104,7 @@ export class BudgetedLLM implements LLM {
     private inner: LLM,
     private capUsd: number,
     private now: () => Date = () => new Date(),
+    private ledger?: SpendLedger,
   ) {}
 
   spentToday(): number {
@@ -97,29 +121,33 @@ export class BudgetedLLM implements LLM {
   }
 
   /** Unknown-model pricing reports $0; charge a conservative rate instead so the cap still trips. */
-  private charge(r: LLMUsage): void {
+  private async charge(r: LLMUsage): Promise<void> {
     const tokens = r.tokensIn + r.tokensOut;
-    this.spent += r.costUsd > 0 || tokens === 0 ? r.costUsd : (r.tokensIn * 15 + r.tokensOut * 75) / 1_000_000;
+    const usd = r.costUsd > 0 || tokens === 0 ? r.costUsd : (r.tokensIn * 15 + r.tokensOut * 75) / 1_000_000;
+    this.roll();
+    this.spent += usd;
+    if (this.ledger && usd > 0) await this.ledger.add(this.day, usd);
   }
 
-  private check(): void {
+  private async check(): Promise<void> {
     this.roll();
-    if (this.spent >= this.capUsd) {
+    const spent = this.ledger ? await this.ledger.spent(this.day) : this.spent;
+    if (spent >= this.capUsd) {
       throw new LLMBudgetError("Today's AI budget is used up. Try again tomorrow.");
     }
   }
 
   async complete(opts: CompleteOptions): Promise<{ text: string } & LLMUsage> {
-    this.check();
+    await this.check();
     const r = await this.inner.complete(opts);
-    this.charge(r);
+    await this.charge(r);
     return r;
   }
 
   async completeJSON<T>(opts: CompleteJSONOptions<T>): Promise<{ data: T } & LLMUsage> {
-    this.check();
+    await this.check();
     const r = await this.inner.completeJSON(opts);
-    this.charge(r);
+    await this.charge(r);
     return r;
   }
 }
@@ -622,6 +650,10 @@ export function getLLM(): LLM {
     instance = new MockLLM();
   }
   const cap = llmDailyBudgetUsd();
-  if (cap) instance = new BudgetedLLM(instance, cap);
+  if (cap) {
+    // Shared across serverless instances when a database is configured.
+    const ledger = databaseUrl() ? dbSpendLedger(getDb) : undefined;
+    instance = new BudgetedLLM(instance, cap, undefined, ledger);
+  }
   return instance;
 }

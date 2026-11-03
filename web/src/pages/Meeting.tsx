@@ -274,6 +274,8 @@ export function Meeting() {
           : "Insights found. Check them in Review.",
         "success",
       );
+      // A long extraction leaves the brief for a second request (function time limit).
+      if (res?.analysis_pending === true) await api.analyzeMeeting(id).catch(() => undefined);
       await loadDetail();
       void loadBrief();
       if (clientId) {
