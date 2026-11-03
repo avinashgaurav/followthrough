@@ -21,12 +21,52 @@ describe("database-backed daily AI budget", () => {
     expect(await ledger.spent("2026-11-04")).toBe(0);
   });
 
-  test("free calls are not written to the ledger", async () => {
+  test("a free call settles its reservation back to $0", async () => {
     const db = await openTestDb();
     const ledger = dbSpendLedger(() => db);
-    const b = new BudgetedLLM(new MockLLM().enqueue("hi"), 1, undefined, ledger);
+    const now = () => new Date("2026-11-03T10:00:00Z");
+    const b = new BudgetedLLM(new MockLLM().enqueue("hi"), 1, now, ledger);
     await b.complete({ prompt: "p" });
-    expect(await db.query("SELECT COUNT(*) AS n FROM llm_spend").get()).toEqual({ n: 0 });
+    expect(await ledger.spent("2026-11-03")).toBe(0);
+  });
+
+  test("concurrent calls cannot all pass the cap on the same remaining budget", async () => {
+    const db = await openTestDb();
+    const ledger = dbSpendLedger(() => db);
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    let started = 0;
+    const slow: LLM = {
+      complete: async () => {
+        started++;
+        await gate; // hold every call open until all have tried to reserve
+        return { text: "x", model: "m", tokensIn: 1, tokensOut: 1, costUsd: 0.6 };
+      },
+      completeJSON: async () => { throw new Error("unused"); },
+    };
+    const now = () => new Date("2026-11-03T10:00:00Z");
+    const b = new BudgetedLLM(slow, 1, now, ledger, () => 0.6);
+    const calls = [1, 2, 3].map((i) => b.complete({ prompt: String(i) }).then(() => "ok", (e) => e));
+    await new Promise((r) => setTimeout(r, 50));
+    release();
+    const results = await Promise.all(calls);
+    expect(started).toBe(1);
+    expect(results.filter((r) => r === "ok")).toHaveLength(1);
+    expect(results.filter((r) => r instanceof LLMBudgetError)).toHaveLength(2);
+    expect(await ledger.spent("2026-11-03")).toBeCloseTo(0.6);
+  });
+
+  test("a failed call keeps its reservation (usage unknown)", async () => {
+    const db = await openTestDb();
+    const ledger = dbSpendLedger(() => db);
+    const failing: LLM = {
+      complete: async () => { throw new Error("provider down"); },
+      completeJSON: async () => { throw new Error("unused"); },
+    };
+    const now = () => new Date("2026-11-03T10:00:00Z");
+    const b = new BudgetedLLM(failing, 1, now, ledger, () => 0.4);
+    await expect(b.complete({ prompt: "x" })).rejects.toThrow("provider down");
+    expect(await ledger.spent("2026-11-03")).toBeCloseTo(0.4);
   });
 });
 

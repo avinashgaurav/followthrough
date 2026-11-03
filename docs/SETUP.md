@@ -93,7 +93,7 @@ Without `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, files are stored on disk
 | `DEMO_MODE` | `true` = public read-only demo: writes and login off, team and calendar hidden, Ask rate-limited per IP, background jobs off |
 | `DEMO_ASK_PER_HOUR` | Ask questions per visitor IP per hour in demo mode (default `10`) |
 | `DEMO_ASK_GLOBAL_PER_HOUR` | Ask questions per hour across all visitors in demo mode (default `200`) |
-| `LLM_DAILY_BUDGET_USD` | hard daily cap on AI spend, shared across instances; once reached, AI calls return 503 until the next UTC day. Demo mode defaults to `5` |
+| `LLM_DAILY_BUDGET_USD` | hard daily cap on AI spend in USD (a positive number), shared across instances; once reached, AI calls return 503 until the next UTC day. **Defaults to `5` whenever an AI key is set**; raise it here if you need more. Each call reserves an estimate first and settles to the real cost after |
 | `TRUSTED_PROXY_HOPS` | proxies in front of the server that append to `X-Forwarded-For` (default `1`; `0` ignores XFF). Drives login lockout and demo rate limits |
 | `TRUST_CF_CONNECTING_IP` | `true` only when the server is reachable solely through Cloudflare |
 | `REQUIRE_LOGIN` | `true` forces login on everywhere (it is already forced on Vercel and with `NODE_ENV=production`) |

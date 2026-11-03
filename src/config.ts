@@ -70,9 +70,22 @@ export function trustCfConnectingIp(): boolean {
 
 /** A public demo always has a spend cap, even when none is configured. */
 export const DEMO_DEFAULT_BUDGET_USD = 5;
+/** Daily AI spend cap whenever a real AI key is set and LLM_DAILY_BUDGET_USD is not. */
+export const DEFAULT_BUDGET_USD = 5;
 
+/**
+ * The daily AI spend cap in USD. LLM_DAILY_BUDGET_USD (a positive number) sets
+ * it; raise it there if $5 a day is too little. With any AI key present there
+ * is always a cap: a public deployment never runs uncapped by accident. Only a
+ * keyless dev setup (MockLLM, which costs nothing) has none.
+ */
 export function llmDailyBudgetUsd(): number | undefined {
-  return env.LLM_DAILY_BUDGET_USD ?? (demoMode() ? DEMO_DEFAULT_BUDGET_USD : undefined);
+  if (env.LLM_DAILY_BUDGET_USD) return env.LLM_DAILY_BUDGET_USD;
+  if (demoMode()) return DEMO_DEFAULT_BUDGET_USD;
+  const anyKey =
+    process.env.GEMINI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.OPENROUTER_API_KEY ||
+    env.GEMINI_API_KEY || env.ANTHROPIC_API_KEY || env.OPENROUTER_API_KEY;
+  return anyKey ? DEFAULT_BUDGET_USD : undefined;
 }
 
 /** Who the AI is working for, e.g. "Acme, a payroll platform for SMBs". */

@@ -80,33 +80,83 @@ export function geminiRetryDelayMs(body: string): number | null {
 /** Longest single wait on a 429, so a call stays well inside a 300s function. */
 const MAX_RETRY_WAIT_MS = 30_000;
 
-/** Where the day's spend is kept. The default is process memory. */
+/** Where the day's spend is kept. */
 export interface SpendLedger {
   spent(day: string): Promise<number>;
-  add(day: string, usd: number): Promise<void>;
+  /** Atomically add `usd` to the day if the total stays within `cap`; false = refused. */
+  reserve(day: string, usd: number, cap: number): Promise<boolean>;
+  /** Settle up after a call: add the difference between real cost and reservation (may be negative). */
+  adjust(day: string, usd: number): Promise<void>;
 }
 
-/** The llm_spend table: one shared tally for every serverless instance. */
+/** Process-memory ledger: one long-lived server, or no database configured. */
+export function memorySpendLedger(): SpendLedger {
+  const days = new Map<string, number>();
+  return {
+    async spent(day) {
+      return days.get(day) ?? 0;
+    },
+    async reserve(day, usd, cap) {
+      const cur = days.get(day) ?? 0;
+      if (cur + usd > cap) return false;
+      days.set(day, cur + usd);
+      return true;
+    },
+    async adjust(day, usd) {
+      days.set(day, Math.max(0, (days.get(day) ?? 0) + usd));
+    },
+  };
+}
+
+/**
+ * The llm_spend table: one shared tally for every serverless instance. The
+ * reservation is a single conditional UPDATE, so two instances can never both
+ * pass the cap check on the same remaining budget.
+ */
 export function dbSpendLedger(db: () => import("../db.ts").Database): SpendLedger {
   return {
     async spent(day) {
       const row = (await db().query("SELECT usd FROM llm_spend WHERE day = ?").get(day)) as { usd: number } | null;
       return row?.usd ?? 0;
     },
-    async add(day, usd) {
-      await db()
-        .query("INSERT INTO llm_spend (day, usd) VALUES (?, ?) ON CONFLICT (day) DO UPDATE SET usd = llm_spend.usd + EXCLUDED.usd")
-        .run(day, usd);
+    async reserve(day, usd, cap) {
+      await db().query("INSERT INTO llm_spend (day, usd) VALUES (?, 0) ON CONFLICT (day) DO NOTHING").run(day);
+      const r = await db()
+        .query("UPDATE llm_spend SET usd = usd + ?1 WHERE day = ?2 AND usd + ?1 <= ?3 RETURNING usd")
+        .run(usd, day, cap);
+      return r.rows.length > 0;
+    },
+    async adjust(day, usd) {
+      if (usd === 0) return;
+      await db().query("UPDATE llm_spend SET usd = GREATEST(usd + ?1, 0) WHERE day = ?2").run(usd, day);
     },
   };
 }
 
+/** Conservative rate (USD per million tokens) for models without a known price. */
+const FALLBACK_PRICE = { in: 15, out: 75 };
+
 /**
- * Hard daily spend cap around any LLM. Checks before each call and records the
- * reported cost after it, so calls already in flight can overshoot by their own
- * cost. Failed calls (and inner retries) are not counted. With a ledger (the
- * database, on Vercel) the tally is shared across instances; without one it is
- * in process memory and a restart resets the day's tally.
+ * What a call is reserved at before it runs: the prompt (about 4 characters a
+ * token) plus up to 2,048 output tokens, at the model's price or the
+ * conservative fallback. The reservation is settled to the real cost after.
+ */
+export function estimateCostUsd(opts: CompleteOptions): number {
+  const model = (opts.model ?? DEFAULT_MODEL).replace(/-\d{8}$/, "");
+  const p = PRICING[model] ?? geminiPricing(model) ?? FALLBACK_PRICE;
+  const tokensIn = Math.ceil(((opts.system?.length ?? 0) + opts.prompt.length) / 4);
+  const tokensOut = Math.min(opts.maxTokens ?? 2048, 2048);
+  return (tokensIn * p.in + tokensOut * p.out) / 1_000_000;
+}
+
+/**
+ * Hard daily spend cap around any LLM. Before each call it atomically reserves
+ * an estimate (estimateCostUsd) against the cap and refuses if that would pass
+ * it; after the call the reservation is settled to the reported cost, so a call
+ * can overshoot by its own cost but concurrent calls cannot all slip through on
+ * the same remaining budget. A call that fails keeps its reservation (its real
+ * usage is unknown). With the database ledger the tally is shared across
+ * serverless instances; the memory ledger resets on restart.
  */
 export class BudgetedLLM implements LLM {
   private day = "";
@@ -116,7 +166,8 @@ export class BudgetedLLM implements LLM {
     private inner: LLM,
     private capUsd: number,
     private now: () => Date = () => new Date(),
-    private ledger?: SpendLedger,
+    private ledger: SpendLedger = memorySpendLedger(),
+    private estimate: (opts: CompleteOptions) => number = estimateCostUsd,
   ) {}
 
   spentToday(): number {
@@ -133,34 +184,39 @@ export class BudgetedLLM implements LLM {
   }
 
   /** Unknown-model pricing reports $0; charge a conservative rate instead so the cap still trips. */
-  private async charge(r: LLMUsage): Promise<void> {
+  private cost(r: LLMUsage): number {
     const tokens = r.tokensIn + r.tokensOut;
-    const usd = r.costUsd > 0 || tokens === 0 ? r.costUsd : (r.tokensIn * 15 + r.tokensOut * 75) / 1_000_000;
-    this.roll();
-    this.spent += usd;
-    if (this.ledger && usd > 0) await this.ledger.add(this.day, usd);
+    return r.costUsd > 0 || tokens === 0
+      ? r.costUsd
+      : (r.tokensIn * FALLBACK_PRICE.in + r.tokensOut * FALLBACK_PRICE.out) / 1_000_000;
   }
 
-  private async check(): Promise<void> {
+  private async guarded<R extends LLMUsage>(opts: CompleteOptions, run: () => Promise<R>): Promise<R> {
     this.roll();
-    const spent = this.ledger ? await this.ledger.spent(this.day) : this.spent;
-    if (spent >= this.capUsd) {
+    const day = this.day;
+    const reserved = this.estimate(opts);
+    if (!(await this.ledger.reserve(day, reserved, this.capUsd))) {
       throw new LLMBudgetError("Today's AI budget is used up. Try again tomorrow.");
     }
-  }
-
-  async complete(opts: CompleteOptions): Promise<{ text: string } & LLMUsage> {
-    await this.check();
-    const r = await this.inner.complete(opts);
-    await this.charge(r);
+    let r: R;
+    try {
+      r = await run();
+    } catch (err) {
+      this.spent += reserved; // usage unknown: the reservation stands
+      throw err;
+    }
+    const actual = this.cost(r);
+    this.spent += actual;
+    await this.ledger.adjust(day, actual - reserved);
     return r;
   }
 
-  async completeJSON<T>(opts: CompleteJSONOptions<T>): Promise<{ data: T } & LLMUsage> {
-    await this.check();
-    const r = await this.inner.completeJSON(opts);
-    await this.charge(r);
-    return r;
+  complete(opts: CompleteOptions): Promise<{ text: string } & LLMUsage> {
+    return this.guarded(opts, () => this.inner.complete(opts));
+  }
+
+  completeJSON<T>(opts: CompleteJSONOptions<T>): Promise<{ data: T } & LLMUsage> {
+    return this.guarded(opts, () => this.inner.completeJSON(opts));
   }
 }
 
@@ -677,7 +733,7 @@ export function getLLM(): LLM {
   const cap = llmDailyBudgetUsd();
   if (cap) {
     // Shared across serverless instances when a database is configured.
-    const ledger = databaseUrl() ? dbSpendLedger(getDb) : undefined;
+    const ledger = databaseUrl() ? dbSpendLedger(getDb) : memorySpendLedger();
     instance = new BudgetedLLM(instance, cap, undefined, ledger);
   }
   return instance;

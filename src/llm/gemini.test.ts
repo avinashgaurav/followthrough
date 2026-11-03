@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { GeminiLLM, GEMINI_MODEL, LLMOutputError, geminiSelected, getLLM, setLLM } from "./provider.ts";
+import { BudgetedLLM, GeminiLLM, GEMINI_MODEL, LLMOutputError, geminiSelected, getLLM, setLLM } from "./provider.ts";
+import { llmDailyBudgetUsd } from "../config.ts";
 
 type Call = { url: string; init: RequestInit };
 
@@ -105,7 +106,9 @@ describe("provider selection", () => {
     delete process.env.OPENROUTER_API_KEY;
     delete process.env.LLM_PROVIDER;
     expect(geminiSelected()).toBe(true);
-    expect(getLLM()).toBeInstanceOf(GeminiLLM);
+    // A real key always comes with the default daily cap around it.
+    expect(llmDailyBudgetUsd()).toBe(5);
+    expect(getLLM()).toBeInstanceOf(BudgetedLLM);
   });
 
   test("an Anthropic key wins unless LLM_PROVIDER=gemini", () => {
