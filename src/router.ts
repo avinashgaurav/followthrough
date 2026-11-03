@@ -2,7 +2,7 @@ import { getDb } from "./db.ts";
 import { userForSession, readSessionCookie, guestUser, type AuthedUser } from "./auth.ts";
 import { authRequired } from "./settings.ts";
 import { demoBlocks, DEMO_BLOCKED_MESSAGE } from "./demo.ts";
-import { LLMBudgetError } from "./llm/provider.ts";
+import { LLMBudgetError, LLMRateLimitError } from "./llm/provider.ts";
 
 export type Handler = (
   req: Request,
@@ -63,7 +63,12 @@ export async function dispatch(req: Request): Promise<Response | null> {
     }
     return Promise.resolve(r.handler(req, user, params)).catch((err: unknown) => {
       if (err instanceof LLMBudgetError) return json({ error: err.message, kind: "budget" }, 503);
-      throw err;
+      if (err instanceof LLMRateLimitError) {
+        return json({ error: "The AI provider is rate limited right now. Try again in a minute.", kind: "rate_limit" }, 503);
+      }
+      // Never answer with a stack trace or a server error page.
+      console.error(`${req.method} ${url.pathname} failed:`, err);
+      return json({ error: "Something went wrong on the server. Try again." }, 500);
     });
   }
   return null; // not an API route; caller may serve static files

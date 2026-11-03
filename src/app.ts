@@ -24,5 +24,11 @@ route("GET", "/api/health", "public", () => json({ ok: true, service: "followthr
 
 /** Every /api/* and /share/* request, on the local server and on Vercel. */
 export async function handleApi(req: Request): Promise<Response> {
-  return (await dispatch(req)) ?? json({ error: "not found" }, 404);
+  try {
+    return (await dispatch(req)) ?? json({ error: "not found" }, 404);
+  } catch (err) {
+    // e.g. the database is unreachable while loading the session
+    console.error(`${req.method} ${new URL(req.url).pathname} failed:`, err);
+    return json({ error: "The server could not handle that request. Try again." }, 500);
+  }
 }

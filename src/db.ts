@@ -143,6 +143,18 @@ export function databaseUrl(): string | undefined {
   return process.env.DATABASE_URL || process.env.POSTGRES_URL;
 }
 
+/**
+ * Optional DB_SCHEMA: run inside a separate Postgres schema (search_path
+ * "<schema>, public"), e.g. for a smoke test or preview that must not touch
+ * the real tables. Unset in production.
+ */
+export function dbSchema(): string | null {
+  const s = process.env.DB_SCHEMA?.trim();
+  if (!s) return null;
+  if (!/^[a-z_][a-z0-9_]{0,62}$/.test(s)) throw new Error(`DB_SCHEMA must be a plain lowercase identifier, got "${s}"`);
+  return s;
+}
+
 let db: Database | null = null;
 let ready: Promise<void> | null = null;
 
@@ -159,6 +171,7 @@ export function getDb(): Database {
     ssl: /localhost|127\.0\.0\.1/.test(url) ? false : "require",
     types: PG_TYPES as any,
     onnotice: () => {},
+    ...(dbSchema() ? { connection: { search_path: `${dbSchema()}, public` } } : {}),
   });
   db = makeDb(postgresExecutor(sql));
   return db;
@@ -166,6 +179,8 @@ export function getDb(): Database {
 
 /** Applies every migrations/*.sql in name order. Each file is idempotent. */
 export async function migrate(target: Database = getDb()): Promise<void> {
+  const schema = dbSchema();
+  if (schema && target === db) await target.exec(`CREATE SCHEMA IF NOT EXISTS ${schema};`);
   for (const file of readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql")).sort()) {
     await target.exec(readFileSync(join(MIGRATIONS_DIR, file), "utf8"));
   }

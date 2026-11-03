@@ -68,6 +68,18 @@ export class LLMOutputError extends Error {}
 /** Thrown before any provider call once the daily LLM_DAILY_BUDGET_USD is spent. */
 export class LLMBudgetError extends Error {}
 
+/** The provider kept answering 429 (rate limit or quota) after every retry. */
+export class LLMRateLimitError extends Error {}
+
+/** Google's suggested wait from a 429 body ("retryDelay": "41s"), in ms, or null. */
+export function geminiRetryDelayMs(body: string): number | null {
+  const m = /"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/.exec(body);
+  return m ? Math.round(Number(m[1]) * 1000) : null;
+}
+
+/** Longest single wait on a 429, so a call stays well inside a 300s function. */
+const MAX_RETRY_WAIT_MS = 30_000;
+
 /** Where the day's spend is kept. The default is process memory. */
 export interface SpendLedger {
   spent(day: string): Promise<number>;
@@ -382,8 +394,10 @@ export class GeminiLLM implements LLM {
       generationConfig: { maxOutputTokens: maxTokens, ...(json ? { responseMimeType: "application/json" } : {}) },
     });
     let lastErr: Error | null = null;
+    let wait = 0;
     for (let attempt = 0; attempt < 4; attempt++) {
-      if (attempt > 0) await this.sleep(1500 * 2 ** attempt);
+      if (attempt > 0) await this.sleep(wait || 1500 * 2 ** attempt);
+      wait = 0;
       let res: Response;
       try {
         res = await this.fetchImpl(url, {
@@ -396,7 +410,18 @@ export class GeminiLLM implements LLM {
         lastErr = err instanceof Error ? err : new Error(String(err));
         continue;
       }
-      if (res.status === 429 || res.status >= 500) {
+      if (res.status === 429) {
+        const text = await res.text();
+        const hinted = geminiRetryDelayMs(text);
+        // A wait longer than the cap (e.g. a daily quota) will not clear in time: stop now.
+        if (hinted !== null && hinted > MAX_RETRY_WAIT_MS) {
+          throw new LLMRateLimitError(`Gemini quota or rate limit reached (retry in ${Math.round(hinted / 1000)}s)`);
+        }
+        wait = hinted ?? 0;
+        lastErr = new LLMRateLimitError(`Gemini rate limit: ${text.slice(0, 300)}`);
+        continue;
+      }
+      if (res.status >= 500) {
         lastErr = new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 400)}`);
         continue;
       }

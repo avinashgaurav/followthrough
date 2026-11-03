@@ -117,3 +117,31 @@ describe("provider selection", () => {
     expect(geminiSelected()).toBe(true);
   });
 });
+
+describe("Gemini rate limits", () => {
+  const quota429 = (delay: string) => ({
+    status: 429,
+    body: { error: { code: 429, message: "quota", details: [{ "@type": "type.googleapis.com/google.rpc.RetryInfo", retryDelay: delay }] } },
+  });
+
+  test("waits Google's retryDelay before retrying", async () => {
+    const waits: number[] = [];
+    const { fetchImpl } = stub(quota429("12s"), answer("ok"));
+    const r = await new GeminiLLM("k", fetchImpl, async (ms) => void waits.push(ms)).complete({ prompt: "x" });
+    expect(r.text).toBe("ok");
+    expect(waits).toEqual([12_000]);
+  });
+
+  test("a long quota wait fails fast with LLMRateLimitError", async () => {
+    const { fetchImpl, calls } = stub(quota429("3600s"));
+    const { LLMRateLimitError } = await import("./provider.ts");
+    await expect(new GeminiLLM("k", fetchImpl, noSleep).complete({ prompt: "x" })).rejects.toBeInstanceOf(LLMRateLimitError);
+    expect(calls).toHaveLength(1);
+  });
+
+  test("429 on every attempt ends in LLMRateLimitError", async () => {
+    const { fetchImpl } = stub(quota429("1s"), quota429("1s"), quota429("1s"), quota429("1s"));
+    const { LLMRateLimitError } = await import("./provider.ts");
+    await expect(new GeminiLLM("k", fetchImpl, noSleep).complete({ prompt: "x" })).rejects.toBeInstanceOf(LLMRateLimitError);
+  });
+});

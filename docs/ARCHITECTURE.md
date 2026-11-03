@@ -28,11 +28,11 @@ One-shot summarization produces mush. The pipeline is multi-pass and verified (`
 
 One runtime, one source of truth.
 
-- **Bun + TypeScript** end to end: `Bun.serve` HTTP server, `bun:sqlite` database (WAL).
+- **Bun + TypeScript** end to end. Deployed on Vercel: `api/server.ts` (Bun runtime) serves the API, the web app is static, a daily cron replaces the server's timers. Locally, `Bun.serve` runs the same routes (`src/app.ts`). Postgres (Supabase) through `src/db.ts`; tests use in-process PGlite.
 - **React + Vite** SPA in `web/`, served from `web/dist` by the same server. Dark-only, single-accent, `Cmd-K` command palette, vim-style keyboard nav.
-- **The event log is the source of truth.** `events` is an append-only table (enforced by triggers); an insight's state is a *cache* written in the same transaction as its event. Every turnaround-time metric is a query over the log, never a hand-maintained timestamp column. See `schema.sql` and `src/events.ts`.
+- **The event log is the source of truth.** `events` is an append-only table (enforced by triggers); an insight's state is a *cache* written in the same transaction as its event. Every turnaround-time metric is a query over the log, never a hand-maintained timestamp column. See `migrations/001_init.sql` and `src/events.ts`.
 - **LLM**: Anthropic direct (or OpenRouter pinned to Claude, retention denied). Structured outputs via Zod schemas, adaptive thinking, and a per-call cost log. Default model `claude-opus-4-8`. `src/llm/provider.ts`.
-- **Storage**: metadata and transcripts in SQLite; audio/screenshots/CSVs as content-addressed blobs behind `media_assets` (local disk now, S3-ready).
+- **Storage**: metadata and transcripts in Postgres; audio/screenshots/CSVs as blobs behind `media_assets`, in a private Supabase Storage bucket (local disk in tests). Browsers upload audio straight to storage through signed URLs.
 
 <details>
 <summary><b>Module map</b> (<code>src/</code>)</summary>
@@ -50,8 +50,8 @@ One runtime, one source of truth.
 | `metrics`, `exports`, `digest` | admin dashboard, CSV export, weekly digest |
 | `notify` | fire-and-forget Slack / Google Chat nudges (extraction + daily summary) |
 | `calendar` | read-only iCal intake for capture prefill (with SSRF guard) |
-| `stt` | transcription: local whisper.cpp, or Deepgram cloud STT when a key is set |
-| `watchfolder`, `retention` | folder auto-ingest; consent/deletion purge |
+| `stt` | transcription with Deepgram, which fetches the recording from a signed URL |
+| `retention` | consent/deletion purge (also deletes stored files) |
 
 </details>
 

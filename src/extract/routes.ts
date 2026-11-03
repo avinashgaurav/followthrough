@@ -2,7 +2,7 @@ import { extractionNudgeText, sendChat } from "../notify.ts";
 import { z } from "zod";
 import { route, json } from "../router.ts";
 import { getDb } from "../db.ts";
-import { getLLM } from "../llm/provider.ts";
+import { getLLM, LLMBudgetError, LLMRateLimitError } from "../llm/provider.ts";
 import { ItemTypeSchema } from "./prompts.ts";
 import { ExtractionError, manualAddInsight, runExtraction } from "./pipeline.ts";
 import { latestAnalysis, runMeetingAnalysis } from "./analysis.ts";
@@ -18,6 +18,8 @@ const GUARD_STATUS: Record<string, number> = {
 };
 
 function errorResponse(err: unknown): Response {
+  // Budget and rate-limit errors get the shared 503 answer from the router.
+  if (err instanceof LLMBudgetError || err instanceof LLMRateLimitError) throw err;
   if (err instanceof ExtractionError) {
     return json({ error: err.message, code: err.code }, GUARD_STATUS[err.code] ?? 409);
   }
