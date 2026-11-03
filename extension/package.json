@@ -6,6 +6,8 @@
   "description": "Chrome MV3 extension that records the current tab's audio and uploads it to Followthrough",
   "scripts": {
     "build": "bun run build.ts",
+    "package": "bun run package.ts",
+    "icons": "bun run make-icons.ts",
     "typecheck": "bun x tsc -p tsconfig.json"
   }
 }

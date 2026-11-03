@@ -5,7 +5,7 @@
  * Uses Bun's built-in bundler; no esbuild or other dependencies.
  * Run with: bun run build.ts (or `bun run build` via package.json).
  */
-import { copyFileSync, mkdirSync, rmSync } from "node:fs";
+import { copyFileSync, cpSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
 const root = import.meta.dir;
@@ -37,4 +37,6 @@ for (const file of staticFiles) {
   copyFileSync(join(root, file), join(dist, file));
 }
 
-console.log(`Built ${result.outputs.length} bundles + ${staticFiles.length} static files -> ${dist}`);
+cpSync(join(root, "icons"), join(dist, "icons"), { recursive: true });
+
+console.log(`Built ${result.outputs.length} bundles + ${staticFiles.length} static files + icons -> ${dist}`);
