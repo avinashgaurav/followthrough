@@ -588,7 +588,7 @@ function ReleasesSection() {
   return (
     <Panel
       title="Releases"
-      desc="We check GitHub for new releases every hour and match them against client insights on the Confirm shipped page."
+      desc="We check GitHub for new releases once a day and match them against client insights on the Confirm shipped page."
     >
       {tokenMissing && (
         <div className="mb-12">
@@ -601,8 +601,8 @@ function ReleasesSection() {
       <div className="card">
         <div className="row-between">
           <span className="muted small">
-            {repo ? `Watching ${repo}. ` : ""}The next check runs on its own within the hour. Use this
-            if you just shipped and do not want to wait.
+            {repo ? `Watching ${repo}. ` : ""}The next check runs on its own within a day. Use Check
+            GitHub now if you just shipped and do not want to wait.
           </span>
           <Btn
             variant="primary"

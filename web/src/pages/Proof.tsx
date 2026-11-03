@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, ApiError, type MatchProposal, type Release , insightHandle } from "../api";
+import { useAuth } from "../auth";
 import { formatDate, insightTitle, stateLabel } from "../format";
 import {
   Alert,
@@ -62,6 +63,8 @@ function quotesOf(m: MatchProposal): string[] {
 
 export function Proof() {
   const toast = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [tab, setTab] = useState<Tab>("matches");
 
   const [matches, setMatches] = useState<MatchProposal[] | null>(null);
@@ -216,6 +219,7 @@ export function Proof() {
             releases={releases}
             error={releasesError}
             tokenConfigured={tokenConfigured}
+            isAdmin={isAdmin}
             onRetry={() => void loadReleases()}
             onManualSaved={() => {
               void loadReleases();
@@ -412,16 +416,20 @@ function ReleasesTab({
   releases,
   error,
   tokenConfigured,
+  isAdmin,
   onRetry,
   onManualSaved,
 }: {
   releases: Release[] | null;
   error: unknown;
   tokenConfigured: boolean;
+  isAdmin: boolean;
   onRetry: () => void;
   onManualSaved: () => void;
 }) {
   const rows = useMemo(() => releases ?? [], [releases]);
+  // Adding a changelog by hand is admin-only on the server.
+  const manualForm = isAdmin ? <ManualChangelogForm onSaved={onManualSaved} /> : null;
 
   if (releases === null && !error) {
     return <Skeleton rows={6} />;
@@ -431,7 +439,7 @@ function ReleasesTab({
     return (
       <div className="stack">
         <ErrorAlert error={error} onRetry={onRetry} />
-        <ManualChangelogForm onSaved={onManualSaved} />
+        {manualForm}
       </div>
     );
   }
@@ -444,11 +452,13 @@ function ReleasesTab({
           <style>{`.manual-empty-wide .empty { max-width: 720px; }`}</style>
           <EmptyState
             title="GitHub is not connected yet"
-            body="The release repo is private, so pulling needs a read-only GitHub token. Add GITHUB_READ_TOKEN to the server's .env and restart; releases then pull automatically every hour. Until then, add changelogs by hand below."
+            body={
+              isAdmin
+                ? "The release repo is private, so pulling needs a read-only GitHub token. Add GITHUB_READ_TOKEN to the server's .env and restart; releases are then checked once a day, or right away with Check GitHub now in Settings. Until then, add changelogs by hand below."
+                : "The release repo is private, so pulling needs a read-only GitHub token. Ask an admin to connect GitHub or add a changelog by hand."
+            }
             action={
-              <div style={{ textAlign: "left" }}>
-                <ManualChangelogForm onSaved={onManualSaved} />
-              </div>
+              manualForm ? <div style={{ textAlign: "left" }}>{manualForm}</div> : undefined
             }
           />
         </div>
@@ -458,9 +468,9 @@ function ReleasesTab({
       <div className="stack">
         <EmptyState
           title="No releases yet"
-          body="Releases pull automatically every hour. An admin can also pull right now from the Settings page."
+          body="Releases are checked once a day. An admin can check right away with Check GitHub now on the Settings page."
         />
-        <ManualChangelogForm onSaved={onManualSaved} />
+        {manualForm}
       </div>
     );
   }
@@ -504,7 +514,7 @@ function ReleasesTab({
           </table>
         </div>
       </div>
-      <ManualChangelogForm onSaved={onManualSaved} />
+      {manualForm}
     </div>
   );
 }
