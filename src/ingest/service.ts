@@ -474,11 +474,16 @@ function errorResponse(e: unknown): Response {
   throw e;
 }
 
-async function readJsonBody(req: Request): Promise<unknown | Response> {
+/**
+ * The parsed body, or the 400 to send back. A tagged result rather than
+ * `unknown | Response`, which TypeScript collapses to `unknown` (so narrowing
+ * with instanceof only worked where Bun's types were loaded).
+ */
+async function readJsonBody(req: Request): Promise<{ ok: true; body: unknown } | { ok: false; res: Response }> {
   try {
-    return await req.json();
+    return { ok: true, body: await req.json() };
   } catch {
-    return json({ error: "Request body must be valid JSON" }, 400);
+    return { ok: false, res: json({ error: "Request body must be valid JSON" }, 400) };
   }
 }
 
@@ -512,8 +517,9 @@ const UploadRequestSchema = z.object({
  * the multipart form as before.
  */
 export async function handleStartUpload(req: Request, opts: { blobDir?: string } = {}): Promise<Response> {
-  const body = await readJsonBody(req);
-  if (body instanceof Response) return body;
+  const read = await readJsonBody(req);
+  if (!read.ok) return read.res;
+  const body = read.body;
   const parsed = UploadRequestSchema.safeParse(body);
   if (!parsed.success) return json({ error: "Invalid request", issues: parsed.error.issues }, 400);
   try {
@@ -540,8 +546,9 @@ function asUploadedFile(v: FormDataEntryValue | null): Promise<UploadedFile | nu
 }
 
 export async function handleCreateClient(db: Database, user: AuthedUser, req: Request): Promise<Response> {
-  const body = await readJsonBody(req);
-  if (body instanceof Response) return body;
+  const read = await readJsonBody(req);
+  if (!read.ok) return read.res;
+  const body = read.body;
   const parsed = ClientCreateSchema.safeParse(body);
   if (!parsed.success) return json({ error: "Invalid request", issues: parsed.error.issues }, 400);
   return json(await createClient(db, user.id, parsed.data), 201);
@@ -563,8 +570,9 @@ export async function handleAddContact(
   clientId: string,
   req: Request,
 ): Promise<Response> {
-  const body = await readJsonBody(req);
-  if (body instanceof Response) return body;
+  const read = await readJsonBody(req);
+  if (!read.ok) return read.res;
+  const body = read.body;
   const parsed = ContactSchema.safeParse(body);
   if (!parsed.success) return json({ error: "Invalid request", issues: parsed.error.issues }, 400);
   try {
@@ -655,8 +663,9 @@ export async function handleAddTranscript(
   meetingId: string,
   req: Request,
 ): Promise<Response> {
-  const body = await readJsonBody(req);
-  if (body instanceof Response) return body;
+  const read = await readJsonBody(req);
+  if (!read.ok) return read.res;
+  const body = read.body;
   const parsed = TranscriptPasteSchema.safeParse(body);
   if (!parsed.success) return json({ error: "Invalid request", issues: parsed.error.issues }, 400);
   try {
