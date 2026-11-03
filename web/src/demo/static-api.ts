@@ -5,21 +5,21 @@
 // DEMO_MODE server seeded with the fictional meetings in demo/. Nothing calls a
 // server or a model. Every write, upload or "process a meeting" action is
 // refused with STATIC_DEMO_NOTICE, which the pages already show as a toast or
-// an alert because they surface ApiError messages.
+// an alert because they surface ApiError messages. Timestamps are moved
+// relative to page load by liven() (see liven.ts).
 
 import { ApiError } from "../api";
 import recorded from "./fixtures.json";
+import { liven, type DemoFixtures } from "./liven";
 
 interface Recorded {
   status: number;
   body: unknown;
 }
 
-const fixtures = recorded as {
-  generated_at: string;
-  responses: Record<string, Recorded>;
-  ask: Record<string, unknown>;
-};
+// Recorded timestamps all fall within a few minutes; liven() moves them so
+// the meetings read as weeks old and the latest activity as recent.
+const fixtures: DemoFixtures = liven(recorded as DemoFixtures);
 
 export const STATIC_DEMO_NOTICE =
   "Read-only demo: nothing can be changed or processed here. Run Followthrough yourself to process your own calls.";

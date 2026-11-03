@@ -25,6 +25,8 @@ After changing source files, run `bun run build` again and press the reload icon
 
 Optional: `bun run typecheck` runs `tsc` over `src/` (strict mode, no emit).
 
+To build the Chrome Web Store upload, run `bun run package`: it builds and zips `dist/` into `extension/followthrough-recorder-<version>.zip` (version from `manifest.json`; the zip is gitignored). Store listing copy and permission justifications are in [STORE_LISTING.md](STORE_LISTING.md).
+
 ## Use
 
 1. Open the tab you want to record (the meeting tab: Meet, Zoom web, etc.).
