@@ -53,7 +53,7 @@ const BUCKETS: Array<{
   },
   {
     key: "to_confirm",
-    label: "System thinks it shipped - confirm?",
+    label: "Proof added: confirm it shipped",
     tip: "Someone added proof that this shipped. Confirm it really did.",
   },
   {

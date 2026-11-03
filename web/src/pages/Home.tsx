@@ -14,14 +14,14 @@ import { formatDate, meetingStatusLabel } from "../format";
 interface HomeCounts {
   toReview: number;
   toFinish: number;
-  /** Release matches waiting on the Confirm shipped page. */
-  toConfirm: number;
+  /** Release matches waiting on the Confirm shipped page; null when they could not be loaded. */
+  toConfirm: number | null;
   /** Proof someone added by hand, confirmed from Review. */
   proofToConfirm: number;
   toTell: number;
 }
 
-function countsFrom(q: QueueResponse, proposedMatches: number): HomeCounts {
+function countsFrom(q: QueueResponse, proposedMatches: number | null): HomeCounts {
   return {
     toReview: (q.to_review ?? []).length,
     // wording + ticket are both "you started this, finish it" work
@@ -45,8 +45,8 @@ export function Home() {
   const loadQueue = useCallback(() => {
     setQueueError(null);
     setCounts(null);
-    Promise.all([api.queue(), api.listMatches("proposed").catch(() => [])])
-      .then(([q, matches]) => setCounts(countsFrom(q, matches.length)))
+    Promise.all([api.queue(), api.listMatches("proposed").catch(() => null)])
+      .then(([q, matches]) => setCounts(countsFrom(q, matches ? matches.length : null)))
       .catch((e) => setQueueError(e));
   }, []);
 
@@ -120,10 +120,12 @@ export function Home() {
                 is confirmed in Review. Go wherever the waiting work is. */}
             <ActionCard
               stage="3 · Shipped"
-              count={counts.toConfirm + counts.proofToConfirm}
+              count={counts.toConfirm === null ? null : counts.toConfirm + counts.proofToConfirm}
               what={shippedWhat(counts.toConfirm, counts.proofToConfirm)}
               go="Confirm them"
-              onGo={() => navigate(counts.toConfirm > 0 || counts.proofToConfirm === 0 ? "/proof" : "/review")}
+              onGo={() =>
+                navigate(counts.toConfirm !== 0 || counts.proofToConfirm === 0 ? "/proof" : "/review")
+              }
             />
             <ActionCard
               stage="4 · Client told"
@@ -240,7 +242,12 @@ export function Home() {
   );
 }
 
-function shippedWhat(matches: number, proofs: number): string {
+function shippedWhat(matches: number | null, proofs: number): string {
+  if (matches === null) {
+    return proofs > 0
+      ? `Release matches did not load; ${proofs} added ${proofs === 1 ? "proof" : "proofs"} in Review`
+      : "Release matches did not load. Open Confirm shipped to check.";
+  }
   const m = matches === 1 ? "1 release match to confirm" : `${matches} release matches to confirm`;
   const p = proofs === 1 ? "1 added proof" : `${proofs} added proofs`;
   if (matches > 0 && proofs > 0) return `${m}, plus ${p} in Review`;
@@ -264,13 +271,15 @@ function ActionCard({
   onGo,
 }: {
   stage: string;
-  count: number;
+  /** null when the number could not be loaded: shown as a dash, never as zero. */
+  count: number | null;
   what: string;
   go: string;
   hot?: boolean;
   onGo: () => void;
 }) {
   const zero = count === 0;
+  const unknown = count === null;
   return (
     <button
       type="button"
@@ -280,9 +289,9 @@ function ActionCard({
       {/* the pipeline stage this card sits at, so the four cards read as the
           loop (Found -> Routed/Locked -> Shipped -> Client told) in order */}
       <div className="stage">{stage}</div>
-      <div className={`count${hot && !zero ? " hot" : ""}`}>{count}</div>
+      <div className={`count${hot && !zero && !unknown ? " hot" : ""}`}>{unknown ? "-" : count}</div>
       <div className="what">{what}</div>
-      <div className="go">{zero ? "Nothing waiting" : go}</div>
+      <div className="go">{zero ? "Nothing waiting" : unknown ? "Check" : go}</div>
     </button>
   );
 }

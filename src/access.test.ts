@@ -81,12 +81,12 @@ describe("router", () => {
   });
 });
 
-/** An admin with a live session, for routes that need a signed-in admin when login is forced. */
-async function adminSession(db: Database): Promise<string> {
+/** A user with a live session, for routes that need a signed-in user when login is forced. */
+async function sessionFor(db: Database, role: "admin" | "member"): Promise<string> {
   const userId = ulid();
   await db.query(
-    "INSERT INTO users (id, email, name, role, created_at) VALUES (?, 'boss@example.com', 'Boss', 'admin', ?)",
-  ).run(userId, nowIso());
+    "INSERT INTO users (id, email, name, role, created_at) VALUES (?, ?, 'Someone', ?, ?)",
+  ).run(userId, `${role}-${userId}@example.com`, role, nowIso());
   const sessionId = ulid() + ulid();
   await db.query("INSERT INTO sessions (id, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)").run(
     sessionId,
@@ -101,7 +101,7 @@ describe("GET /api/settings/access", () => {
   test("says when the server forces login, so Settings can hide the open toggle", async () => {
     process.env.REQUIRE_LOGIN = "true";
     const db = await freshApp();
-    const sid = await adminSession(db);
+    const sid = await sessionFor(db, "admin");
     const res = await handleApi(
       new Request("http://localhost/api/settings/access", { headers: { cookie: `ie_session=${sid}` } }),
     );
@@ -139,5 +139,35 @@ describe("POST /api/users/:id/rotate-code", () => {
     };
     expect(row.disabled_at).toBeNull();
     expect(row.code_hash).toBeTruthy();
+  });
+
+  test("a member cannot re-enable anyone", async () => {
+    process.env.REQUIRE_LOGIN = "true";
+    const db = await freshApp();
+    const sid = await sessionFor(db, "member");
+    const userId = ulid();
+    const revokedAt = nowIso();
+    await db.query(
+      "INSERT INTO users (id, email, name, role, created_at, disabled_at) VALUES (?, 'gone@example.com', 'Gone', 'member', ?, ?)",
+    ).run(userId, nowIso(), revokedAt);
+    const res = await handleApi(
+      new Request(`http://localhost/api/users/${userId}/rotate-code`, {
+        method: "POST",
+        headers: { cookie: `ie_session=${sid}` },
+      }),
+    );
+    expect(res.status).toBe(403);
+    const row = (await db.query("SELECT disabled_at FROM users WHERE id = ?").get(userId)) as {
+      disabled_at: string | null;
+    };
+    expect(row.disabled_at).toBe(revokedAt);
+  });
+
+  test("the open-access guest never gets a code", async () => {
+    await freshApp();
+    const res = await handleApi(
+      new Request("http://localhost/api/users/open-access-guest/rotate-code", { method: "POST" }),
+    );
+    expect(res.status).toBe(400);
   });
 });
