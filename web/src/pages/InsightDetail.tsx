@@ -5,7 +5,7 @@ import {
   api,
   ApiError,
   TRACKS,
-  EVIDENCE_KINDS,
+  MANUAL_EVIDENCE_KINDS,
   insightHandle,
 } from "../api";
 import type {
@@ -1185,7 +1185,7 @@ function EvidencePanel({
   onChanged: () => Promise<void>;
   toastPush: (m: string, s?: "info" | "success" | "warning" | "critical") => void;
 }) {
-  const [kind, setKind] = useState<string>(EVIDENCE_KINDS[0]);
+  const [kind, setKind] = useState<string>(MANUAL_EVIDENCE_KINDS[0]!);
   const [url, setUrl] = useState("");
   const [proposing, setProposing] = useState(false);
   const [acting, setActing] = useState<string | null>(null);
@@ -1279,7 +1279,7 @@ function EvidencePanel({
         <div className="field">
           <label htmlFor={`ev-kind-${insightId}`}>Add proof</label>
           <select id={`ev-kind-${insightId}`} className="ctrl" value={kind} onChange={(e) => setKind(e.target.value)}>
-            {EVIDENCE_KINDS.map((k) => (
+            {MANUAL_EVIDENCE_KINDS.map((k) => (
               <option key={k} value={k}>
                 {titleCase(k)}
               </option>
