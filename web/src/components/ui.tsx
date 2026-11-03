@@ -521,6 +521,7 @@ export function ConfirmModal({
   confirmLabel = "Confirm",
   danger = true,
   busy = false,
+  confirmDisabled = false,
   onConfirm,
   onClose,
 }: {
@@ -530,6 +531,8 @@ export function ConfirmModal({
   confirmLabel?: string;
   danger?: boolean;
   busy?: boolean;
+  /** Keep the confirm button off until the body's input is valid (e.g. a required reason). */
+  confirmDisabled?: boolean;
   onConfirm: () => void;
   onClose: () => void;
 }) {
@@ -543,7 +546,7 @@ export function ConfirmModal({
           <Btn variant="ghost" onClick={onClose} disabled={busy}>
             Cancel
           </Btn>
-          <Btn variant={danger ? "danger" : "primary"} onClick={onConfirm} disabled={busy}>
+          <Btn variant={danger ? "danger" : "primary"} onClick={onConfirm} disabled={busy || confirmDisabled}>
             {busy ? "Working" : confirmLabel}
           </Btn>
         </>
