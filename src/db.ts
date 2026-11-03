@@ -105,8 +105,10 @@ export function currentTenant(): string | null {
 }
 
 function pinSql(schema: string): string {
-  // schema is validated by withTenant; public stays on the path for extensions (citext).
-  return `SET LOCAL search_path TO ${schema}, public`;
+  // schema is validated by withTenant. Only the workspace and the extensions
+  // schema (citext) are on the path: never public, so a workspace can never
+  // fall through to tables that live there.
+  return `SET LOCAL search_path TO ${schema}, extensions`;
 }
 
 function makeDb(root: Executor): Database {
@@ -272,7 +274,8 @@ async function sharedPglite() {
       [types.BOOL]: (x: string) => (x === "t" ? 1 : 0),
     },
   });
-  await pg.exec("CREATE EXTENSION IF NOT EXISTS citext SCHEMA public;");
+  // Same layout as Supabase: extensions live in their own schema.
+  await pg.exec("CREATE SCHEMA IF NOT EXISTS extensions; CREATE EXTENSION IF NOT EXISTS citext SCHEMA extensions;");
   shared = { pg, schemas: 0, active: "public" };
   return shared;
 }
@@ -298,7 +301,7 @@ function schemaExecutor(s: NonNullable<typeof shared>, schema: string, tx?: PgLi
     // Inside a transaction the path was set once at begin (and may have been
     // narrowed to a workspace by withTenant); never override it per statement.
     if (tx || s.active === schema) return;
-    await conn().exec(`SET search_path TO ${schema}, public;`);
+    await conn().exec(`SET search_path TO ${schema}, public, extensions;`);
     s.active = schema;
   };
   return {
@@ -313,7 +316,7 @@ function schemaExecutor(s: NonNullable<typeof shared>, schema: string, tx?: PgLi
     },
     begin(fn) {
       return s.pg.transaction!(async (t) => {
-        await t.exec(`SET LOCAL search_path TO ${schema}, public;`);
+        await t.exec(`SET LOCAL search_path TO ${schema}, public, extensions;`);
         return fn(schemaExecutor(s, schema, t));
       });
     },

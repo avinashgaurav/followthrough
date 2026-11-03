@@ -7,7 +7,7 @@ import type { FetchLike } from "./supabase-auth.ts";
 import { blobKeyAllowed, newBlobKey } from "../ingest/media.ts";
 import {
   SignupsFullError,
-  assertPublicHasNoAppTables,
+  assertExtensionsReady,
   createWorkspace,
   migrateControl,
   openSession,
@@ -113,14 +113,15 @@ describe("workspace isolation", () => {
     expect(() => withTenant("ws_a; DROP SCHEMA x", async () => 1)).toThrow();
   });
 
-  test("public holding app tables is refused", async () => {
-    await expect(
-      db.transaction(async () => {
-        await db.exec("CREATE TABLE public.insights (id TEXT);");
-        await assertPublicHasNoAppTables(db);
-      }),
-    ).rejects.toThrow(/public schema/);
-    await assertPublicHasNoAppTables(db); // rolled back
+  test("a workspace never resolves tables in public", async () => {
+    const a = await signedIn("public-probe");
+    await db.exec("CREATE TABLE IF NOT EXISTS public.probe_secret (v TEXT); INSERT INTO public.probe_secret VALUES ('leak');");
+    await expect(withTenant(a.ws.schema_name, () => db.query("SELECT v FROM probe_secret").all())).rejects.toThrow();
+    await db.exec("DROP TABLE public.probe_secret;");
+  });
+
+  test("citext is ready in the extensions schema", async () => {
+    await assertExtensionsReady(db);
   });
 });
 

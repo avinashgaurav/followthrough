@@ -44,20 +44,19 @@ export async function migrateControl(db: Database): Promise<void> {
 }
 
 /**
- * Refuse to serve if app tables sit in the shared public schema. Workspace
- * schemas resolve names before public, so a table that one workspace lacked
- * (say, a migration that had not reached it yet) would otherwise fall through
- * to shared data.
+ * Workspaces resolve names in their own schema, then "extensions" only. Refuse
+ * to serve if citext is not there (workspace tables need it) or if app tables
+ * ever landed in "extensions" (they would be shared by every workspace).
  */
-export async function assertPublicHasNoAppTables(db: Database): Promise<void> {
+export async function assertExtensionsReady(db: Database): Promise<void> {
   const row = (await db
-    .query("SELECT to_regclass('public.insights') IS NOT NULL AS bad, to_regclass('public.users') IS NOT NULL AS bad2")
-    .get()) as { bad: number; bad2: number };
-  if (row.bad || row.bad2) {
-    throw new Error(
-      "Hosted mode found app tables in the public schema. Use a fresh Supabase project (or drop them): workspace data must never fall through to public.",
-    );
-  }
+    .query(
+      `SELECT to_regtype('extensions.citext') IS NOT NULL AS citext,
+              to_regclass('extensions.insights') IS NOT NULL OR to_regclass('extensions.users') IS NOT NULL AS polluted`,
+    )
+    .get()) as { citext: number; polluted: number };
+  if (!row.citext) throw new Error('Hosted mode needs the citext extension in the "extensions" schema (the control migration moves it).');
+  if (row.polluted) throw new Error('Hosted mode found app tables in the "extensions" schema; they would be shared by every workspace.');
 }
 
 /** Applies migrations/*.sql to every workspace schema (run on deploy). */

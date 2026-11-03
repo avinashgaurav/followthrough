@@ -13,9 +13,11 @@ from this deployment's AI key.
   (`src/hosted/routes.ts` `hostedDispatch`): each statement runs in a transaction
   that starts with `SET LOCAL search_path`, so the Supabase transaction pooler
   can never carry one workspace's path into another's query.
-- The deploy step refuses to run if app tables exist in `public` (a table a
-  workspace lacked would otherwise fall through to shared data). **Use a fresh
-  Supabase project**, and never deploy this project once without `HOSTED_MODE`.
+- Workspaces resolve names in their own schema and `extensions` only, never
+  `public`, so a workspace cannot fall through to shared tables. The control
+  migration moves `citext` into `extensions` (Supabase's default home for
+  extensions, already on its default search path), so a single-tenant app in
+  the same database keeps working.
 
 ## Limits that protect your bill
 

@@ -1,11 +1,11 @@
 import { type Database, migrate } from "../db.ts";
 import { hostedMode } from "../config.ts";
-import { assertPublicHasNoAppTables, migrateAllWorkspaces, migrateControl } from "./tenancy.ts";
+import { assertExtensionsReady, migrateAllWorkspaces, migrateControl } from "./tenancy.ts";
 
 /**
  * Brings the database up to date. Single-tenant: migrations/*.sql in the
- * current schema. Hosted: the control registry, a check that public holds no
- * app tables, then migrations/*.sql in every workspace schema.
+ * current schema. Hosted: the control registry (which also puts citext in
+ * "extensions"), a check of that, then migrations/*.sql in every workspace.
  */
 export async function prepareDatabase(db: Database): Promise<string> {
   if (!hostedMode()) {
@@ -13,7 +13,7 @@ export async function prepareDatabase(db: Database): Promise<string> {
     return "migrations applied";
   }
   await migrateControl(db);
-  await assertPublicHasNoAppTables(db);
+  await assertExtensionsReady(db);
   const n = await migrateAllWorkspaces(db);
   return `control registry ready; migrations applied to ${n} workspace(s)`;
 }
