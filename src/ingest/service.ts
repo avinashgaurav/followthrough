@@ -521,8 +521,13 @@ export async function handleStartUpload(req: Request, opts: { blobDir?: string }
   } catch (e) {
     return errorResponse(e);
   }
+  const store = storeFor(opts);
+  if (store.maxBytes !== null && parsed.data.size_bytes > store.maxBytes) {
+    const mb = Math.floor(store.maxBytes / (1024 * 1024));
+    return json({ error: `Recordings can be up to ${mb} MB here. Trim the file, or paste the transcript instead.`, code: "too_large" }, 413);
+  }
   const key = newBlobKey(parsed.data.filename);
-  const url = await storeFor(opts).signedUploadUrl(key);
+  const url = await store.signedUploadUrl(key);
   if (!url) return json({ mode: "inline" });
   return json({ mode: "direct", key, upload_url: url, method: "PUT" });
 }

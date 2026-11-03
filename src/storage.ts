@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
 import { env } from "./config.ts";
 import { ulid } from "./ids.ts";
@@ -21,9 +21,13 @@ export type StorageBackend = "local" | "supabase";
 
 export interface BlobStore {
   backend: StorageBackend;
+  /** Largest object the store accepts, or null for no store-level limit. */
+  maxBytes: number | null;
   put(key: string, bytes: Uint8Array, contentType: string | null): Promise<void>;
   get(key: string): Promise<Uint8Array | null>;
   exists(key: string): Promise<boolean>;
+  /** The stored object's real size in bytes, or null if it does not exist. */
+  objectSize(key: string): Promise<number | null>;
   remove(keys: string[]): Promise<void>;
   /** A URL the browser can download from, or null when the caller must stream bytes. */
   signedDownloadUrl(key: string, filename: string, ttlSeconds?: number): Promise<string | null>;
@@ -32,6 +36,19 @@ export interface BlobStore {
 }
 
 export const BUCKET = process.env.STORAGE_BUCKET || "followthrough";
+
+/**
+ * Per-file limit for the Supabase bucket. Supabase's free plan caps every file
+ * at 50 MB project-wide and refuses a bucket limit above that; on a paid plan
+ * raise the project limit, then STORAGE_MAX_BYTES.
+ */
+export function storageMaxBytes(): number {
+  const n = Number(process.env.STORAGE_MAX_BYTES ?? 50 * 1024 * 1024);
+  return n > 0 ? n : 50 * 1024 * 1024;
+}
+
+/** What the bucket accepts; Supabase enforces both at upload time. */
+export const ALLOWED_MIME_TYPES = ["audio/*", "video/*", "text/*", "image/*", "application/octet-stream"];
 
 export function supabaseStorageConfigured(): boolean {
   return !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -53,6 +70,7 @@ export function localStore(dir: string = env.BLOB_DIR): BlobStore {
   };
   return {
     backend: "local",
+    maxBytes: null,
     async put(key, bytes) {
       const p = path(key);
       mkdirSync(dirname(p), { recursive: true });
@@ -67,6 +85,10 @@ export function localStore(dir: string = env.BLOB_DIR): BlobStore {
     async exists(key) {
       return existsSync(path(key));
     },
+    async objectSize(key) {
+      const p = path(key);
+      return existsSync(p) ? statSync(p).size : null;
+    },
     async remove(keys) {
       for (const k of keys) rmSync(path(k), { force: true });
     },
@@ -80,7 +102,7 @@ export function localStore(dir: string = env.BLOB_DIR): BlobStore {
 }
 
 export function supabaseStore(
-  opts: { url?: string; key?: string; bucket?: string; fetchImpl?: typeof fetch } = {},
+  opts: { url?: string; key?: string; bucket?: string; fetchImpl?: typeof fetch; maxBytes?: number } = {},
 ): BlobStore {
   const base = (opts.url ?? process.env.SUPABASE_URL ?? "").replace(/\/+$/, "") + "/storage/v1";
   const serviceKey = opts.key ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
@@ -91,28 +113,46 @@ export function supabaseStore(
     assertSafeKey(key);
     return key.split("/").map(encodeURIComponent).join("/");
   };
+  const maxBytes = opts.maxBytes ?? storageMaxBytes();
+  const settings = { public: false, file_size_limit: maxBytes, allowed_mime_types: ALLOWED_MIME_TYPES };
   let bucketReady: Promise<void> | null = null;
+  // Create the private bucket with its limits, or bring an existing one's limits up to date.
   const ensureBucket = () =>
     (bucketReady ??= (async () => {
       const res = await doFetch(`${base}/bucket`, {
         method: "POST",
         headers: { ...auth, "Content-Type": "application/json" },
-        body: JSON.stringify({ id: bucket, name: bucket, public: false }),
+        body: JSON.stringify({ id: bucket, name: bucket, ...settings }),
       });
-      // 409 / "already exists" is the normal case after the first deploy.
-      if (!res.ok && res.status !== 409) {
-        const text = await res.text();
-        if (!/already exists|Duplicate/i.test(text)) {
-          bucketReady = null;
-          throw new Error(`Could not create storage bucket "${bucket}": ${res.status} ${text.slice(0, 200)}`);
-        }
+      if (res.ok) return;
+      const text = await res.text();
+      if (res.status !== 409 && !/already exists|Duplicate/i.test(text)) {
+        bucketReady = null;
+        throw new Error(`Could not create storage bucket "${bucket}": ${res.status} ${text.slice(0, 200)}`);
+      }
+      const upd = await doFetch(`${base}/bucket/${bucket}`, {
+        method: "PUT",
+        headers: { ...auth, "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      });
+      if (!upd.ok) {
+        bucketReady = null;
+        throw new Error(`Could not update storage bucket "${bucket}": ${upd.status} ${(await upd.text()).slice(0, 200)}`);
       }
     })());
+  const objectSize = async (key: string): Promise<number | null> => {
+    const res = await doFetch(`${base}/object/info/${bucket}/${enc(key)}`, { headers: auth });
+    if (!res.ok) return null;
+    const info = (await res.json()) as { size?: unknown; metadata?: { size?: unknown } };
+    const size = Number(info.size ?? info.metadata?.size);
+    return Number.isFinite(size) ? size : null;
+  };
   const fail = async (what: string, res: Response) => {
     throw new Error(`Storage ${what} failed: ${res.status} ${(await res.text()).slice(0, 200)}`);
   };
   return {
     backend: "supabase",
+    maxBytes,
     async put(key, bytes, contentType) {
       await ensureBucket();
       const res = await doFetch(`${base}/object/${bucket}/${enc(key)}`, {
@@ -129,9 +169,9 @@ export function supabaseStore(
       return new Uint8Array(await res.arrayBuffer());
     },
     async exists(key) {
-      const res = await doFetch(`${base}/object/info/${bucket}/${enc(key)}`, { headers: auth });
-      return res.ok;
+      return (await objectSize(key)) !== null;
     },
+    objectSize,
     async remove(keys) {
       if (keys.length === 0) return;
       keys.forEach(assertSafeKey);

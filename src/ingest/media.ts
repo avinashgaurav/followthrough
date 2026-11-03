@@ -149,14 +149,29 @@ export async function registerUploadedBlob(
   if (!BLOB_KEY.test(upload.key)) throw new IngestError("Invalid upload key", 400);
   if (!/^[0-9a-f]{64}$/.test(upload.sha256)) throw new IngestError("Invalid sha256 for the uploaded file", 400);
   assertSizeOk(kind, upload.sizeBytes);
+  // A key can back one asset only: no replaying someone else's upload.
+  if (await db.query("SELECT 1 FROM media_assets WHERE storage_ref = ?").get(upload.key)) {
+    throw new IngestError("That upload was already used. Upload the file again.", 409);
+  }
   const store = storeFor(opts);
-  if (!(await store.exists(upload.key))) throw new IngestError("The uploaded file was not found in storage. Upload it again.", 400);
+  const size = await store.objectSize(upload.key);
+  if (size === null) throw new IngestError("The uploaded file was not found in storage. Upload it again.", 400);
+  // Trust the stored object, not the client's numbers: a size that differs from
+  // what was declared, or that breaks a limit, is deleted and refused.
+  const tooBig = size > MAX_BLOB_BYTES || (store.maxBytes !== null && size > store.maxBytes);
+  if (size !== upload.sizeBytes || tooBig) {
+    await store.remove([upload.key]).catch(() => {});
+    throw new IngestError(
+      tooBig ? "The uploaded file is over the size limit." : "The uploaded file does not match what was declared. Upload it again.",
+      400,
+    );
+  }
   return insertAsset(db, store, {
     kind,
     key: upload.key,
     filename: sanitizeFilename(upload.filename),
     contentType: upload.contentType,
-    size: upload.sizeBytes,
+    size,
     sha: upload.sha256,
     uploadedBy,
   });
