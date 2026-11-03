@@ -75,7 +75,7 @@ Without `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, files are stored on disk
 | `GEMINI_MODELS` | Gemini models to try in order (default `gemini-3.6-flash,gemini-3-flash-preview,gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-flash-lite-latest`). A free key has a small daily quota per model: when one is used up (or no longer offered) calls move to the next, and it is skipped until the next UTC day on every instance |
 | `GEMINI_MODEL` | optional: a model to try before the list |
 | `GEMINI_PRICES` | per-model USD per million tokens, e.g. `gemini-3.6-flash=0.3/2.5,gemini-3.1-flash-lite=0.1/0.4`; each call is priced by the model that answered |
-| `GEMINI_PRICE_IN_PER_M`, `GEMINI_PRICE_OUT_PER_M` | price for any Gemini model not in `GEMINI_PRICES` (without a price the budget charges a conservative fallback rate) |
+| `GEMINI_PRICE_IN_PER_M`, `GEMINI_PRICE_OUT_PER_M` | price for any Gemini model not in `GEMINI_PRICES`. Without either, built-in **conservative estimates** apply: flash $0.50 in / $3.00 out, flash-lite $0.25 / $1.50 per million tokens (set at or above flash-tier list pricing, not quotes; set `GEMINI_PRICES` to your real rates). Other models get the budget's fallback rate ($15 / $75) |
 | `ANTHROPIC_API_KEY` | Anthropic direct (preferred when set) |
 | `LLM_MODEL` | Anthropic model id (default `claude-opus-4-8`); `OPENROUTER_MODEL` is the OpenRouter equivalent (default `anthropic/claude-opus-4.8`) |
 | `OPENROUTER_API_KEY` | OpenRouter, pinned to Claude models with data retention denied |
@@ -96,7 +96,7 @@ Without `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, files are stored on disk
 | `DEMO_MODE` | `true` = public read-only demo: writes and login off, team and calendar hidden, Ask rate-limited per IP, background jobs off |
 | `DEMO_ASK_PER_HOUR` | Ask questions per visitor IP per hour in demo mode (default `10`) |
 | `DEMO_ASK_GLOBAL_PER_HOUR` | Ask questions per hour across all visitors in demo mode (default `200`) |
-| `LLM_DAILY_BUDGET_USD` | hard daily cap on AI spend in USD (a positive number), shared across instances; once reached, AI calls return 503 until the next UTC day. **Defaults to `5` whenever an AI key is set**; raise it here if you need more. Each call reserves an estimate first and settles to the real cost after |
+| `LLM_DAILY_BUDGET_USD` | hard daily cap on AI spend in USD (a positive number), shared across instances; once reached, AI calls return 503 until the next UTC day. **Defaults to `5` whenever an AI key is set**; raise it here if you need more. Each call reserves its worst case first (full output allowance, both attempts of a JSON call) and settles to the real cost after; a call the provider refused without generating (rate limit, quota, 4xx) is refunded |
 | `TRUSTED_PROXY_HOPS` | proxies in front of the server that append to `X-Forwarded-For` (default `1`; `0` ignores XFF). Drives login lockout and demo rate limits |
 | `TRUST_CF_CONNECTING_IP` | `true` only when the server is reachable solely through Cloudflare |
 | `REQUIRE_LOGIN` | `true` forces login on everywhere (it is already forced on Vercel and with `NODE_ENV=production`) |

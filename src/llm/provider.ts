@@ -92,6 +92,31 @@ export class LLMBudgetError extends Error {}
 /** The provider kept answering 429 (rate limit or quota) after every retry. */
 export class LLMRateLimitError extends Error {}
 
+/** The provider refused the request (4xx) before generating anything: nothing was billed. */
+export class LLMRequestError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+/** The call ran out of its overall time (model fallback plus retries). */
+export class LLMDeadlineError extends Error {}
+
+/**
+ * True when a failed call cannot have been billed: a rate limit or quota stop
+ * (including every Gemini model exhausted), or any 4xx refusal (Anthropic's SDK
+ * errors carry a status). Timeouts, 5xx after the request was sent, and
+ * unusable output may have used tokens, so they are not refunded.
+ */
+export function wasNotBilled(err: unknown): boolean {
+  if (err instanceof LLMRateLimitError || err instanceof LLMRequestError) return true;
+  const status = err && typeof err === "object" ? (err as { status?: unknown }).status : undefined;
+  return typeof status === "number" && status >= 400 && status < 500 && status !== 408;
+}
+
 /** Google's suggested wait from a 429 body ("retryDelay": "41s"), in ms, or null. */
 export function geminiRetryDelayMs(body: string): number | null {
   const m = /"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/.exec(body);
@@ -157,17 +182,24 @@ export function dbSpendLedger(db: () => import("../db.ts").Database): SpendLedge
 /** Conservative rate (USD per million tokens) for models without a known price. */
 const FALLBACK_PRICE = { in: 15, out: 75 };
 
+/** Output-token defaults the providers use when a call does not set maxTokens. */
+export const DEFAULT_MAX_TOKENS = { text: 8192, json: 16000 } as const;
+/** completeJSON may make a repair attempt (Gemini, OpenRouter): reserve for both. */
+const JSON_ATTEMPTS = 2;
+
 /**
- * What a call is reserved at before it runs: the prompt (about 4 characters a
- * token) plus up to 2,048 output tokens, at the model's price or the
- * conservative fallback. The reservation is settled to the real cost after.
+ * The worst case a call can cost, reserved before it runs: the prompt (about 4
+ * characters a token) plus the full output allowance (maxTokens, or the
+ * provider default), times the attempts a JSON call may make, at the model's
+ * price or the conservative fallback. Settling refunds the difference.
  */
-export function estimateCostUsd(opts: CompleteOptions): number {
+export function estimateCostUsd(opts: CompleteOptions, kind: "text" | "json" = "text"): number {
   const model = (opts.model ?? DEFAULT_MODEL).replace(/-\d{8}$/, "");
   const p = PRICING[model] ?? geminiPricing(model) ?? FALLBACK_PRICE;
   const tokensIn = Math.ceil(((opts.system?.length ?? 0) + opts.prompt.length) / 4);
-  const tokensOut = Math.min(opts.maxTokens ?? 2048, 2048);
-  return (tokensIn * p.in + tokensOut * p.out) / 1_000_000;
+  const tokensOut = opts.maxTokens ?? DEFAULT_MAX_TOKENS[kind];
+  const attempts = kind === "json" ? JSON_ATTEMPTS : 1;
+  return ((tokensIn * p.in + tokensOut * p.out) * attempts) / 1_000_000;
 }
 
 /**
@@ -188,7 +220,7 @@ export class BudgetedLLM implements LLM {
     private capUsd: number,
     private now: () => Date = () => new Date(),
     private ledger: SpendLedger = memorySpendLedger(),
-    private estimate: (opts: CompleteOptions) => number = estimateCostUsd,
+    private estimate: (opts: CompleteOptions, kind: "text" | "json") => number = estimateCostUsd,
   ) {}
 
   spentToday(): number {
@@ -212,10 +244,19 @@ export class BudgetedLLM implements LLM {
       : (r.tokensIn * FALLBACK_PRICE.in + r.tokensOut * FALLBACK_PRICE.out) / 1_000_000;
   }
 
-  private async guarded<R extends LLMUsage>(opts: CompleteOptions, run: () => Promise<R>): Promise<R> {
+  /** Ledger writes after the provider answered must never fail the call. */
+  private async settle(day: string, usd: number): Promise<void> {
+    try {
+      await this.ledger.adjust(day, usd);
+    } catch (err) {
+      console.error("AI budget ledger update failed:", err);
+    }
+  }
+
+  private async guarded<R extends LLMUsage>(opts: CompleteOptions, kind: "text" | "json", run: () => Promise<R>): Promise<R> {
     this.roll();
     const day = this.day;
-    const reserved = this.estimate(opts);
+    const reserved = this.estimate(opts, kind);
     if (!(await this.ledger.reserve(day, reserved, this.capUsd))) {
       throw new LLMBudgetError("Today's AI budget is used up. Try again tomorrow.");
     }
@@ -223,21 +264,24 @@ export class BudgetedLLM implements LLM {
     try {
       r = await run();
     } catch (err) {
-      this.spent += reserved; // usage unknown: the reservation stands
+      // Refused before generating (rate limit, quota, 4xx): give the reservation
+      // back. Otherwise usage is unknown and the reservation stands.
+      if (wasNotBilled(err)) await this.settle(day, -reserved);
+      else this.spent += reserved;
       throw err;
     }
     const actual = this.cost(r);
     this.spent += actual;
-    await this.ledger.adjust(day, actual - reserved);
+    await this.settle(day, actual - reserved);
     return r;
   }
 
   complete(opts: CompleteOptions): Promise<{ text: string } & LLMUsage> {
-    return this.guarded(opts, () => this.inner.complete(opts));
+    return this.guarded(opts, "text", () => this.inner.complete(opts));
   }
 
   completeJSON<T>(opts: CompleteJSONOptions<T>): Promise<{ data: T } & LLMUsage> {
-    return this.guarded(opts, () => this.inner.completeJSON(opts));
+    return this.guarded(opts, "json", () => this.inner.completeJSON(opts));
   }
 }
 
@@ -368,7 +412,7 @@ class OpenRouterLLM implements LLM {
         lastErr = new Error(`OpenRouter ${res.status}: ${await res.text()}`);
         continue;
       }
-      if (!res.ok) throw new Error(`OpenRouter ${res.status}: ${await res.text()}`);
+      if (!res.ok) throw new LLMRequestError(res.status, `OpenRouter ${res.status}: ${await res.text()}`);
       const body = (await res.json()) as {
         choices?: Array<{ message?: { content?: string } }>;
         usage?: { prompt_tokens?: number; completion_tokens?: number };
@@ -438,8 +482,20 @@ export function geminiPricing(model: string): { in: number; out: number } | null
   }
   const pin = Number(process.env.GEMINI_PRICE_IN_PER_M);
   const pout = Number(process.env.GEMINI_PRICE_OUT_PER_M);
-  return pin > 0 && pout > 0 ? { in: pin, out: pout } : null;
+  if (pin > 0 && pout > 0) return { in: pin, out: pout };
+  return GEMINI_DEFAULT_PRICES.find((d) => d.match.test(model))?.price ?? null;
 }
+
+/**
+ * Built-in budget prices (USD per million tokens) for the Gemini families in
+ * the default model list. They are conservative estimates set at or above
+ * flash-tier list pricing, not quotes: set GEMINI_PRICES to your real rates.
+ * Other Gemini models (e.g. pro) get the budget's conservative fallback rate.
+ */
+export const GEMINI_DEFAULT_PRICES: Array<{ match: RegExp; price: { in: number; out: number } }> = [
+  { match: /^gemini-.*flash-lite/, price: { in: 0.25, out: 1.5 } },
+  { match: /^gemini-.*flash/, price: { in: 0.5, out: 3 } },
+];
 
 /** A model that cannot serve calls today: its daily quota is spent, or it is gone. */
 class GeminiModelUnavailable extends Error {}
@@ -490,13 +546,22 @@ export class GeminiLLM implements LLM {
   private exhausted: Map<string, string>;
   private store: GeminiExhaustionStore | null;
   private loadedDay = "";
+  private deadlineMs: number;
 
   constructor(
     private apiKey: string,
     private fetchImpl: typeof fetch = fetch,
     private sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
-    opts: { models?: string[]; now?: () => Date; exhausted?: Map<string, string>; store?: GeminiExhaustionStore | null } = {},
+    opts: {
+      models?: string[];
+      now?: () => Date;
+      exhausted?: Map<string, string>;
+      store?: GeminiExhaustionStore | null;
+      /** Overall time for one call, across model fallback and retries (default 240s, under the 300s function limit). */
+      deadlineMs?: number;
+    } = {},
   ) {
+    this.deadlineMs = opts.deadlineMs ?? 240_000;
     this.models = opts.models ?? geminiModels();
     this.now = opts.now ?? (() => new Date());
     this.exhausted = opts.exhausted ?? exhaustedToday;
@@ -530,10 +595,12 @@ export class GeminiLLM implements LLM {
         console.warn("could not read exhausted Gemini models:", err);
       }
     }
+    const deadline = Date.now() + this.deadlineMs;
     for (const model of this.candidates(requested)) {
       if (this.exhausted.get(model) === day) continue;
+      if (Date.now() >= deadline) throw new LLMDeadlineError("Gemini call ran out of time trying models");
       try {
-        return { ...(await this.generateOn(model, system, user, maxTokens, json)), called: model };
+        return { ...(await this.generateOn(model, system, user, maxTokens, json, deadline)), called: model };
       } catch (err) {
         if (!(err instanceof GeminiModelUnavailable)) throw err;
         console.warn(`Gemini ${model} unavailable today, trying the next model: ${err.message}`);
@@ -551,6 +618,7 @@ export class GeminiLLM implements LLM {
     user: string,
     maxTokens: number,
     json: boolean,
+    deadline = Date.now() + this.deadlineMs,
   ): Promise<{ text: string; tokensIn: number; tokensOut: number; model: string }> {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
     const body = (thinking: boolean) =>
@@ -568,15 +636,21 @@ export class GeminiLLM implements LLM {
     let lastErr: Error | null = null;
     let wait = 0;
     for (let attempt = 0; attempt < 4; attempt++) {
-      if (attempt > 0) await this.sleep(wait || 1500 * 2 ** attempt);
+      if (attempt > 0) {
+        const pause = wait || 1500 * 2 ** attempt;
+        if (Date.now() + pause >= deadline) break; // no time left for another try
+        await this.sleep(pause);
+      }
       wait = 0;
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) break;
       let res: Response;
       try {
         res = await this.fetchImpl(url, {
           method: "POST",
           headers: { "x-goog-api-key": this.apiKey, "content-type": "application/json" },
           body: body(thinking),
-          signal: AbortSignal.timeout(120_000),
+          signal: AbortSignal.timeout(Math.min(120_000, remaining)),
         });
       } catch (err) {
         lastErr = err instanceof Error ? err : new Error(String(err));
@@ -608,9 +682,9 @@ export class GeminiLLM implements LLM {
           attempt--;
           continue;
         }
-        throw new Error(`Gemini 400: ${text.slice(0, 400)}`);
+        throw new LLMRequestError(400, `Gemini 400: ${text.slice(0, 400)}`);
       }
-      if (!res.ok) throw new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 400)}`);
+      if (!res.ok) throw new LLMRequestError(res.status, `Gemini ${res.status}: ${(await res.text()).slice(0, 400)}`);
       const data = (await res.json()) as GeminiResponse;
       if (data.promptFeedback?.blockReason) {
         throw new LLMOutputError(`Gemini blocked the prompt: ${data.promptFeedback.blockReason}`);
@@ -629,7 +703,7 @@ export class GeminiLLM implements LLM {
         model: data.modelVersion ?? model,
       };
     }
-    throw lastErr ?? new Error("Gemini request failed");
+    throw lastErr ?? new LLMDeadlineError(`Gemini ${model} ran out of time`);
   }
 
   async complete(opts: CompleteOptions): Promise<{ text: string } & LLMUsage> {
