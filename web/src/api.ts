@@ -691,7 +691,12 @@ export const api = {
     ),
   /** Raw releases envelope; includes repo + whether a GitHub read token is configured. */
   releasesStatus: () =>
-    get<{ releases?: Release[]; repo?: string; github_token_configured?: boolean }>("/api/releases"),
+    get<{
+      releases?: Release[];
+      repo?: string;
+      github_token_configured?: boolean;
+      release_check?: "daily" | "hourly";
+    }>("/api/releases"),
   pollReleases: () => post<Record<string, unknown>>("/api/releases/poll"),
   listMatches: async (status = "proposed"): Promise<MatchProposal[]> =>
     asArray<MatchProposal>(await get<unknown>(`/api/matches${qs({ status })}`)),

@@ -70,6 +70,14 @@ export async function runPollPipeline(
 }
 
 /** Hourly poll of RELEASE_REPO releases. Errors are logged, never fatal. */
+/**
+ * How often releases are checked on their own: the hosted app relies on the
+ * daily Vercel cron (cron.ts); a long-running server polls every hour.
+ */
+export function releaseCheckCadence(): "daily" | "hourly" {
+  return process.env.VERCEL ? "daily" : "hourly";
+}
+
 export function startReleasePoller(): ReturnType<typeof setInterval> | null {
   if (!env.RELEASE_REPO) {
     console.log("release poller: RELEASE_REPO not set, polling off (manual changelog intake still works)");
@@ -304,6 +312,7 @@ route("GET", "/api/releases", "user", async () => {
     releases,
     repo: env.RELEASE_REPO ?? null,
     github_token_configured: Boolean(env.GITHUB_READ_TOKEN),
+    release_check: releaseCheckCadence(),
   });
 });
 

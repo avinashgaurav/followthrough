@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, ApiError, domainRule, emailAllowed, type SttStatus, type User } from "../api";
-import { formatDate } from "../format";
+import { formatDate, releaseCheckWords } from "../format";
 import {
   Alert,
   Btn,
@@ -553,6 +553,8 @@ function ReleasesSection() {
   const [polling, setPolling] = useState(false);
   const [repo, setRepo] = useState("");
   const [tokenMissing, setTokenMissing] = useState(false);
+  const [cadence, setCadence] = useState<string | undefined>(undefined);
+  const check = releaseCheckWords(cadence);
 
   useEffect(() => {
     let alive = true;
@@ -562,6 +564,7 @@ function ReleasesSection() {
         if (!alive) return;
         if (typeof r?.repo === "string") setRepo(r.repo);
         setTokenMissing(r?.github_token_configured === false);
+        setCadence(r?.release_check);
       })
       .catch(() => {
         // Status is a nice-to-have; the section works without it.
@@ -601,7 +604,7 @@ function ReleasesSection() {
   return (
     <Panel
       title="Releases"
-      desc="We check GitHub for new releases once a day and match them against client insights on the Confirm shipped page."
+      desc={`We check GitHub for new releases ${check.every} and match them against client insights on the Confirm shipped page.`}
     >
       {tokenMissing && (
         <div className="mb-12">
@@ -614,15 +617,15 @@ function ReleasesSection() {
       <div className="card">
         <div className="row-between">
           <span className="muted small">
-            {repo ? `Watching ${repo}. ` : ""}The next check runs on its own within a day. Use Check
-            GitHub now if you just shipped and do not want to wait.
+            {repo ? `Watching ${repo}. ` : ""}The next check runs {check.within}. Use Check GitHub now
+            if you just shipped and do not want to wait.
           </span>
           <Btn
             variant="primary"
             size="sm"
             onClick={() => void poll()}
             disabled={polling}
-            tooltip="Check GitHub right now instead of waiting for the daily check. New releases get matched against open insights."
+            tooltip="Check GitHub right now instead of waiting for the next scheduled check. New releases get matched against open insights."
           >
             {polling ? "Checking" : "Check GitHub now"}
           </Btn>
