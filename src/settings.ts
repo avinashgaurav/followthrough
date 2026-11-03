@@ -30,7 +30,17 @@ export async function setSetting(
 const REQUIRE_LOGIN_KEY = "require_login";
 
 /** Default false: the app is open until an admin turns login on. */
+/**
+ * REQUIRE_LOGIN=true forces login on regardless of the in-app toggle. A public
+ * deployment sets it so there is never a window where every visitor is the
+ * guest admin before someone turns login on in Settings.
+ */
+export function loginForcedByEnv(): boolean {
+  return process.env.REQUIRE_LOGIN?.trim().toLowerCase() === "true";
+}
+
 export async function authRequired(db: Database): Promise<boolean> {
+  if (loginForcedByEnv()) return true;
   return await getSetting(db, REQUIRE_LOGIN_KEY) === "true";
 }
 

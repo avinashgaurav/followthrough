@@ -16,7 +16,7 @@ import {
 } from "./auth.ts";
 import { allowedEmailDomains, demoMode, writableRepos } from "./config.ts";
 import { clientIp } from "./demo.ts";
-import { authRequired, setAuthRequired } from "./settings.ts";
+import { authRequired, loginForcedByEnv, setAuthRequired } from "./settings.ts";
 import { appendEvent } from "./events.ts";
 
 /** Is there a real (non-guest) account that can actually log in? Gates require_login. */
@@ -88,6 +88,9 @@ route("POST", "/api/settings/access", "admin", async (req, admin) => {
   const db = getDb();
   const body = AccessSchema.safeParse(await req.json().catch(() => null));
   if (!body.success) return json({ error: "require_login (boolean) required" }, 400);
+  if (!body.data.require_login && loginForcedByEnv()) {
+    return json({ error: "Login is required by this server's REQUIRE_LOGIN setting, so it can't be turned off here." }, 400);
+  }
   // Anti-lockout: do not let anyone turn login ON until a real account with a
   // login code exists, or everyone (including this guest) would be locked out.
   if (body.data.require_login && !await hasLoginCapableUser(db)) {

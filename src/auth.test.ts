@@ -127,3 +127,21 @@ describe("per-user code login (fallback path still works)", () => {
     expect(r.ok).toBe(false);
   });
 });
+
+describe("REQUIRE_LOGIN", () => {
+  test("forces login on even when the in-app toggle is off", async () => {
+    const { authRequired, setAuthRequired } = await import("./settings.ts");
+    const db = await openTestDb();
+    await setAuthRequired(db, false);
+    const before = process.env.REQUIRE_LOGIN;
+    try {
+      delete process.env.REQUIRE_LOGIN;
+      expect(await authRequired(db)).toBe(false);
+      process.env.REQUIRE_LOGIN = "true";
+      expect(await authRequired(db)).toBe(true);
+    } finally {
+      if (before === undefined) delete process.env.REQUIRE_LOGIN;
+      else process.env.REQUIRE_LOGIN = before;
+    }
+  });
+});
