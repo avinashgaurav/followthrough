@@ -43,7 +43,7 @@ const flag = (v: string | undefined) => ["1", "true", "yes", "on"].includes((v ?
  * public URL is never open before someone signs in. First admin: `bun run seed`.
  */
 export function loginForcedByEnv(): boolean {
-  if (flag(process.env.REQUIRE_LOGIN)) return true;
+  if (flag(process.env.REQUIRE_LOGIN) || flag(process.env.HOSTED_MODE)) return true;
   // demoMode() is the one reading of DEMO_MODE (config.ts), shared with the demo guard and budget.
   if (demoMode() || flag(process.env.OPEN_ACCESS)) return false;
   return !!process.env.VERCEL || process.env.NODE_ENV === "production";

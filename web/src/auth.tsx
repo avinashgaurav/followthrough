@@ -16,6 +16,8 @@ interface AuthState {
   writableRepos: string[];
   /** DEMO_MODE on the server: read-only public demo. */
   demo: boolean;
+  /** HOSTED_MODE on the server: multi-workspace app with a free meeting quota. */
+  hosted: boolean;
   setUser: (u: User | null) => void;
   refresh: () => Promise<void>;
 }
@@ -28,6 +30,7 @@ const AuthCtx = createContext<AuthState>({
   allowedDomains: [],
   writableRepos: [],
   demo: false,
+  hosted: false,
   setUser: () => undefined,
   refresh: async () => undefined,
 });
@@ -44,6 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [allowedDomains, setAllowedDomains] = useState<string[]>([]);
   const [writableRepos, setWritableRepos] = useState<string[]>([]);
   const [demo, setDemo] = useState(false);
+  const [hosted, setHosted] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -54,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAllowedDomains(r.allowed_email_domains ?? []);
       setWritableRepos(r.writable_repos ?? []);
       setDemo(!!r.demo);
+      setHosted(!!r.hosted);
     } catch (e) {
       if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
         setUser(null);
@@ -72,8 +77,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const value = useMemo(
-    () => ({ user, loading, isGuest, requireLogin, allowedDomains, writableRepos, demo, setUser, refresh }),
-    [user, loading, isGuest, requireLogin, allowedDomains, writableRepos, demo, refresh],
+    () => ({ user, loading, isGuest, requireLogin, allowedDomains, writableRepos, demo, hosted, setUser, refresh }),
+    [user, loading, isGuest, requireLogin, allowedDomains, writableRepos, demo, hosted, refresh],
   );
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 }

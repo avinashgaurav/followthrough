@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { env } from "../config.ts";
 import { nowIso } from "../db.ts";
 import { ulid } from "../ids.ts";
+import { hostedMode } from "../config.ts";
+import { currentWorkspaceId } from "../hosted/tenancy.ts";
 import { storeFor, type BlobStore } from "../storage.ts";
 
 /**
@@ -74,11 +76,25 @@ export interface SaveBlobInput {
 }
 
 /** A fresh storage key for an upload: "<ulid>/<sanitized name>". */
+/**
+ * Hosted mode files each workspace's uploads under its id ("<ws>/<ulid>/<name>")
+ * and only accepts keys under the caller's own prefix, so a key from another
+ * workspace can never be attached to a meeting here.
+ */
 export function newBlobKey(filename: string): string {
-  return `${ulid()}/${sanitizeFilename(filename)}`;
+  const ws = hostedMode() ? currentWorkspaceId() : null;
+  return `${ws ? `${ws}/` : ""}${ulid()}/${sanitizeFilename(filename)}`;
 }
 
-const BLOB_KEY = /^[0-9A-HJKMNP-TV-Z]{26}\/[^/]+$/;
+const ULID_PART = "[0-9A-HJKMNP-TV-Z]{26}";
+const BLOB_KEY = new RegExp(`^${ULID_PART}\\/[^/]+$`);
+
+/** Whether a client-supplied upload key may be used by the current request. */
+export function blobKeyAllowed(key: string): boolean {
+  const ws = hostedMode() ? currentWorkspaceId() : null;
+  if (!ws) return BLOB_KEY.test(key);
+  return key.startsWith(`${ws}/`) && BLOB_KEY.test(key.slice(ws.length + 1));
+}
 
 async function insertAsset(
   db: Database,
@@ -154,7 +170,7 @@ export async function registerUploadedBlob(
   uploadedBy: string | null,
   opts: { blobDir?: string } = {},
 ): Promise<MediaAsset> {
-  if (!BLOB_KEY.test(upload.key)) throw new IngestError("Invalid upload key", 400);
+  if (!blobKeyAllowed(upload.key)) throw new IngestError("Invalid upload key", 400);
   if (!/^[0-9a-f]{64}$/.test(upload.sha256)) throw new IngestError("Invalid sha256 for the uploaded file", 400);
   assertSizeOk(kind, upload.sizeBytes);
   // A key can back one asset only: no replaying someone else's upload.

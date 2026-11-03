@@ -29,6 +29,7 @@ function readCode(r: { loginCode?: string; login_code?: string } | undefined | n
 }
 
 export function Settings() {
+  const { hosted } = useAuth();
   return (
     <>
       <SectionHead
@@ -36,11 +37,11 @@ export function Settings() {
         job="Set up once, then come back only when something changes: users, calendar feed, releases, search, and system health."
       />
       <div className="page-body stack" style={{ display: "flex", flexDirection: "column", gap: 28, maxWidth: 860 }}>
-        <AccessSection />
+        {hosted ? <WorkspaceSection /> : <AccessSection />}
         <UsersSection />
         <CalendarSection />
         <ReleasesSection />
-        <DigestSection />
+        {!hosted && <DigestSection />}
         <SearchSection />
         <SystemSection />
       </div>
@@ -74,6 +75,65 @@ function Panel({
       </div>
       {children}
     </section>
+  );
+}
+
+// ================================================================ Workspace (hosted)
+
+function WorkspaceSection() {
+  const toast = useToast();
+  const [product, setProduct] = useState("");
+  const [what, setWhat] = useState("");
+  const [quota, setQuota] = useState<{ used: number; total: number } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    api
+      .workspace()
+      .then((w) => {
+        setProduct(w.product_name);
+        setWhat(w.product_description ?? "");
+        setQuota({ used: w.meetings_used, total: w.meetings_quota });
+      })
+      .catch(() => {});
+  }, []);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      await api.updateWorkspace(product.trim(), what.trim() || null);
+      toast.push("Saved. New extractions use it.", "success");
+    } catch (err) {
+      toast.push(err instanceof Error ? err.message : "Could not save.", "critical");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Panel
+      title="Workspace"
+      desc={
+        quota
+          ? `The AI frames every ask around your product. Free meetings used: ${quota.used} of ${quota.total}.`
+          : "The AI frames every ask around your product."
+      }
+    >
+      <form onSubmit={save} className="stack" style={{ maxWidth: 520 }}>
+        <Field label="Company or product" htmlFor="ws-product">
+          <input id="ws-product" className="ctrl" required maxLength={80} value={product} onChange={(e) => setProduct(e.target.value)} />
+        </Field>
+        <Field label="What you sell (optional)" htmlFor="ws-what">
+          <input id="ws-what" className="ctrl" maxLength={160} value={what} onChange={(e) => setWhat(e.target.value)} />
+        </Field>
+        <div className="form-actions">
+          <Btn variant="primary" type="submit" disabled={busy || !product.trim()}>
+            {busy ? "Saving" : "Save"}
+          </Btn>
+        </div>
+      </form>
+    </Panel>
   );
 }
 

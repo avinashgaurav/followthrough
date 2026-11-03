@@ -82,11 +82,49 @@ function bindable(p: unknown): unknown {
   return p;
 }
 
+// ---------------------------------------------------------------- workspaces (hosted)
+
+/**
+ * Hosted mode keeps each workspace in its own Postgres schema. withTenant()
+ * pins everything inside it to that schema: every statement runs in a
+ * transaction that first does SET LOCAL search_path, so a pooled connection
+ * (Supabase transaction pooler) can never carry one workspace's search_path
+ * into another's query, and no query in the app has to name a schema.
+ */
+const tenantScope = new AsyncLocalStorage<string>();
+const TENANT_SCHEMA = /^ws_[a-z0-9]{1,40}$/;
+
+export function withTenant<T>(schema: string, fn: () => Promise<T>): Promise<T> {
+  if (!TENANT_SCHEMA.test(schema)) throw new Error(`not a workspace schema: "${schema}"`);
+  return tenantScope.run(schema, fn);
+}
+
+/** The workspace schema this request is pinned to, or null outside withTenant. */
+export function currentTenant(): string | null {
+  return tenantScope.getStore() ?? null;
+}
+
+function pinSql(schema: string): string {
+  // schema is validated by withTenant. Only the workspace and the extensions
+  // schema (citext) are on the path: never public, so a workspace can never
+  // fall through to tables that live there.
+  return `SET LOCAL search_path TO ${schema}, extensions`;
+}
+
 function makeDb(root: Executor): Database {
   const scope = new AsyncLocalStorage<Executor>();
   const current = () => scope.getStore() ?? root;
-  const exec = async (sql: string, params: unknown[]) =>
-    current().run(toPgPlaceholders(sql), params.map(bindable));
+  const exec = async (sql: string, params: unknown[]) => {
+    const text = toPgPlaceholders(sql);
+    const values = params.map(bindable);
+    const tenant = tenantScope.getStore();
+    const inTx = scope.getStore();
+    if (!tenant || inTx) return current().run(text, values);
+    return root.begin(async (tx) => {
+      await tx.run(pinSql(tenant), []);
+      return tx.run(text, values);
+    });
+  };
   return {
     query(sql: string): Statement {
       return {
@@ -103,10 +141,21 @@ function makeDb(root: Executor): Database {
         },
       };
     },
-    exec: (sql) => current().exec(sql),
+    exec: (sql) => {
+      const tenant = tenantScope.getStore();
+      if (!tenant || scope.getStore()) return current().exec(sql);
+      return root.begin(async (tx) => {
+        await tx.run(pinSql(tenant), []);
+        await tx.exec(sql);
+      });
+    },
     transaction<T>(fn: () => Promise<T>): Promise<T> {
       if (scope.getStore()) return fn();
-      return root.begin((tx) => scope.run(tx, fn));
+      const tenant = tenantScope.getStore();
+      return root.begin(async (tx) => {
+        if (tenant) await tx.run(pinSql(tenant), []);
+        return scope.run(tx, fn);
+      });
     },
     close: () => root.close(),
   };
@@ -225,7 +274,8 @@ async function sharedPglite() {
       [types.BOOL]: (x: string) => (x === "t" ? 1 : 0),
     },
   });
-  await pg.exec("CREATE EXTENSION IF NOT EXISTS citext SCHEMA public;");
+  // Same layout as Supabase: extensions live in their own schema.
+  await pg.exec("CREATE SCHEMA IF NOT EXISTS extensions; CREATE EXTENSION IF NOT EXISTS citext SCHEMA extensions;");
   shared = { pg, schemas: 0, active: "public" };
   return shared;
 }
@@ -248,8 +298,10 @@ export async function openTestDb(): Promise<Database> {
 function schemaExecutor(s: NonNullable<typeof shared>, schema: string, tx?: PgLike): Executor {
   const conn = () => tx ?? s.pg;
   const use = async () => {
-    if (s.active === schema && !tx) return;
-    await conn().exec(`SET search_path TO ${schema}, public;`);
+    // Inside a transaction the path was set once at begin (and may have been
+    // narrowed to a workspace by withTenant); never override it per statement.
+    if (tx || s.active === schema) return;
+    await conn().exec(`SET search_path TO ${schema}, public, extensions;`);
     s.active = schema;
   };
   return {
@@ -263,7 +315,10 @@ function schemaExecutor(s: NonNullable<typeof shared>, schema: string, tx?: PgLi
       await conn().exec(text);
     },
     begin(fn) {
-      return s.pg.transaction!(async (t) => fn(schemaExecutor(s, schema, t)));
+      return s.pg.transaction!(async (t) => {
+        await t.exec(`SET LOCAL search_path TO ${schema}, public, extensions;`);
+        return fn(schemaExecutor(s, schema, t));
+      });
     },
     async close() {},
   };

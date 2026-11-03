@@ -50,7 +50,7 @@ export function confidenceFor(
   return confidence;
 }
 
-const SYSTEM_PROMPT = `You are matching a client-requested product insight against the entries of one software release of ${productLabel()}.
+const systemPrompt = (): string => `You are matching a client-requested product insight against the entries of one software release of ${productLabel()}.
 
 Decide for each candidate entry whether it ships the insight:
 - "full": the entry clearly delivers what the insight asks for.
@@ -161,7 +161,7 @@ export async function matchRelease(db: Database, llm: LLM, releaseId: string): P
     let matches: z.infer<typeof MatchResponseSchema>["matches"];
     try {
       const res = await llm.completeJSON({
-        system: SYSTEM_PROMPT,
+        system: systemPrompt(),
         prompt: buildPrompt(insight, release.tag_name, entries),
         schema: MatchResponseSchema,
       });

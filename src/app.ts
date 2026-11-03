@@ -19,13 +19,17 @@ import "./watchfolder/routes.ts";
 import "./retention/routes.ts";
 import "./share/routes.ts";
 import "./cron.ts";
+import "./hosted/routes.ts";
+import { hostedDispatch } from "./hosted/routes.ts";
+import { hostedMode } from "./config.ts";
 
 route("GET", "/api/health", "public", () => json({ ok: true, service: "followthrough", time: nowIso() }));
 
 /** Every /api/* and /share/* request, on the local server and on Vercel. */
 export async function handleApi(req: Request): Promise<Response> {
   try {
-    return (await dispatch(req)) ?? json({ error: "not found" }, 404);
+    const res = hostedMode() ? await hostedDispatch(req, dispatch) : await dispatch(req);
+    return res ?? json({ error: "not found" }, 404);
   } catch (err) {
     // e.g. the database is unreachable while loading the session
     console.error(`${req.method} ${new URL(req.url).pathname} failed:`, err);

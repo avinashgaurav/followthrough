@@ -44,7 +44,7 @@ export interface DraftRow {
 const EmailSchema = z.object({ subject: z.string(), body_md: z.string() });
 
 // Stable system prompt: do not interpolate per-call data here, it gets cached.
-const EMAIL_SYSTEM_PROMPT = [
+const emailSystemPrompt = (): string => [
   `You write client follow-up emails for ${productLabel()}.`,
   "Brand voice: direct, confident, short sentences. No fluff, no hype.",
   "Hard rules:",
@@ -177,7 +177,7 @@ export async function generateDrafts(
       .all(opts.insightId, requester.client_id) as MentionRow[];
 
     const { data } = await llm.completeJSON({
-      system: EMAIL_SYSTEM_PROMPT,
+      system: emailSystemPrompt(),
       prompt: buildPrompt({
         insight,
         clientName: requester.name,

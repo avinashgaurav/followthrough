@@ -1,6 +1,8 @@
 import { route, json } from "./router.ts";
 import { getDb } from "./db.ts";
-import { env, demoMode } from "./config.ts";
+import { env, demoMode, hostedMode } from "./config.ts";
+import { withTenant } from "./db.ts";
+import { listWorkspaces, pruneControl } from "./hosted/tenancy.ts";
 import { maybeSendDigest } from "./digest/digest.ts";
 import { dailyNudgeText, sendChat } from "./notify.ts";
 import { runPollPipeline } from "./releases/routes.ts";
@@ -23,6 +25,7 @@ import { getStore, sweepOrphanUploads } from "./storage.ts";
  * CRON_SECRET set, the route refuses to run.
  */
 export async function runDailyJobs(now: Date = new Date()): Promise<Record<string, unknown>> {
+  if (hostedMode()) return runHostedDailyJobs(now);
   const db = getDb();
   const out: Record<string, unknown> = {};
   const step = async (name: string, fn: () => Promise<unknown>) => {
@@ -48,6 +51,46 @@ export async function runDailyJobs(now: Date = new Date()): Promise<Record<strin
     }
     if (env.RELEASE_REPO) await step("releases", () => runPollPipeline(db, getLLM()));
   }
+  return out;
+}
+
+/**
+ * Hosted mode: the housekeeping sweeps run in each workspace. Digest, nudges
+ * and release polling are single-tenant features (one webhook, one repo) and
+ * stay off. One workspace failing never stops the rest.
+ */
+async function runHostedDailyJobs(now: Date): Promise<Record<string, unknown>> {
+  const db = getDb();
+  const out: Record<string, unknown> = { control: await pruneControl(db, now.getTime()) };
+  let ok = 0;
+  const failed: string[] = [];
+  // Stay well inside the function's 300s limit. The start rotates by day, so
+  // workspaces past the deadline one day are swept first on a later day.
+  const all = await listWorkspaces(db);
+  const start = all.length ? Math.floor(now.getTime() / 86_400_000) % all.length : 0;
+  const ordered = [...all.slice(start), ...all.slice(0, start)];
+  const deadline = Date.now() + 240_000;
+  for (const ws of ordered) {
+    if (Date.now() > deadline) {
+      out.stopped_early = true;
+      break;
+    }
+    try {
+      await withTenant(ws.schema_name, async () => {
+        await failStaleExtractionRuns(db, staleRunMinutes());
+        await markStaleDrafts(db);
+        await pruneRateHits(db, now.getTime());
+        // Only this workspace's own folder, checked against its own media_assets.
+        await sweepOrphanUploads(db, getStore(), now.getTime(), undefined, undefined, ws.id);
+      });
+      ok++;
+    } catch (err) {
+      failed.push(ws.id);
+      console.warn(`cron sweep failed for workspace ${ws.id}:`, err);
+    }
+  }
+  out.workspaces_swept = ok;
+  if (failed.length) out.workspaces_failed = failed;
   return out;
 }
 

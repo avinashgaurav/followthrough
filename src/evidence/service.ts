@@ -1,3 +1,4 @@
+import { hostedMode } from "../config.ts";
 import type { Database } from "../db.ts";
 import { nowIso } from "../db.ts";
 import { ulid } from "../ids.ts";
@@ -84,7 +85,8 @@ export async function proposeEvidence(db: Database, input: ProposeInput): Promis
 
   // Liveness check: 2xx marks the url verified; any failure proceeds with null.
   let urlVerifiedAt: string | null = null;
-  if (input.url) {
+  // Hosted: no server-side fetch of user URLs (internal-network probing).
+  if (input.url && !hostedMode()) {
     try {
       const res = await (input.fetchImpl ?? defaultFetch)(input.url);
       if (res.ok) urlVerifiedAt = nowIso();

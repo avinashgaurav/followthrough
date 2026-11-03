@@ -1,5 +1,5 @@
 import type { Database } from "./db.ts";
-import { env } from "./config.ts";
+import { env, hostedMode } from "./config.ts";
 
 /**
  * Chat nudges (SPEC section 12 nudges, delivered): short messages pushed to the
@@ -16,6 +16,8 @@ export async function sendChat(
   fetchImpl: typeof fetch = fetch,
   webhookUrl: string | undefined = env.DIGEST_WEBHOOK_URL,
 ): Promise<boolean> {
+  // Hosted: the operator's webhook must never receive a workspace's client data.
+  if (hostedMode()) return false;
   if (!webhookUrl) return false;
   try {
     const res = await fetchImpl(webhookUrl, {

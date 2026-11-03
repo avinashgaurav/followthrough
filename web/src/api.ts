@@ -61,6 +61,14 @@ function put<T>(path: string, body: unknown): Promise<T> {
   });
 }
 
+function patch<T>(path: string, body: unknown): Promise<T> {
+  return request<T>(path, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
 function del<T>(path: string): Promise<T> {
   return request<T>(path, { method: "DELETE" });
 }
@@ -498,9 +506,33 @@ export const api = {
       allowed_email_domains?: string[];
       writable_repos?: string[];
       demo?: boolean;
+      hosted?: boolean;
     }>("/api/me"),
   // Public: the email-domain rule, readable before sign-in.
   authConfig: () => get<{ allowed_email_domains: string[] }>("/api/auth/config"),
+  // Hosted sign-up / sign-in (HOSTED_MODE on the server).
+  hostedConfig: () => get<{ hosted: boolean; free_meetings?: number; signups_open?: boolean }>("/api/hosted/config"),
+  sendCode: (email: string) => post<{ ok: true }>("/api/hosted/send-code", { email }),
+  verifyCode: (email: string, code: string) =>
+    post<{
+      ok?: true;
+      needs_workspace?: boolean;
+      signup_token?: string;
+      invite?: { workspace: string; invited_by: string | null };
+    }>("/api/hosted/verify", { email, code }),
+  acceptInvite: (signup_token: string) => post<{ ok: true }>("/api/hosted/accept-invite", { signup_token }),
+  createWorkspace: (signup_token: string, product_name: string, product_description?: string) =>
+    post<{ ok: true }>("/api/hosted/create-workspace", { signup_token, product_name, product_description }),
+  workspace: () =>
+    get<{
+      name: string;
+      product_name: string;
+      product_description: string | null;
+      meetings_used: number;
+      meetings_quota: number;
+    }>("/api/hosted/workspace"),
+  updateWorkspace: (product_name: string, product_description: string | null) =>
+    patch<{ ok: true }>("/api/hosted/workspace", { product_name, product_description }),
   // Public probe used on app load; returns { user: null } (200) when signed out.
   session: () => get<{ user: User | null }>("/api/auth/session"),
 

@@ -274,13 +274,16 @@ export async function sweepOrphanUploads(
   now: number = Date.now(),
   maxAgeMs = 24 * 3600 * 1000,
   maxFolders = 500,
+  /** Hosted mode: a workspace id, so only that workspace's "<id>/<ulid>/<file>" keys are considered. */
+  prefix = "",
 ): Promise<number> {
-  const folders = (await store.list(""))
+  const folders = (await store.list(prefix))
     .filter((e) => e.folder && (ulidTime(e.name) ?? Infinity) < now - maxAgeMs)
     .slice(0, maxFolders);
   let deleted = 0;
   for (const f of folders) {
-    const keys = (await store.list(f.name)).filter((e) => !e.folder).map((e) => `${f.name}/${e.name}`);
+    const folder = prefix ? `${prefix}/${f.name}` : f.name;
+    const keys = (await store.list(folder)).filter((e) => !e.folder).map((e) => `${folder}/${e.name}`);
     if (keys.length === 0) continue;
     const used = (await db
       .query(`SELECT storage_ref FROM media_assets WHERE storage_ref IN (${keys.map(() => "?").join(", ")})`)

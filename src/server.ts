@@ -1,7 +1,9 @@
 import { join } from "node:path";
 import { existsSync } from "node:fs";
-import { env, allowedEmailDomains, demoMode, llmDailyBudgetUsd } from "./config.ts";
-import { getDb, migrate } from "./db.ts";
+import { env, allowedEmailDomains, demoMode, hostedMode, llmDailyBudgetUsd } from "./config.ts";
+import { getDb } from "./db.ts";
+import { prepareDatabase } from "./hosted/boot.ts";
+import { runDailyJobs } from "./cron.ts";
 import { handleApi } from "./app.ts";
 import { startDigestScheduler } from "./digest/digest.ts";
 import { failStaleExtractionRuns } from "./extract/pipeline.ts";
@@ -36,14 +38,19 @@ async function serveStatic(pathname: string): Promise<Response> {
 }
 
 if (import.meta.main) {
-  await migrate(getDb());
-  // The public demo is read-only synthetic data: no polling, ingest or outbound nudges.
-  if (!demoMode()) {
+  console.log(await prepareDatabase(getDb()));
+  // The public demo is read-only synthetic data: no polling, ingest or outbound
+  // nudges. Hosted mode runs these per workspace from the daily cron instead.
+  if (!demoMode() && !hostedMode()) {
     startDigestScheduler();
     startReleasePoller();
     startDailyNudge(getDb);
   }
   const sweepStale = async () => {
+    if (hostedMode()) {
+      await runDailyJobs().catch((err) => console.warn("hosted sweep failed:", err));
+      return;
+    }
     try {
       await markStaleDrafts(getDb());
       const swept = await failStaleExtractionRuns(getDb());

@@ -61,7 +61,8 @@ export const ExtractionResponseSchema = z.object({
     .describe("One entry per distinct qualifying item. An empty list is correct when nothing qualifies."),
 });
 
-export const EXTRACTION_SYSTEM_PROMPT = `You extract structured intelligence items from client meeting transcripts for ${productLabel()}. Your output is read by the founder and routed to engineering, product, and customer success. It must be the caliber of a top analyst's call readout: specific, interpretive, and decision-ready. Shallow paraphrase is failure.
+/** Built per call: the product named in it is per workspace in hosted mode. */
+export const extractionSystemPrompt = (): string => `You extract structured intelligence items from client meeting transcripts for ${productLabel()}. Your output is read by the founder and routed to engineering, product, and customer success. It must be the caliber of a top analyst's call readout: specific, interpretive, and decision-ready. Shallow paraphrase is failure.
 
 You will be given one chunk of a cleaned transcript. Extract only the decision-grade items that clearly belong to exactly one of these types:
 
