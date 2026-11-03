@@ -6,6 +6,11 @@ import { setAuthFetch } from "./routes.ts";
 import type { FetchLike } from "./supabase-auth.ts";
 import { blobKeyAllowed, newBlobKey } from "../ingest/media.ts";
 import { hostedSpendLedger } from "../llm/provider.ts";
+import { localStore, sweepOrphanUploads } from "../storage.ts";
+import { ulid } from "../ids.ts";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   SignupsFullError,
   assertExtensionsReady,
@@ -343,5 +348,31 @@ describe("review fixes", () => {
     expect((await handleApi(req("POST", "/api/releases/poll", { cookie: a.cookie }))).status).toBe(404);
     expect((await handleApi(req("GET", "/api/calendar/events", { cookie: a.cookie }))).status).toBe(404);
     expect((await handleApi(req("GET", "/share/%E0%A4%A"))).status).toBe(404);
+  });
+});
+
+describe("hosted orphan-upload sweep", () => {
+  test("only touches the workspace's own folder and keeps files its meetings use", async () => {
+    const a = await signedIn("sweep-a");
+    const b = await signedIn("sweep-b");
+    const store = localStore(mkdtempSync(join(tmpdir(), "ft-sweep-")));
+    const old = Date.now() - 3 * 86_400_000;
+    const orphanA = `${a.ws.id}/${ulid(old)}/orphan.webm`;
+    const keptA = `${a.ws.id}/${ulid(old)}/kept.webm`;
+    const fileB = `${b.ws.id}/${ulid(old)}/b.webm`;
+    for (const k of [orphanA, keptA, fileB]) await store.put(k, new Uint8Array([1]), null);
+    await withTenant(a.ws.schema_name, () =>
+      db
+        .query(
+          `INSERT INTO media_assets (id, kind, storage_backend, storage_ref, filename, content_type, size_bytes, sha256, uploaded_by, created_at)
+           VALUES (?, 'audio', 'local', ?, 'kept.webm', NULL, 1, 'x', NULL, ?)`,
+        )
+        .run(ulid(), keptA, new Date().toISOString()),
+    );
+    const n = await withTenant(a.ws.schema_name, () => sweepOrphanUploads(db, store, Date.now(), undefined, undefined, a.ws.id));
+    expect(n).toBe(1);
+    expect(await store.exists(orphanA)).toBe(false);
+    expect(await store.exists(keptA)).toBe(true);
+    expect(await store.exists(fileB)).toBe(true); // another workspace's file is never considered
   });
 });

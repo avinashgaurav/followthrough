@@ -80,6 +80,8 @@ async function runHostedDailyJobs(now: Date): Promise<Record<string, unknown>> {
         await failStaleExtractionRuns(db, staleRunMinutes());
         await markStaleDrafts(db);
         await pruneRateHits(db, now.getTime());
+        // Only this workspace's own folder, checked against its own media_assets.
+        await sweepOrphanUploads(db, getStore(), now.getTime(), undefined, undefined, ws.id);
       });
       ok++;
     } catch (err) {
