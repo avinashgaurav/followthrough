@@ -121,8 +121,9 @@ describe("POST /api/meetings/:id/transcribe (transcribeMeeting)", () => {
     const res = await transcribeMeeting(db, meetingId, { id: userId }, deepgram({ status: 502 }));
 
     expect(res.status).toBe(500);
-    const body = (await res.json()) as { error: string };
-    expect(body.error).toContain("Deepgram error 502");
+    const body = (await res.json()) as { error: string; code: string };
+    expect(body.code).toBe("transcription_failed");
+    expect(body.error).not.toContain("Deepgram error"); // provider detail is not echoed
 
     expect(await meetingStatus(meetingId)).toBe("transcription_failed");
     const failures = await eventsFor(meetingId, "meeting.transcription_failed");

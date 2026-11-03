@@ -29,8 +29,14 @@ function actorOf(user: AuthedUser | null): Actor {
 function errorResponse(err: unknown): Response {
   if (err instanceof HttpError) return json({ error: err.message }, err.status);
   if (err instanceof TransitionError) return json({ error: err.message }, 403);
-  if (err instanceof GitHubApiError) return json({ error: err.message }, 502);
-  if (err instanceof LLMOutputError) return json({ error: err.message }, 502);
+  if (err instanceof GitHubApiError) {
+    console.error("GitHub request failed:", err);
+    return json({ error: "GitHub refused the request. Check the token and repo, then try again.", code: "github_failed" }, 502);
+  }
+  if (err instanceof LLMOutputError) {
+    console.error("ticket draft failed:", err);
+    return json({ error: "The AI draft came back unusable. Try again.", code: "ai_output_invalid" }, 502);
+  }
   console.error("tickets route error:", err);
   return json({ error: "internal error" }, 500);
 }

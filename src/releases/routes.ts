@@ -242,7 +242,10 @@ route("POST", "/api/releases/manual", "admin", async (req, user) => {
   try {
     rel = await addManualRelease(db, body.data, user!.id);
   } catch (e) {
-    return json({ error: e instanceof Error ? e.message : "Could not save the changelog" }, 409);
+    // The duplicate-tag message is ours and safe to show; anything else is logged.
+    if (e instanceof Error && e.message.startsWith("A manual changelog for tag")) return json({ error: e.message }, 409);
+    console.error("manual changelog failed:", e);
+    return json({ error: "Could not save the changelog.", code: "changelog_failed" }, 500);
   }
   try {
     const run = await matchRelease(db, getLLM(), rel.id);

@@ -145,7 +145,9 @@ export async function transcribeMeeting(
         payload: { error: message },
       });
     });
-    return json({ error: message }, 500);
+    // The provider's detail is in the logs and the failure event, not the response.
+    console.error(`transcription failed for meeting ${meetingId}:`, err);
+    return json({ error: "Transcription failed. Try again, or paste the transcript.", code: "transcription_failed" }, 500);
   }
 }
 

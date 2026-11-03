@@ -23,8 +23,10 @@ function errorResponse(err: unknown): Response {
   if (err instanceof ExtractionError) {
     return json({ error: err.message, code: err.code }, GUARD_STATUS[err.code] ?? 409);
   }
-  // LLM or unexpected failure; the run row already carries the error detail.
-  return json({ error: err instanceof Error ? err.message : "extraction failed" }, 502);
+  // LLM or unexpected failure: the detail stays in the logs and the run row
+  // (extraction_runs.error), never in the response.
+  console.error("extraction failed:", err);
+  return json({ error: "Extraction failed. Try again in a minute.", code: "extraction_failed" }, 502);
 }
 
 /** After this long, the meeting brief is left for a separate /analyze call, so the request stays inside the function limit. */
@@ -88,7 +90,9 @@ route("POST", "/api/meetings/:id/analyze", "user", async (_req, _user, params) =
     const r = await runMeetingAnalysis(getDb(), getLLM(), params.id ?? "");
     return json({ markdown: r.markdown });
   } catch (err) {
-    return json({ error: err instanceof Error ? err.message : "analysis failed" }, 502);
+    if (err instanceof LLMBudgetError || err instanceof LLMRateLimitError) throw err;
+    console.error("meeting analysis failed:", err);
+    return json({ error: "The meeting brief could not be generated. Try again.", code: "analysis_failed" }, 502);
   }
 });
 
