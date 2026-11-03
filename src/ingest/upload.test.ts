@@ -96,3 +96,35 @@ describe("media_assets storage_ref", () => {
     await insert(ulid(), "[purged]"); // many purged rows are fine
   });
 });
+
+describe("orphan upload sweep", () => {
+  test("deletes old unregistered uploads; keeps registered, recent and export files", async () => {
+    const { localStore, sweepOrphanUploads, ulidTime } = await import("../storage.ts");
+    const dir = mkdtempSync(join(tmpdir(), "ie-sweep-"));
+    try {
+      const store = localStore(dir);
+      const { db, userId } = await seedUser();
+      const now = Date.parse("2026-11-04T12:00:00Z");
+      const old = ulid(now - 2 * 86_400_000);
+      const fresh = ulid(now - 3_600_000);
+      expect(ulidTime(old)).toBe(now - 2 * 86_400_000);
+      const put = (k: string) => store.put(k, new TextEncoder().encode("x"), null);
+      await put(`${old}/orphan.webm`);
+      await put(`${old}/kept.webm`);
+      await put(`${fresh}/in-progress.webm`);
+      await put("exports/e.csv");
+      await db.query(
+        `INSERT INTO media_assets (id, kind, storage_backend, storage_ref, filename, sha256, uploaded_by, created_at)
+         VALUES (?, 'audio', 'local', ?, 'kept.webm', 'x', ?, ?)`,
+      ).run(ulid(), `${old}/kept.webm`, userId, nowIso());
+
+      expect(await sweepOrphanUploads(db, store, now)).toBe(1);
+      expect(existsSync(join(dir, old, "orphan.webm"))).toBe(false);
+      expect(existsSync(join(dir, old, "kept.webm"))).toBe(true);
+      expect(existsSync(join(dir, fresh, "in-progress.webm"))).toBe(true);
+      expect(existsSync(join(dir, "exports", "e.csv"))).toBe(true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
