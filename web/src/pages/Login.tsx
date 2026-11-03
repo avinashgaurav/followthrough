@@ -25,6 +25,11 @@ export function Login() {
       setError("Enter your work email and password.");
       return;
     }
+    // The server refuses anything shorter (a 400 that would read as an email problem).
+    if (c.length < 4) {
+      setError("That password or code is too short. It is at least 4 characters.");
+      return;
+    }
     if (!emailAllowed(mail, allowedDomains)) {
       setError(`Use your ${rule} email. Only ${rule} accounts can sign in.`);
       return;

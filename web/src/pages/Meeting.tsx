@@ -4,6 +4,7 @@ import { api, ApiError, asArray, STATES, TRACKS } from "../api";
 import type { Client, Insight, Meeting as MeetingRow, User } from "../api";
 import { useAuth } from "../auth";
 import {
+  Alert,
   Btn,
   ConfirmModal,
   EmptyState,
@@ -27,6 +28,7 @@ import {
 // Job: one meeting, everything that came out of it. Humans remember meetings,
 // not insight IDs, so this is the meeting's real page.
 // Data: api.getMeeting(id) -> { meeting, has_transcript, transcripts, insights },
+// api.setTranscript / api.transcribe to attach the conversation when it is missing,
 // api.getAnalysis(id) for the brief, api.listInsights({client_id}) filtered by
 // meeting_id for the richer insight rows (the backend list has no meeting filter).
 
@@ -46,6 +48,24 @@ function shapeDetail(raw: Record<string, unknown>): MeetingDetailData {
     hasTranscript: Boolean(raw.has_transcript ?? transcripts.length > 0),
     inlineInsights: asArray<Insight>(raw.insights),
   };
+}
+
+// Matches the server's transcript cap and the file types Capture accepts.
+const MAX_TRANSCRIPT_BYTES = 10 * 1024 * 1024;
+const TRANSCRIPT_EXTENSIONS = [".txt", ".md", ".vtt", ".srt"];
+
+/** Drop the WEBVTT header, cue numbers and timing lines from a caption file, keeping the words. */
+function stripCaptionCues(text: string): string {
+  return text
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .filter((line) => {
+      const t = line.trim();
+      return !/^WEBVTT\b/.test(t) && !/^\d+$/.test(t) && !t.includes("-->");
+    })
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 function meetingSeq(m: MeetingRow): number | null {
@@ -88,6 +108,12 @@ export function Meeting() {
   const [briefFailed, setBriefFailed] = useState(false);
 
   const [extracting, setExtracting] = useState(false);
+
+  // Adding the conversation when the meeting has none yet.
+  const [pasteText, setPasteText] = useState("");
+  const [savingTranscript, setSavingTranscript] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const [transcribeError, setTranscribeError] = useState<string | null>(null);
 
   // Brief-first review: route or reject every extracted insight in one pass.
   const [users, setUsers] = useState<User[]>([]);
@@ -294,6 +320,76 @@ export function Meeting() {
     }
   }, [detail, extracting, id, clientId, toast, loadDetail, loadBrief]);
 
+  const saveTranscript = useCallback(async () => {
+    const submitted = pasteText;
+    const text = submitted.trim();
+    if (!text || savingTranscript) return;
+    setSavingTranscript(true);
+    try {
+      await api.setTranscript(id, text);
+      toast.push("Transcript added. You can extract insights now.", "success");
+      // Keep anything typed while the save was in flight.
+      setPasteText((cur) => (cur === submitted ? "" : cur));
+      await loadDetail();
+    } catch (err) {
+      toast.push(
+        err instanceof ApiError ? err.message : "Could not add the transcript. Try again.",
+        "critical",
+      );
+    } finally {
+      setSavingTranscript(false);
+    }
+  }, [pasteText, savingTranscript, id, toast, loadDetail]);
+
+  const loadTranscriptFile = useCallback(
+    async (file: File | undefined) => {
+      if (!file) return;
+      const ext = file.name.toLowerCase().match(/\.[a-z0-9]+$/)?.[0] ?? "";
+      if (!TRANSCRIPT_EXTENSIONS.includes(ext)) {
+        toast.push("That file type is not supported. Use a .txt, .md, .vtt or .srt file.", "warning");
+        return;
+      }
+      if (file.size > MAX_TRANSCRIPT_BYTES) {
+        toast.push("That file is over 10 MB, the most a transcript can be. Trim it and try again.", "warning");
+        return;
+      }
+      try {
+        const text = await file.text();
+        setPasteText(ext === ".vtt" || ext === ".srt" ? stripCaptionCues(text) : text);
+      } catch {
+        toast.push("Could not read that file. Paste the text instead.", "critical");
+      }
+    },
+    [toast],
+  );
+
+  const doTranscribe = useCallback(async () => {
+    if (transcribing) return;
+    setTranscribing(true);
+    setTranscribeError(null);
+    try {
+      await api.transcribe(id);
+      toast.push("Audio turned into text. You can extract insights now.", "success");
+      await loadDetail();
+    } catch (err) {
+      // Keep the reason on screen: a missing Deepgram key (503), a failed run (500), and so on.
+      setTranscribeError(
+        err instanceof ApiError ? err.message : "Could not transcribe the audio. Try again.",
+      );
+      await loadDetail();
+    } finally {
+      setTranscribing(false);
+    }
+  }, [transcribing, id, toast, loadDetail]);
+
+  // A reload mid-transcription shows "transcribing"; check back until it finishes.
+  const meetingStatus = detail?.meeting.status;
+  useEffect(() => {
+    if (meetingStatus !== "transcribing" || transcribing) return;
+    const timer = setInterval(() => void loadDetail(), 5000);
+    return () => clearInterval(timer);
+  }, [meetingStatus, transcribing, loadDetail]);
+
   // ---------------------------------------------------------------- not found / error / loading
 
   if (notFound) {
@@ -339,6 +435,7 @@ export function Meeting() {
   const title = m.title?.trim() || (seq !== null ? `Meeting ${seq}` : "Untitled meeting");
   const name = clientName ?? (typeof m.client_name === "string" ? m.client_name : "");
   const canExtract = detail.hasTranscript && m.status !== "extracted";
+  const hasAudio = !!m.audio_asset_id;
 
   // ---- brief-first review derivations
   const reviewActive = extracted.length > 0;
@@ -419,6 +516,84 @@ export function Meeting() {
         <div className="meet-grid">
           {/* ---- main column: review pass (when anything is still Found), then groups, then brief */}
           <div>
+            {!detail.hasTranscript && (
+              <>
+                <div className="row-between mb-4">
+                  <span className="lbl">Add the conversation</span>
+                </div>
+                <div className="card stack-sm mb-16">
+                  {hasAudio && (
+                    <>
+                      <p className="small muted" style={{ margin: 0 }}>
+                        This meeting has a recording but no text yet. Turn the audio into text, or
+                        paste the transcript below.
+                      </p>
+                      <div className="row">
+                        <Btn
+                          onClick={() => void doTranscribe()}
+                          disabled={transcribing || m.status === "transcribing"}
+                          tooltip="Run speech to text on the recording. After this you can extract insights."
+                          tooltipTitle="Transcribe audio"
+                        >
+                          {transcribing || m.status === "transcribing" ? "Transcribing" : "Transcribe audio"}
+                        </Btn>
+                      </div>
+                      {transcribeError && (
+                        <Alert
+                          severity="warning"
+                          title="The audio was not turned into text."
+                          onDismiss={() => setTranscribeError(null)}
+                        >
+                          {transcribeError}
+                        </Alert>
+                      )}
+                      <hr className="divider" style={{ margin: "8px 0" }} />
+                    </>
+                  )}
+                  <textarea
+                    className="ctrl"
+                    value={pasteText}
+                    placeholder="Paste the full transcript here."
+                    rows={7}
+                    aria-label="Transcript text"
+                    aria-describedby="meet-tx-help"
+                    onChange={(e) => setPasteText(e.target.value)}
+                    readOnly={savingTranscript}
+                  />
+                  <p id="meet-tx-help" className="helper" style={{ margin: 0 }}>
+                    Or load a text file (.txt, .md, .vtt, .srt, up to 10 MB). It fills the box above so you
+                    can check it first; caption timings and cue numbers are dropped.
+                  </p>
+                  <label className="lbl" htmlFor="meet-tx-file" style={{ display: "block" }}>
+                    Load a transcript file
+                  </label>
+                  <div className="row">
+                    <input
+                      id="meet-tx-file"
+                      type="file"
+                      className="ctrl"
+                      accept=".txt,.md,.vtt,.srt,text/plain"
+                      aria-describedby="meet-tx-help"
+                      onChange={(e) => {
+                        void loadTranscriptFile(e.target.files?.[0]);
+                        e.target.value = "";
+                      }}
+                      disabled={savingTranscript}
+                    />
+                    <Btn
+                      variant="primary"
+                      onClick={() => void saveTranscript()}
+                      disabled={savingTranscript || pasteText.trim() === ""}
+                      tooltip="Attach this text to the meeting. Next you can extract insights."
+                      tooltipTitle="Add transcript"
+                    >
+                      {savingTranscript ? "Adding" : "Add transcript"}
+                    </Btn>
+                  </div>
+                </div>
+              </>
+            )}
+
             {reviewActive && (
               <>
                 <div className="row-between mb-4">
@@ -558,7 +733,7 @@ export function Meeting() {
                   body={
                     detail.hasTranscript
                       ? "The transcript is in. Extract insights to pull out what the client asked for."
-                      : "This meeting has no transcript yet, so there is nothing to read. Add one from Capture first."
+                      : "This meeting has no transcript yet, so there is nothing to read. Add the conversation above first."
                   }
                   action={detail.hasTranscript ? extractBtn : undefined}
                 />
@@ -635,7 +810,7 @@ export function Meeting() {
                 content={
                   detail.hasTranscript
                     ? "The conversation text is attached, so insights can be extracted."
-                    : "No conversation text yet. Add it from this meeting's row in Capture."
+                    : "No conversation text yet. Add it on this page."
                 }
               >
                 <span className="lbl">Transcript</span>

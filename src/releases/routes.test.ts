@@ -7,6 +7,7 @@ import {
   MatchActionError,
   confirmMatch,
   rejectMatch,
+  releaseCheckCadence,
   runPollPipeline,
 } from "./routes.ts";
 import type { FetchLike } from "./poller.ts";
@@ -246,5 +247,20 @@ describe("runPollPipeline", () => {
     expect(
       (await s.db.query("SELECT COUNT(*) AS n FROM release_matches").get() as { n: number }).n,
     ).toBe(1);
+  });
+});
+
+describe("releaseCheckCadence", () => {
+  test("daily on Vercel (the daily cron), hourly on a long-running server", () => {
+    const saved = process.env.VERCEL;
+    try {
+      process.env.VERCEL = "1";
+      expect(releaseCheckCadence()).toBe("daily");
+      delete process.env.VERCEL;
+      expect(releaseCheckCadence()).toBe("hourly");
+    } finally {
+      if (saved === undefined) delete process.env.VERCEL;
+      else process.env.VERCEL = saved;
+    }
   });
 });

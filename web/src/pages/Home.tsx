@@ -8,21 +8,26 @@ import { formatDate, meetingStatusLabel } from "../format";
 
 // Job: answer "what needs me right now" with zero pipeline knowledge.
 // One look tells the founder where to click: action cards on top (from the
-// review queue buckets), the latest meetings underneath. Two api calls, no polling.
+// review queue buckets plus proposed release matches), the latest meetings
+// underneath. Three api calls, no polling.
 
 interface HomeCounts {
   toReview: number;
   toFinish: number;
-  toConfirm: number;
+  /** Release matches waiting on the Confirm shipped page; null when they could not be loaded. */
+  toConfirm: number | null;
+  /** Proof someone added by hand, confirmed from Review. */
+  proofToConfirm: number;
   toTell: number;
 }
 
-function countsFrom(q: QueueResponse): HomeCounts {
+function countsFrom(q: QueueResponse, proposedMatches: number | null): HomeCounts {
   return {
     toReview: (q.to_review ?? []).length,
     // wording + ticket are both "you started this, finish it" work
     toFinish: (q.to_finalize ?? []).length + (q.to_ticket ?? []).length,
-    toConfirm: (q.to_confirm ?? []).length,
+    toConfirm: proposedMatches,
+    proofToConfirm: (q.to_confirm ?? []).length,
     toTell: (q.to_email ?? []).length,
   };
 }
@@ -40,9 +45,8 @@ export function Home() {
   const loadQueue = useCallback(() => {
     setQueueError(null);
     setCounts(null);
-    api
-      .queue()
-      .then((q) => setCounts(countsFrom(q)))
+    Promise.all([api.queue(), api.listMatches("proposed").catch(() => null)])
+      .then(([q, matches]) => setCounts(countsFrom(q, matches ? matches.length : null)))
       .catch((e) => setQueueError(e));
   }, []);
 
@@ -112,16 +116,16 @@ export function Home() {
               go="Finish them"
               onGo={() => navigate("/review")}
             />
+            {/* Release matches are confirmed on Confirm shipped; proof added by hand
+                is confirmed in Review. Go wherever the waiting work is. */}
             <ActionCard
               stage="3 · Shipped"
-              count={counts.toConfirm}
-              what={
-                counts.toConfirm === 1
-                  ? "1 looks shipped"
-                  : `${counts.toConfirm} look shipped`
-              }
+              count={counts.toConfirm === null ? null : counts.toConfirm + counts.proofToConfirm}
+              what={shippedWhat(counts.toConfirm, counts.proofToConfirm)}
               go="Confirm them"
-              onGo={() => navigate("/proof")}
+              onGo={() =>
+                navigate(counts.toConfirm !== 0 || counts.proofToConfirm === 0 ? "/proof" : "/review")
+              }
             />
             <ActionCard
               stage="4 · Client told"
@@ -238,6 +242,19 @@ export function Home() {
   );
 }
 
+function shippedWhat(matches: number | null, proofs: number): string {
+  if (matches === null) {
+    return proofs > 0
+      ? `Release matches did not load; ${proofs} added ${proofs === 1 ? "proof" : "proofs"} in Review`
+      : "Release matches did not load. Open Confirm shipped to check.";
+  }
+  const m = matches === 1 ? "1 release match to confirm" : `${matches} release matches to confirm`;
+  const p = proofs === 1 ? "1 added proof" : `${proofs} added proofs`;
+  if (matches > 0 && proofs > 0) return `${m}, plus ${p} in Review`;
+  if (proofs > 0) return `${p} to confirm in Review`;
+  return m;
+}
+
 // ---------------------------------------------------------------- action card
 
 /**
@@ -254,13 +271,15 @@ function ActionCard({
   onGo,
 }: {
   stage: string;
-  count: number;
+  /** null when the number could not be loaded: shown as a dash, never as zero. */
+  count: number | null;
   what: string;
   go: string;
   hot?: boolean;
   onGo: () => void;
 }) {
   const zero = count === 0;
+  const unknown = count === null;
   return (
     <button
       type="button"
@@ -270,9 +289,9 @@ function ActionCard({
       {/* the pipeline stage this card sits at, so the four cards read as the
           loop (Found -> Routed/Locked -> Shipped -> Client told) in order */}
       <div className="stage">{stage}</div>
-      <div className={`count${hot && !zero ? " hot" : ""}`}>{count}</div>
+      <div className={`count${hot && !zero && !unknown ? " hot" : ""}`}>{unknown ? "-" : count}</div>
       <div className="what">{what}</div>
-      <div className="go">{zero ? "Nothing waiting" : go}</div>
+      <div className="go">{zero ? "Nothing waiting" : unknown ? "Check" : go}</div>
     </button>
   );
 }

@@ -219,7 +219,7 @@ export function Capture() {
     (inputMode === "transcript_file" && !!transcriptFile) ||
     (inputMode === "audio_file" && !!audioFile);
 
-  const canSubmit = !!client && !!meetingDate && consent && !submitting;
+  const canSubmit = !!client && !!meetingDate && consent && conversationProvided && !submitting;
 
   const resetResult = useCallback(() => {
     setCreatedMeeting(null);
@@ -730,7 +730,7 @@ export function Capture() {
               <textarea
                 className="ctrl"
                 value={transcriptText}
-                placeholder="Paste the full transcript here. You can also add it later."
+                placeholder="Paste the full transcript here."
                 rows={7}
                 onChange={(e) => setTranscriptText(e.target.value)}
               />
@@ -771,8 +771,8 @@ export function Capture() {
 
             {!conversationProvided && (
               <p className="helper mt-6">
-                You can add the conversation now or later (open the meeting's page
-                from Recent meetings below). Either way the meeting gets created.
+                Add the conversation to continue: paste it, upload a transcript file, or
+                upload the audio. A meeting needs one of these to be added.
               </p>
             )}
           </div>
@@ -805,9 +805,11 @@ export function Capture() {
               content={
                 !client
                   ? "Pick a client first."
-                  : !consent
-                    ? "Confirm consent to enable this."
-                    : "Add this meeting. Next you can extract insights from it."
+                  : !conversationProvided
+                    ? "Add the conversation first."
+                    : !consent
+                      ? "Confirm consent to enable this."
+                      : "Add this meeting. Next you can extract insights from it."
               }
               title="Add meeting"
             >

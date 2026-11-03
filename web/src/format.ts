@@ -194,3 +194,10 @@ export function metricTooltipFor(key: string | undefined | null): string {
   if (!key) return "";
   return metricTooltip[key] ?? "";
 }
+
+/** Plain words for how often releases are checked on their own (GET /api/releases release_check). */
+export function releaseCheckWords(cadence: string | undefined | null): { every: string; within: string } {
+  if (cadence === "hourly") return { every: "every hour", within: "within the hour" };
+  if (cadence === "daily") return { every: "once a day", within: "within a day" };
+  return { every: "on a schedule", within: "on its own" };
+}

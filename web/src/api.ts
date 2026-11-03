@@ -142,6 +142,9 @@ export const EVIDENCE_KINDS = [
   "manual_attestation",
 ] as const;
 
+/** Kinds a person can add by hand. release_match only comes from confirming a proposed match. */
+export const MANUAL_EVIDENCE_KINDS = EVIDENCE_KINDS.filter((k) => k !== "release_match");
+
 /** Account email rule from the server's ALLOWED_EMAIL_DOMAINS. Empty list → any email. */
 export function emailAllowed(email: string, domains: string[]): boolean {
   const mail = email.trim().toLowerCase();
@@ -501,8 +504,10 @@ export const api = {
   // Public probe used on app load; returns { user: null } (200) when signed out.
   session: () => get<{ user: User | null }>("/api/auth/session"),
 
-  // ---------------- access mode (admin): open by default, login optional
-  getAccess: () => get<{ require_login: boolean; can_require: boolean }>("/api/settings/access"),
+  // ---------------- access mode (admin): open by default, login optional,
+  // unless the server forces login (REQUIRE_LOGIN or a public deployment)
+  getAccess: () =>
+    get<{ require_login: boolean; can_require: boolean; forced_by_server?: boolean }>("/api/settings/access"),
   setAccess: (require_login: boolean) =>
     post<{ require_login: boolean }>("/api/settings/access", { require_login }),
 
@@ -686,12 +691,18 @@ export const api = {
     ),
   /** Raw releases envelope; includes repo + whether a GitHub read token is configured. */
   releasesStatus: () =>
-    get<{ releases?: Release[]; repo?: string; github_token_configured?: boolean }>("/api/releases"),
+    get<{
+      releases?: Release[];
+      repo?: string;
+      github_token_configured?: boolean;
+      release_check?: "daily" | "hourly";
+    }>("/api/releases"),
   pollReleases: () => post<Record<string, unknown>>("/api/releases/poll"),
   listMatches: async (status = "proposed"): Promise<MatchProposal[]> =>
     asArray<MatchProposal>(await get<unknown>(`/api/matches${qs({ status })}`)),
   confirmMatch: (id: string) => post<unknown>(`/api/matches/${encodeURIComponent(id)}/confirm`),
-  rejectMatch: (id: string) => post<unknown>(`/api/matches/${encodeURIComponent(id)}/reject`),
+  rejectMatch: (id: string, reason: string) =>
+    post<unknown>(`/api/matches/${encodeURIComponent(id)}/reject`, { reason }),
 
   // ---------------- exports / admin extras
   exportCsv: (client_id?: string) =>
