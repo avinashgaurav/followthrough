@@ -5,12 +5,22 @@ import { z } from "zod";
 import { env, llmDailyBudgetUsd } from "../config.ts";
 
 /**
- * LLM layer (SPEC.md sections 5, 10): Anthropic direct, single provider for
- * client-confidential transcripts. Structured outputs via messages.parse()
- * with Zod schemas; the SDK validates and retries 429/5xx automatically.
+ * LLM layer (SPEC.md sections 5, 10). Providers, in order of preference:
+ * Anthropic direct (structured outputs via messages.parse() with Zod schemas;
+ * the SDK retries 429/5xx), OpenRouter pinned to Claude models, and Google
+ * Gemini. LLM_PROVIDER=gemini forces Gemini when several keys are set.
  */
 
-export const DEFAULT_MODEL = process.env.LLM_MODEL ?? "claude-opus-4-8";
+export const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-3.6-flash";
+
+/** Gemini is used when forced, or when it is the only provider key present. */
+export function geminiSelected(): boolean {
+  if (!process.env.GEMINI_API_KEY) return false;
+  if (process.env.LLM_PROVIDER === "gemini") return true;
+  return !process.env.ANTHROPIC_API_KEY && !process.env.OPENROUTER_API_KEY && process.env.LLM_PROVIDER !== "claude-cli";
+}
+
+export const DEFAULT_MODEL = process.env.LLM_MODEL ?? (geminiSelected() ? GEMINI_MODEL : "claude-opus-4-8");
 
 // USD per million tokens
 const PRICING: Record<string, { in: number; out: number }> = {
@@ -47,7 +57,7 @@ export interface LLM {
 
 function costUsd(model: string, tokensIn: number, tokensOut: number): number {
   const base = model.replace(/-\d{8}$/, "");
-  const p = PRICING[base];
+  const p = PRICING[base] ?? geminiPricing(base);
   if (!p) return 0;
   return (tokensIn * p.in + tokensOut * p.out) / 1_000_000;
 }
@@ -292,6 +302,131 @@ class OpenRouterLLM implements LLM {
 }
 
 /**
+ * Google Gemini over the REST generateContent endpoint (x-goog-api-key).
+ * Structured output: JSON response mode, the Zod schema as JSON Schema in the
+ * system instruction, Zod validation, and one repair round on a mismatch (the
+ * same contract as OpenRouter above). Retries 429/5xx with backoff.
+ *
+ * Gemini prices are not hard-coded: set GEMINI_PRICE_IN_PER_M and
+ * GEMINI_PRICE_OUT_PER_M (USD per million tokens) so the daily budget counts
+ * real spend; without them the budget charges a conservative fallback rate.
+ */
+function geminiPricing(model: string): { in: number; out: number } | null {
+  if (!model.startsWith("gemini")) return null;
+  const pin = Number(process.env.GEMINI_PRICE_IN_PER_M);
+  const pout = Number(process.env.GEMINI_PRICE_OUT_PER_M);
+  return pin > 0 && pout > 0 ? { in: pin, out: pout } : null;
+}
+
+interface GeminiResponse {
+  candidates?: Array<{
+    content?: { parts?: Array<{ text?: string; thought?: boolean }> };
+    finishReason?: string;
+  }>;
+  usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; thoughtsTokenCount?: number };
+  modelVersion?: string;
+  promptFeedback?: { blockReason?: string };
+}
+
+export class GeminiLLM implements LLM {
+  constructor(
+    private apiKey: string,
+    private fetchImpl: typeof fetch = fetch,
+    private sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
+  ) {}
+
+  /** Callers may name a Claude model (e.g. eval configs); Gemini ignores non-Gemini names. */
+  private model(requested?: string): string {
+    return requested && requested.startsWith("gemini") ? requested : GEMINI_MODEL;
+  }
+
+  private async generate(
+    system: string | undefined,
+    user: string,
+    maxTokens: number,
+    model: string,
+    json: boolean,
+  ): Promise<{ text: string; tokensIn: number; tokensOut: number; model: string }> {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+    const body = JSON.stringify({
+      ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
+      contents: [{ role: "user", parts: [{ text: user }] }],
+      generationConfig: { maxOutputTokens: maxTokens, ...(json ? { responseMimeType: "application/json" } : {}) },
+    });
+    let lastErr: Error | null = null;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      if (attempt > 0) await this.sleep(1500 * 2 ** attempt);
+      let res: Response;
+      try {
+        res = await this.fetchImpl(url, {
+          method: "POST",
+          headers: { "x-goog-api-key": this.apiKey, "content-type": "application/json" },
+          body,
+          signal: AbortSignal.timeout(120_000),
+        });
+      } catch (err) {
+        lastErr = err instanceof Error ? err : new Error(String(err));
+        continue;
+      }
+      if (res.status === 429 || res.status >= 500) {
+        lastErr = new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 400)}`);
+        continue;
+      }
+      if (!res.ok) throw new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 400)}`);
+      const data = (await res.json()) as GeminiResponse;
+      if (data.promptFeedback?.blockReason) {
+        throw new LLMOutputError(`Gemini blocked the prompt: ${data.promptFeedback.blockReason}`);
+      }
+      const cand = data.candidates?.[0];
+      // Thinking models may return thought parts; only the answer text counts.
+      const text = (cand?.content?.parts ?? []).filter((p) => !p.thought).map((p) => p.text ?? "").join("");
+      if (!text && cand?.finishReason && cand.finishReason !== "STOP") {
+        throw new LLMOutputError(`Gemini returned no text (finishReason: ${cand.finishReason})`);
+      }
+      const u = data.usageMetadata ?? {};
+      return {
+        text,
+        tokensIn: u.promptTokenCount ?? 0,
+        tokensOut: (u.candidatesTokenCount ?? 0) + (u.thoughtsTokenCount ?? 0),
+        model: data.modelVersion ?? model,
+      };
+    }
+    throw lastErr ?? new Error("Gemini request failed");
+  }
+
+  async complete(opts: CompleteOptions): Promise<{ text: string } & LLMUsage> {
+    const model = this.model(opts.model);
+    const r = await this.generate(opts.system, opts.prompt, opts.maxTokens ?? 8192, model, false);
+    return { text: r.text, model: r.model, tokensIn: r.tokensIn, tokensOut: r.tokensOut, costUsd: costUsd(model, r.tokensIn, r.tokensOut) };
+  }
+
+  async completeJSON<T>(opts: CompleteJSONOptions<T>): Promise<{ data: T } & LLMUsage> {
+    const model = this.model(opts.model);
+    const { $schema: _meta, ...schema } = z.toJSONSchema(opts.schema as z.ZodType) as Record<string, unknown>;
+    void _meta;
+    const system = `${opts.system ?? ""}\n\nRespond with ONLY a single JSON object (no prose, no code fences) that validates against this JSON Schema:\n${JSON.stringify(schema)}`;
+    let tokensIn = 0;
+    let tokensOut = 0;
+    let lastError = "";
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const prompt = attempt === 0
+        ? opts.prompt
+        : `${opts.prompt}\n\nYour previous response failed validation: ${lastError}. Return ONLY the corrected JSON object.`;
+      const r = await this.generate(system, prompt, opts.maxTokens ?? 16000, model, true);
+      tokensIn += r.tokensIn;
+      tokensOut += r.tokensOut;
+      try {
+        const data = opts.schema.parse(JSON.parse(extractJsonObject(r.text)));
+        return { data, model: r.model, tokensIn, tokensOut, costUsd: costUsd(model, tokensIn, tokensOut) };
+      } catch (err) {
+        lastError = err instanceof Error ? err.message.slice(0, 600) : String(err);
+      }
+    }
+    throw new LLMOutputError(`Gemini output failed schema validation: ${lastError}`);
+  }
+}
+
+/**
  * Evaluation-only provider: LLM_PROVIDER=claude-cli routes calls through the
  * locally installed, logged-in Claude Code CLI (`claude -p`) instead of the
  * API, so the eval harness can run on a subscription without an API key. It is
@@ -475,6 +610,8 @@ export function getLLM(): LLM {
     }
     console.warn("LLM_PROVIDER=claude-cli: routing through the local Claude Code CLI (evals only).");
     instance = new ClaudeCliLLM();
+  } else if (geminiSelected()) {
+    instance = new GeminiLLM((process.env.GEMINI_API_KEY ?? env.GEMINI_API_KEY)!);
   } else if (env.ANTHROPIC_API_KEY) {
     instance = new AnthropicLLM(env.ANTHROPIC_API_KEY);
   } else if (env.OPENROUTER_API_KEY) {

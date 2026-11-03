@@ -7,6 +7,8 @@ const EnvSchema = z.object({
   SESSION_TTL_HOURS: z.coerce.number().default(24 * 14),
   ANTHROPIC_API_KEY: z.string().optional(),
   OPENROUTER_API_KEY: z.string().optional(),
+  // Google Gemini (used when it is the only key set, or with LLM_PROVIDER=gemini).
+  GEMINI_API_KEY: z.string().optional(),
   DEEPGRAM_API_KEY: z.string().optional(),
   // Comma-separated domain terms to boost in Deepgram transcription accuracy
   // (e.g. "Karpenter,Kubernetes,Acme"). Empty → no boosting.
