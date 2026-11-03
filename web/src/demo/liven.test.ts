@@ -78,6 +78,37 @@ describe("liven (static demo timestamps)", () => {
     expect(extracted.age_buckets["0-3d"]).toBe(0);
   });
 
+  test("meeting dates stay exactly 21/14/7 days back on every day, with insights on their meeting's date", () => {
+    for (let k = 0; k < 90; k++) {
+      const now = NOW + k * DAY + (k % 24) * 3_600_000;
+      const o = liven(fx, now);
+      const want = [21, 14, 7].map((n) => new Date(now - n * DAY).toISOString().slice(0, 10));
+      const dates = (o.responses["/api/meetings"]!.body as any).meetings.map((m: any) => m.meeting_date).sort();
+      expect(dates).toEqual(want);
+      for (const row of (o.responses["/api/queue"]!.body as any).to_review) {
+        expect(row.created_at.slice(0, 10)).toBe(row.meeting_date);
+      }
+      for (const t of instants(o.responses)) expect(Date.parse(t)).toBeLessThanOrEqual(now);
+    }
+  });
+
+  test("prose ages use each line's own handle and empty fixtures pass through", () => {
+    const one = liven(
+      {
+        generated_at: "",
+        responses: {
+          "/api/insights": { status: 200, body: { insights: [{ id: "a", handle: "INS-AAA", state: "extracted", created_at: "2026-10-16T00:00:00.000Z", age_days: 0 }] } },
+          "/later": { status: 200, body: { at: "2026-10-20T00:00:00.000Z" } },
+          "/x": { status: 200, body: { markdown: "- INS-BBB unknown, see INS-AAA known (extracted, 0d old)" } },
+        },
+        ask: {},
+      },
+      NOW,
+    );
+    expect((one.responses["/x"]!.body as any).markdown).toBe("- INS-BBB unknown, see INS-AAA known (extracted, 4d old)");
+    expect(liven({ generated_at: "", responses: {}, ask: {} }, NOW)).toEqual({ generated_at: "", responses: {}, ask: {} });
+  });
+
   test("is deterministic and leaves the recorded fixtures untouched", () => {
     const before = JSON.stringify(recorded);
     expect(JSON.stringify(liven(fx, NOW))).toBe(JSON.stringify(out));

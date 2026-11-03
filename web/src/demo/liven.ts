@@ -28,7 +28,7 @@ const TEXT_DATE = /\b\d{4}-\d{2}-\d{2}\b(?!T\d)/g;
 /** The latest meeting lands this many days before today. */
 const LATEST_MEETING_DAYS_AGO = 7;
 /** New meetings sit at this UTC time on their (shifted) date. */
-const MEETING_TIME_UTC = "T15:00:00.000Z";
+const MEETING_TIME_UTC = "T12:00:00.000Z";
 /** A pause longer than this starts a new burst of post-extraction activity. */
 const BURST_GAP_MS = 1000;
 /** Mirrors DEFAULT_STUCK_THRESHOLDS in src/metrics/queries.ts. */
@@ -94,7 +94,8 @@ function buildTimeMap(fx: DemoFixtures, now: number) {
   const instants = new Set<number>();
   const tree = [fx.responses, fx.ask];
   mapStrings(tree, (s) => {
-    if (ISO_INSTANT.test(s)) instants.add(Date.parse(s));
+    const ms = ISO_INSTANT.test(s) ? Date.parse(s) : NaN;
+    if (!Number.isNaN(ms)) instants.add(ms);
     return s;
   });
   const sorted = [...instants].sort((a, b) => a - b);
@@ -194,11 +195,12 @@ export function liven<T extends DemoFixtures>(fx: T, now: number = Date.now()): 
 
   const shift = (node: unknown) =>
     mapStrings(node, (s) => {
-      if (ISO_INSTANT.test(s)) {
+      const ms = ISO_INSTANT.test(s) ? Date.parse(s) : NaN;
+      if (!Number.isNaN(ms)) {
         recordedDates.add(s.slice(0, 10));
-        return new Date(map.instant(Date.parse(s))).toISOString();
+        return new Date(map.instant(ms)).toISOString();
       }
-      if (DATE_ONLY.test(s)) return map.date(s);
+      if (DATE_ONLY.test(s) && !Number.isNaN(Date.parse(s))) return map.date(s);
       return s;
     });
   const responses = shift(fx.responses) as T["responses"];
@@ -234,11 +236,11 @@ export function liven<T extends DemoFixtures>(fx: T, now: number = Date.now()): 
     if (!/\d{4}-\d{2}-\d{2}/.test(s) && !/\d+d old\)/.test(s)) return s;
     return s
       .replace(/^(# Weekly digest \()(\d{4}-\d{2}-\d{2})\)/m, (_m, head: string) => `${head}${today})`)
-      .replace(/\b(INS-[A-Z0-9]+)\b([^\n]*?)\((\w+), \d+d old\)/g, (m, h: string, mid: string, state: string) => {
+      .replace(/\b(INS-[A-Z0-9]+)\b((?:(?!INS-)[^\n])*?)\((\w+), \d+d old\)/g, (m, h: string, mid: string, state: string) => {
         const row = handles.get(h);
         return row ? `${h}${mid}(${state}, ${ageDays(sinceOf(row), now)}d old)` : m;
       })
-      .replace(/\b(INS-[A-Z0-9]+)\b([^\n]*?)\(shipped (\d{4}-\d{2}-\d{2})\)/g, (m, h: string, mid: string) => {
+      .replace(/\b(INS-[A-Z0-9]+)\b((?:(?!INS-)[^\n])*?)\(shipped (\d{4}-\d{2}-\d{2})\)/g, (m, h: string, mid: string) => {
         const id = str(handles.get(h)?.id);
         const at = id ? shippedAt.get(id) : undefined;
         return at ? `${h}${mid}(shipped ${at.slice(0, 10)})` : m;
@@ -249,8 +251,11 @@ export function liven<T extends DemoFixtures>(fx: T, now: number = Date.now()): 
         return d;
       });
   };
-  const outResponses = mapStrings(responses, (s) => (ISO_INSTANT.test(s) ? s : prose(s))) as T["responses"];
-  const outAsk = mapStrings(ask, (s) => (ISO_INSTANT.test(s) ? s : prose(s))) as T["ask"];
+  // Bare dates and instants were already moved above; rewriting them again
+  // would double-shift any that happen to land on a recorded date.
+  const inProse = (s: string) => (ISO_INSTANT.test(s) || DATE_ONLY.test(s) ? s : prose(s));
+  const outResponses = mapStrings(responses, inProse) as T["responses"];
+  const outAsk = mapStrings(ask, inProse) as T["ask"];
 
   recomputeAging(outResponses, sinceOf, now);
   return { ...fx, responses: outResponses, ask: outAsk };

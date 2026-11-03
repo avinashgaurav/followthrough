@@ -19,7 +19,7 @@ const zipPath = join(root, `followthrough-recorder-${version}.zip`);
 if (existsSync(zipPath)) rmSync(zipPath);
 
 // Zip from inside dist so manifest.json sits at the archive root, as the store requires.
-const zip = Bun.spawnSync(["zip", "-r", "-X", "-q", zipPath, "."], { cwd: dist, stdout: "inherit", stderr: "inherit" });
+const zip = Bun.spawnSync(["zip", "-r", "-X", "-q", zipPath, ".", "-x", "*.DS_Store"], { cwd: dist, stdout: "inherit", stderr: "inherit" });
 if (zip.exitCode !== 0) {
   console.error("zip failed; is the `zip` command installed?");
   process.exit(zip.exitCode ?? 1);

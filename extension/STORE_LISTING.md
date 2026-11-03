@@ -76,10 +76,11 @@ No. All JavaScript is bundled in the package; the extension does not load or eva
 
 | Data type | Collected? | What and why |
 | --- | --- | --- |
-| Personally identifiable information | Yes | The user's email address, sent to their Followthrough server to sign in and kept locally to prefill the sign-in form. |
+| Personally identifiable information | Yes | The user's email address, sent to their Followthrough server to sign in, and stored locally (with their user id and role) only while they are signed in. Signing out removes it. |
 | Authentication information | Yes | The login code, sent once to the user's Followthrough server to sign in. Never stored by the extension. Afterwards the server's session cookie is used. |
 | Website content | Yes | The audio of the tab the user chose to record, uploaded to the user's Followthrough server, with the client and meeting title they picked. |
-| Health, financial, personal communications, location, web history, user activity | No | Not collected. (The recorded call may itself contain such content; it goes only to the user's own server.) |
+| Personal communications | Yes | The recorded tab is usually a call, so the audio is communications content. Ticked to be safe; it goes only to the user's own server. |
+| Health, financial, location, web history, user activity | No | Not collected by the extension. (A recorded call may mention such things; the audio goes only to the user's own server.) |
 
 **Where the data goes**
 
