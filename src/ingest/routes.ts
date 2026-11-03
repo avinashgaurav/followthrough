@@ -1,4 +1,6 @@
-import { route } from "../router.ts";
+import { route, json } from "../router.ts";
+import { hostedMode } from "../config.ts";
+import { currentWorkspaceId, refundMeeting, reserveMeeting } from "../hosted/tenancy.ts";
 import { getDb } from "../db.ts";
 import type { AuthedUser } from "../auth.ts";
 import {
@@ -30,9 +32,21 @@ route("POST", "/api/clients/:id/contacts", "user", (req, user, params) =>
   handleAddContact(getDb(), user as AuthedUser, params.id ?? "", req),
 );
 
-route("POST", "/api/meetings", "user", (req, user) =>
-  handleCreateMeeting(getDb(), user as AuthedUser, req),
-);
+// Hosted mode: each new meeting takes one of the workspace's free meetings
+// (it is what gets transcribed and extracted on this deployment's AI key).
+// Anything but a fresh 201 gives it back.
+route("POST", "/api/meetings", "user", async (req, user) => {
+  const ws = hostedMode() ? currentWorkspaceId() : null;
+  if (ws && !(await reserveMeeting(getDb(), ws))) {
+    return json(
+      { error: "You've used all your free meetings. Self-host Followthrough to keep going with your own AI key.", kind: "quota" },
+      402,
+    );
+  }
+  const res = await handleCreateMeeting(getDb(), user as AuthedUser, req);
+  if (ws && res.status !== 201) await refundMeeting(getDb(), ws);
+  return res;
+});
 
 route("POST", "/api/uploads", "user", (req) => handleStartUpload(req));
 

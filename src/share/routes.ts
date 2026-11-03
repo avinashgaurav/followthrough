@@ -4,6 +4,7 @@ import { ulid } from "../ids.ts";
 import { appendEvent } from "../events.ts";
 import { formatHtml } from "./page.ts";
 import { demoMode } from "../config.ts";
+import { currentWorkspaceId } from "../hosted/tenancy.ts";
 
 /**
  * Client-facing "You asked, we shipped" page (AUDIT.md P2-10).
@@ -21,7 +22,9 @@ route("POST", "/api/clients/:id/share-link", "admin", async (_req, user, params)
     | { id: string; name: string }
     | null;
   if (!client) return json({ error: "Client not found" }, 404);
-  const token = ulid() + ulid();
+  // Hosted: the token carries its workspace so the public page can find it.
+  const ws = currentWorkspaceId();
+  const token = (ws ? `${ws}.` : "") + ulid() + ulid();
   await db.query("UPDATE clients SET share_token = ? WHERE id = ?").run(token, client.id);
   await appendEvent(db, {
     actorUserId: user!.id,

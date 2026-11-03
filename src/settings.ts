@@ -42,7 +42,7 @@ const flag = (v: string | undefined) => ["1", "true", "yes", "on"].includes((v ?
  * public URL is never open before someone signs in. First admin: `bun run seed`.
  */
 export function loginForcedByEnv(): boolean {
-  if (flag(process.env.REQUIRE_LOGIN)) return true;
+  if (flag(process.env.REQUIRE_LOGIN) || flag(process.env.HOSTED_MODE)) return true;
   if (flag(process.env.DEMO_MODE) || flag(process.env.OPEN_ACCESS)) return false;
   return !!process.env.VERCEL || process.env.NODE_ENV === "production";
 }

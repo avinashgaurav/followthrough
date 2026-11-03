@@ -15,7 +15,7 @@ import {
   ClusterResponseSchema,
   DEDUP_SYSTEM_PROMPT,
   DedupResponseSchema,
-  EXTRACTION_SYSTEM_PROMPT,
+  extractionSystemPrompt,
   ExtractionResponseSchema,
   PROMPT_VERSION,
   VERIFIER_SYSTEM_PROMPT,
@@ -415,7 +415,7 @@ async function execute(
     const chunk = chunks[i]!;
     const out = { survivors: [] as Candidate[], citations: 0, verifier: 0, injection: 0, usage: [] as Array<{ tokensIn: number; tokensOut: number; costUsd: number }> };
     const ext = await llm.completeJSON({
-      system: EXTRACTION_SYSTEM_PROMPT,
+      system: extractionSystemPrompt(),
       prompt: extractionUserPrompt(chunk.text, i, chunks.length, attendees),
       schema: ExtractionResponseSchema,
     });

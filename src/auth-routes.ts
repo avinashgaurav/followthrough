@@ -14,7 +14,8 @@ import {
   isGuestUser,
   GUEST_USER_ID,
 } from "./auth.ts";
-import { allowedEmailDomains, demoMode, writableRepos } from "./config.ts";
+import { allowedEmailDomains, demoMode, hostedMode, writableRepos } from "./config.ts";
+import { AlreadyMemberError, addMember, currentWorkspaceId } from "./hosted/tenancy.ts";
 import { clientIp } from "./demo.ts";
 import { authRequired, loginForcedByEnv, setAuthRequired } from "./settings.ts";
 import { appendEvent } from "./events.ts";
@@ -72,6 +73,7 @@ route("GET", "/api/me", "user", async (_req, user) =>
     allowed_email_domains: allowedEmailDomains(),
     writable_repos: writableRepos(),
     demo: demoMode(),
+    hosted: hostedMode(),
   }),
 );
 
@@ -133,6 +135,21 @@ route("POST", "/api/users", "admin", async (req, admin) => {
   await db.query(
     "INSERT INTO users (id, email, name, role, code_hash, invited_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
   ).run(id, body.data.email.toLowerCase(), body.data.name, body.data.role, await hashCode(code), admin!.id, nowIso());
+  // Hosted: teammates sign in with an email code, so register them with the
+  // workspace too (refused, and the user row undone, if the email already
+  // belongs to a workspace).
+  const ws = hostedMode() ? currentWorkspaceId() : null;
+  if (ws) {
+    try {
+      await addMember(db, ws, body.data.email, id);
+    } catch (err) {
+      await db.query("DELETE FROM users WHERE id = ?").run(id);
+      if (err instanceof AlreadyMemberError) {
+        return json({ error: "That email already belongs to a Followthrough workspace." }, 409);
+      }
+      throw err;
+    }
+  }
   await appendEvent(db, {
     actorUserId: admin!.id,
     entityType: "user",

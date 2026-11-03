@@ -103,8 +103,16 @@ function Kbd({ k }: { k: string }) {
 }
 
 export function Shell() {
-  const { user, demo } = useAuth();
+  const { user, demo, hosted } = useAuth();
   const location = useLocation();
+  const [quota, setQuota] = useState<{ used: number; total: number } | null>(null);
+  useEffect(() => {
+    if (!hosted) return;
+    api
+      .workspace()
+      .then((w) => setQuota({ used: w.meetings_used, total: w.meetings_quota }))
+      .catch(() => {});
+  }, [hosted, location.pathname]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const isAdmin = user?.role === "admin";
@@ -170,6 +178,11 @@ export function Shell() {
             <span className="kbd">Cmd K</span>
           </button>
           <div className="right">
+            {quota && (
+              <span className="small mono subtle" title="Meetings this workspace can process on the hosted app">
+                {Math.max(quota.total - quota.used, 0)} of {quota.total} free meetings left
+              </span>
+            )}
             <span className="small">{user?.name || user?.email}</span>
             <UserMenu />
           </div>
