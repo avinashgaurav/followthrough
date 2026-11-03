@@ -68,8 +68,6 @@ route("POST", "/api/uploads", "user", async (req) => {
   return handleStartUpload(req);
 });
 
-route("POST", "/api/uploads", "user", (req) => handleStartUpload(req));
-
 route("GET", "/api/meetings", "user", (req) => handleListMeetings(getDb(), req));
 
 route("GET", "/api/meetings/:id", "user", (_req, _user, params) =>
