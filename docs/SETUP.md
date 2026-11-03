@@ -72,8 +72,10 @@ Without `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, files are stored on disk
 | `BLOB_DIR` | local file storage when Supabase Storage is not configured (default `./data/blobs`) |
 | `PORT` | local server port (default `4500`) |
 | `GEMINI_API_KEY` | Google Gemini. Used when it is the only AI key, or with `LLM_PROVIDER=gemini` |
-| `GEMINI_MODEL` | Gemini model (default `gemini-3.6-flash`) |
-| `GEMINI_PRICE_IN_PER_M`, `GEMINI_PRICE_OUT_PER_M` | Gemini USD per million tokens, so `LLM_DAILY_BUDGET_USD` counts real spend (without them the budget charges a conservative fallback rate) |
+| `GEMINI_MODELS` | Gemini models to try in order (default `gemini-3.6-flash,gemini-3-flash-preview,gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-flash-lite-latest`). A free key has a small daily quota per model: when one is used up (or no longer offered) calls move to the next, and it is skipped until the next UTC day on every instance |
+| `GEMINI_MODEL` | optional: a model to try before the list |
+| `GEMINI_PRICES` | per-model USD per million tokens, e.g. `gemini-3.6-flash=0.3/2.5,gemini-3.1-flash-lite=0.1/0.4`; each call is priced by the model that answered |
+| `GEMINI_PRICE_IN_PER_M`, `GEMINI_PRICE_OUT_PER_M` | price for any Gemini model not in `GEMINI_PRICES` (without a price the budget charges a conservative fallback rate) |
 | `ANTHROPIC_API_KEY` | Anthropic direct (preferred when set) |
 | `LLM_MODEL` | Anthropic model id (default `claude-opus-4-8`); `OPENROUTER_MODEL` is the OpenRouter equivalent (default `anthropic/claude-opus-4.8`) |
 | `OPENROUTER_API_KEY` | OpenRouter, pinned to Claude models with data retention denied |
