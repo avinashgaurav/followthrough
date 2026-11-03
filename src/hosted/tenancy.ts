@@ -52,40 +52,59 @@ export async function assertExtensionsReady(db: Database): Promise<void> {
   const row = (await db
     .query(
       `SELECT to_regtype('extensions.citext') IS NOT NULL AS citext,
-              to_regclass('extensions.insights') IS NOT NULL OR to_regclass('extensions.users') IS NOT NULL AS polluted`,
+              EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'extensions') AS polluted`,
     )
     .get()) as { citext: number; polluted: number };
   if (!row.citext) throw new Error('Hosted mode needs the citext extension in the "extensions" schema (the control migration moves it).');
-  if (row.polluted) throw new Error('Hosted mode found app tables in the "extensions" schema; they would be shared by every workspace.');
+  if (row.polluted) throw new Error('Hosted mode found tables in the "extensions" schema; workspaces would share them. Move them out before serving.');
 }
 
 /** Applies migrations/*.sql to every workspace schema (run on deploy). */
 export async function migrateAllWorkspaces(db: Database): Promise<number> {
-  const all = (await db.query("SELECT schema_name FROM control.workspaces ORDER BY created_at").all()) as {
-    schema_name: string;
-  }[];
-  for (const w of all) await withTenant(w.schema_name, () => migrate(db));
-  return all.length;
+  const all = (await db
+    .query(
+      `SELECT w.schema_name, n.nspname IS NOT NULL AS present FROM control.workspaces w
+       LEFT JOIN pg_namespace n ON n.nspname = w.schema_name ORDER BY w.created_at`,
+    )
+    .all()) as { schema_name: string; present: number }[];
+  let done = 0;
+  for (const w of all) {
+    // A missing schema would let search_path fall through to "extensions" and
+    // create the app tables there, shared by everyone. Never migrate it.
+    if (!w.present) {
+      console.warn(`hosted: workspace schema ${w.schema_name} is missing; skipped`);
+      continue;
+    }
+    await withTenant(w.schema_name, () => migrate(db));
+    done++;
+  }
+  return done;
 }
 
 export async function getWorkspace(db: Database, id: string): Promise<Workspace | null> {
   return (await db.query("SELECT * FROM control.workspaces WHERE id = ?").get(id)) as Workspace | null;
 }
 
-export async function membershipFor(
-  db: Database,
-  email: string,
-): Promise<{ workspace: Workspace; userId: string } | null> {
+export interface Membership {
+  workspace: Workspace;
+  userId: string;
+  status: "active" | "invited";
+  invitedBy: string | null;
+}
+
+export async function membershipFor(db: Database, email: string): Promise<Membership | null> {
   const row = (await db
     .query(
-      `SELECT w.*, m.user_id AS member_user_id FROM control.members m
-       JOIN control.workspaces w ON w.id = m.workspace_id
+      `SELECT w.*, m.user_id AS member_user_id, m.status AS member_status, m.invited_by AS member_invited_by
+       FROM control.members m JOIN control.workspaces w ON w.id = m.workspace_id
        WHERE m.email = ?`,
     )
-    .get(email.trim().toLowerCase())) as (Workspace & { member_user_id: string }) | null;
+    .get(email.trim().toLowerCase())) as
+    | (Workspace & { member_user_id: string; member_status: "active" | "invited"; member_invited_by: string | null })
+    | null;
   if (!row) return null;
-  const { member_user_id, ...workspace } = row;
-  return { workspace, userId: member_user_id };
+  const { member_user_id, member_status, member_invited_by, ...workspace } = row;
+  return { workspace, userId: member_user_id, status: member_status, invitedBy: member_invited_by };
 }
 
 /**
@@ -107,12 +126,8 @@ export async function createWorkspace(
   const userId = ulid();
   const productName = input.productName.trim();
   const now = nowIso();
-  await db
-    .query(
-      `INSERT INTO control.workspaces (id, schema_name, name, product_name, product_description, owner_email, meetings_quota, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(id, schema, productName, productName, input.productDescription?.trim() || null, email, env.FREE_MEETINGS_PER_WORKSPACE, now);
+  // Build the schema completely first and register it last: a registry row
+  // must never point at a schema that does not exist (see workspaceForSession).
   try {
     await db.exec(`CREATE SCHEMA ${schema};`);
     await withTenant(schema, async () => {
@@ -121,25 +136,71 @@ export async function createWorkspace(
         .query("INSERT INTO users (id, email, name, role, created_at) VALUES (?, ?, ?, 'admin', ?)")
         .run(userId, email, email.split("@")[0]!, now);
     });
-    await db
-      .query("INSERT INTO control.members (email, workspace_id, user_id, created_at) VALUES (?, ?, ?, ?)")
-      .run(email, id, userId, now);
+    await db.transaction(async () => {
+      await db
+        .query(
+          `INSERT INTO control.workspaces (id, schema_name, name, product_name, product_description, owner_email, meetings_quota, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(id, schema, productName, productName, input.productDescription?.trim() || null, email, env.FREE_MEETINGS_PER_WORKSPACE, now);
+      await db
+        .query("INSERT INTO control.members (email, workspace_id, user_id, status, created_at) VALUES (?, ?, ?, 'active', ?)")
+        .run(email, id, userId, now);
+    });
   } catch (err) {
     await db.exec(`DROP SCHEMA IF EXISTS ${schema} CASCADE;`).catch(() => {});
-    await db.query("DELETE FROM control.workspaces WHERE id = ?").run(id).catch(() => {});
+    // Two sign-ups for one email racing: the loser hits the members key.
+    if (/duplicate key|unique/i.test(String((err as Error)?.message ?? err))) throw new AlreadyMemberError(email);
     throw err;
   }
   return { workspace: (await getWorkspace(db, id))!, userId };
 }
 
 /** A teammate added by an admin signs in with their own email code. */
-export async function addMember(db: Database, workspaceId: string, email: string, userId: string): Promise<void> {
+export class TooManyMembersError extends Error {}
+
+/**
+ * An admin invites a teammate. The invite stays 'invited' until the invitee
+ * signs in with their own email code and accepts (acceptInvite); until then
+ * it grants nothing.
+ */
+export async function addMember(
+  db: Database,
+  workspaceId: string,
+  email: string,
+  userId: string,
+  invitedBy: string,
+): Promise<void> {
   const normalized = email.trim().toLowerCase();
-  const existing = await membershipFor(db, normalized);
-  if (existing) throw new AlreadyMemberError(normalized);
-  await db
-    .query("INSERT INTO control.members (email, workspace_id, user_id, created_at) VALUES (?, ?, ?, ?)")
-    .run(normalized, workspaceId, userId, nowIso());
+  if (await membershipFor(db, normalized)) throw new AlreadyMemberError(normalized);
+  const { n } = (await db.query("SELECT COUNT(*) AS n FROM control.members WHERE workspace_id = ?").get(workspaceId)) as {
+    n: number;
+  };
+  if (n >= env.MAX_MEMBERS_PER_WORKSPACE) throw new TooManyMembersError("This workspace has reached its member limit.");
+  try {
+    await db
+      .query("INSERT INTO control.members (email, workspace_id, user_id, status, invited_by, created_at) VALUES (?, ?, ?, 'invited', ?, ?)")
+      .run(normalized, workspaceId, userId, invitedBy, nowIso());
+  } catch (err) {
+    if (/duplicate key|unique/i.test(String((err as Error)?.message ?? err))) throw new AlreadyMemberError(normalized);
+    throw err;
+  }
+}
+
+export async function acceptInvite(db: Database, email: string): Promise<void> {
+  await db.query("UPDATE control.members SET status = 'active' WHERE email = ? AND status = 'invited'").run(email);
+}
+
+/** Declining (or a revoked teammate) frees the email for its own workspace. */
+export async function removeMember(db: Database, email: string): Promise<Membership | null> {
+  const m = await membershipFor(db, email);
+  if (!m) return null;
+  await db.query("DELETE FROM control.members WHERE email = ?").run(email.trim().toLowerCase());
+  return m;
+}
+
+export async function removeMemberByUser(db: Database, workspaceId: string, userId: string): Promise<void> {
+  await db.query("DELETE FROM control.members WHERE workspace_id = ? AND user_id = ?").run(workspaceId, userId);
 }
 
 /** Opens a session in the workspace and records which workspace the cookie belongs to. */
@@ -167,6 +228,7 @@ export async function workspaceForSession(db: Database, sessionId: string | null
   return (await db
     .query(
       `SELECT w.* FROM control.sessions s JOIN control.workspaces w ON w.id = s.workspace_id
+       JOIN pg_namespace n ON n.nspname = w.schema_name
        WHERE s.id = ? AND s.expires_at > ?`,
     )
     .get(sessionId, nowIso())) as Workspace | null;
@@ -190,19 +252,22 @@ export async function refundMeeting(db: Database, workspaceId: string): Promise<
 
 /** Simple sliding-window throttle shared by every instance (sign-in codes). */
 export async function controlRateLimited(db: Database, key: string, limit: number, windowMs: number): Promise<boolean> {
+  // Record the hit first, then count: parallel requests cannot all pass a
+  // check that ran before any of their inserts landed.
   const now = Date.now();
+  await db.query("INSERT INTO control.rate_hits (key, at) VALUES (?, ?)").run(key, now);
   const { n } = (await db
     .query("SELECT COUNT(*) AS n FROM control.rate_hits WHERE key = ? AND at >= ?")
     .get(key, now - windowMs)) as { n: number };
-  if (n >= limit) return true;
-  await db.query("INSERT INTO control.rate_hits (key, at) VALUES (?, ?)").run(key, now);
-  return false;
+  return n > limit;
 }
 
-export async function pruneControl(db: Database, now = Date.now()): Promise<{ sessions: number; rate_hits: number }> {
+export async function pruneControl(db: Database, now = Date.now()): Promise<Record<string, number>> {
   const s = await db.query("DELETE FROM control.sessions WHERE expires_at <= ?").run(new Date(now).toISOString());
   const r = await db.query("DELETE FROM control.rate_hits WHERE at < ?").run(now - 24 * 3_600_000);
-  return { sessions: s.changes, rate_hits: r.changes };
+  const p = await db.query("DELETE FROM control.pending_signups WHERE expires_at <= ?").run(new Date(now).toISOString());
+  const ws = await db.query("DELETE FROM control.llm_spend_ws WHERE day < ?").run(new Date(now - 7 * 86_400_000).toISOString().slice(0, 10));
+  return { sessions: s.changes, rate_hits: r.changes, pending_signups: p.changes, ws_spend_days: ws.changes };
 }
 
 export async function listWorkspaces(db: Database): Promise<Workspace[]> {

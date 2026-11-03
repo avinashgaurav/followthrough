@@ -31,10 +31,14 @@ CREATE TABLE IF NOT EXISTS control.workspaces (
 );
 
 -- One workspace per email. user_id is the person's row in that workspace's users table.
+-- An admin's invite is only 'invited' until the invitee signs in and accepts:
+-- nobody can be placed in a workspace without proving they own the email.
 CREATE TABLE IF NOT EXISTS control.members (
   email        TEXT PRIMARY KEY,
   workspace_id TEXT NOT NULL REFERENCES control.workspaces(id) ON DELETE CASCADE,
   user_id      TEXT NOT NULL,
+  status       TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'invited')),
+  invited_by   TEXT,
   created_at   TEXT NOT NULL
 );
 
@@ -53,6 +57,14 @@ CREATE TABLE IF NOT EXISTS control.pending_signups (
   expires_at TEXT NOT NULL
 );
 
+-- Per-workspace daily AI spend, under the deployment-wide cap in llm_spend.
+CREATE TABLE IF NOT EXISTS control.llm_spend_ws (
+  workspace_id TEXT NOT NULL,
+  day          TEXT NOT NULL,
+  usd          DOUBLE PRECISION NOT NULL DEFAULT 0,
+  PRIMARY KEY (workspace_id, day)
+);
+
 -- Deployment-wide counters: AI spend (one cap across every workspace) and sign-in throttling.
 CREATE TABLE IF NOT EXISTS control.llm_spend (
   day TEXT PRIMARY KEY,
@@ -63,6 +75,15 @@ CREATE TABLE IF NOT EXISTS control.rate_hits (
   at  BIGINT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_control_rate_hits ON control.rate_hits(key, at);
+
+-- Defence in depth: no policies, so API roles could read nothing even if granted.
+DO $$
+DECLARE t record;
+BEGIN
+  FOR t IN SELECT tablename FROM pg_tables WHERE schemaname = 'control' LOOP
+    EXECUTE format('ALTER TABLE control.%I ENABLE ROW LEVEL SECURITY', t.tablename);
+  END LOOP;
+END $$;
 
 -- Supabase exposes schemas over its REST API to anon/authenticated roles; this
 -- registry is server-only.

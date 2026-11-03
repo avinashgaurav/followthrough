@@ -55,6 +55,10 @@ const EnvSchema = z.object({
   FREE_MEETINGS_PER_WORKSPACE: z.coerce.number().int().min(0).default(5),
   // Hard cap on sign-ups, so a launch spike cannot outgrow the AI budget.
   MAX_WORKSPACES: z.coerce.number().int().positive().default(300),
+  MAX_MEMBERS_PER_WORKSPACE: z.coerce.number().int().positive().default(10),
+  // Each workspace's own daily AI cap (USD), inside LLM_DAILY_BUDGET_USD, so one
+  // workspace cannot spend everyone's budget.
+  WORKSPACE_DAILY_BUDGET_USD: z.coerce.number().positive().default(1),
 });
 
 export const env = EnvSchema.parse(process.env);

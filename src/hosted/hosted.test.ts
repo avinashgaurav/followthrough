@@ -5,10 +5,13 @@ import { handleApi } from "../app.ts";
 import { setAuthFetch } from "./routes.ts";
 import type { FetchLike } from "./supabase-auth.ts";
 import { blobKeyAllowed, newBlobKey } from "../ingest/media.ts";
+import { hostedSpendLedger } from "../llm/provider.ts";
 import {
   SignupsFullError,
   assertExtensionsReady,
   createWorkspace,
+  controlRateLimited,
+  migrateAllWorkspaces,
   migrateControl,
   openSession,
   refundMeeting,
@@ -258,5 +261,82 @@ describe("upload keys", () => {
     expect(await withTenant(b.ws.schema_name, async () => blobKeyAllowed(keyA))).toBe(false);
     // An unprefixed (self-hosted style) key is refused in hosted mode.
     expect(await withTenant(a.ws.schema_name, async () => blobKeyAllowed(keyA.slice(a.ws.id.length + 1)))).toBe(false);
+  });
+});
+
+describe("review fixes", () => {
+  async function verifyAs(who: string) {
+    const r = await handleApi(req("POST", "/api/hosted/verify", { body: { email: who, code: "222221" } }));
+    return { res: r, body: (await r.json()) as { ok?: true; needs_workspace?: boolean; signup_token?: string; invite?: { workspace: string; invited_by: string } } };
+  }
+
+  test("an invite never signs the invitee in by itself; they must accept", async () => {
+    const a = await signedIn("inv-a");
+    const victim = email("victim");
+    expect((await handleApi(req("POST", "/api/users", { cookie: a.cookie, body: { email: victim, name: "V" } }))).status).toBe(201);
+    const v = await verifyAs(victim);
+    expect(cookieOf(v.res)).toBe("");
+    expect(v.body.invite?.workspace).toBe("inv-a Inc");
+    expect(v.body.signup_token).toBeTruthy();
+    const acc = await handleApi(req("POST", "/api/hosted/accept-invite", { body: { signup_token: v.body.signup_token } }));
+    expect(acc.status).toBe(200);
+    const me = (await (await handleApi(req("GET", "/api/me", { cookie: cookieOf(acc) }))).json()) as { user: { email: string } };
+    expect(me.user.email).toBe(victim);
+    // Accepted: the next sign-in goes straight in.
+    const again = await verifyAs(victim);
+    expect(cookieOf(again.res)).not.toBe("");
+  });
+
+  test("an invitee can decline by creating their own workspace", async () => {
+    const a = await signedIn("dec-a");
+    const who = email("decliner");
+    await handleApi(req("POST", "/api/users", { cookie: a.cookie, body: { email: who, name: "D" } }));
+    const v = await verifyAs(who);
+    const c = await handleApi(req("POST", "/api/hosted/create-workspace", { body: { signup_token: v.body.signup_token, product_name: "Mine" } }));
+    expect(c.status).toBe(201);
+    const ws = (await (await handleApi(req("GET", "/api/hosted/workspace", { cookie: cookieOf(c) }))).json()) as { product_name: string };
+    expect(ws.product_name).toBe("Mine");
+  });
+
+  test("revoking a teammate frees their email", async () => {
+    const a = await signedIn("rev-a");
+    const mate = email("revoked");
+    const added = (await (await handleApi(req("POST", "/api/users", { cookie: a.cookie, body: { email: mate, name: "M" } }))).json()) as { id: string };
+    expect((await handleApi(req("POST", `/api/users/${added.id}/revoke`, { cookie: a.cookie }))).status).toBe(200);
+    const row = await db.query("SELECT COUNT(*) AS n FROM control.members WHERE email = ?").get(mate);
+    expect((row as { n: number }).n).toBe(0);
+  });
+
+  test("parallel requests cannot slip past a rate limit", async () => {
+    const key = `race-${Date.now()}`;
+    const results = await Promise.all(Array.from({ length: 20 }, () => controlRateLimited(db, key, 5, 60_000)));
+    expect(results.filter((limited) => !limited).length).toBeLessThanOrEqual(5);
+  });
+
+  test("each workspace has its own daily AI cap inside the global one", async () => {
+    const a = await signedIn("cap-a");
+    const b = await signedIn("cap-b");
+    const ledger = hostedSpendLedger(() => db, 1);
+    const day = `2099-01-${String(seq % 28).padStart(2, "0")}`;
+    expect(await withTenant(a.ws.schema_name, () => ledger.reserve(day, 0.8, 100))).toBe(true);
+    expect(await withTenant(a.ws.schema_name, () => ledger.reserve(day, 0.5, 100))).toBe(false);
+    expect(await withTenant(b.ws.schema_name, () => ledger.reserve(day, 0.5, 100))).toBe(true);
+    // The refused reservation was never charged to the global tally.
+    expect(await ledger.spent(day)).toBeCloseTo(1.3);
+  });
+
+  test("a workspace whose schema is missing gets no access and is never migrated into a shared schema", async () => {
+    const a = await signedIn("gone");
+    await db.exec(`DROP SCHEMA ${a.ws.schema_name} CASCADE;`);
+    expect((await handleApi(req("GET", "/api/clients", { cookie: a.cookie }))).status).toBe(401);
+    await migrateAllWorkspaces(db);
+    await assertExtensionsReady(db); // no tables appeared in extensions
+  });
+
+  test("operator-credential routes are blocked and bad share URLs are a 404", async () => {
+    const a = await signedIn("block2");
+    expect((await handleApi(req("POST", "/api/releases/poll", { cookie: a.cookie }))).status).toBe(404);
+    expect((await handleApi(req("GET", "/api/calendar/events", { cookie: a.cookie }))).status).toBe(404);
+    expect((await handleApi(req("GET", "/share/%E0%A4%A"))).status).toBe(404);
   });
 });

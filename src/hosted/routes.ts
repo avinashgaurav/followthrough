@@ -9,6 +9,9 @@ import { AuthProviderError, sendCode, verifyCode, type FetchLike } from "./supab
 import {
   AlreadyMemberError,
   SignupsFullError,
+  acceptInvite,
+  removeMember,
+  type Membership,
   controlRateLimited,
   createWorkspace,
   currentWorkspaceId,
@@ -44,12 +47,18 @@ const OUTSIDE_WORKSPACE = new Set([
   "/api/hosted/send-code",
   "/api/hosted/verify",
   "/api/hosted/create-workspace",
+  "/api/hosted/accept-invite",
 ]);
 
 /** Single-tenant features that would act with this deployment's credentials or files. */
 function blockedWhenHosted(method: string, path: string): boolean {
   if (method === "POST" && path === "/api/auth/login") return true; // admin-issued codes; hosted uses email codes
   if (path.startsWith("/api/watchfolder")) return true;
+  // Would read the operator's RELEASE_REPO with the operator's GitHub token.
+  if (path === "/api/releases/poll") return true;
+  // iCal feeds are fetched server-side; off until redirects and private
+  // addresses are checked at fetch time, not only when the URL is saved.
+  if (path.startsWith("/api/calendar")) return true;
   return false;
 }
 
@@ -77,7 +86,12 @@ export async function hostedDispatch(
 
   // Public client page: the token names its workspace ("<workspaceId>.<secret>").
   if (path.startsWith("/share/")) {
-    const token = decodeURIComponent(path.slice("/share/".length));
+    let token: string;
+    try {
+      token = decodeURIComponent(path.slice("/share/".length));
+    } catch {
+      return new Response("Not found", { status: 404 });
+    }
     const wsId = token.split(".")[0] ?? "";
     const ws = /^[0-9A-Z]{26}$/.test(wsId) ? await getWorkspace(db, wsId) : null;
     if (!ws) return new Response("Not found", { status: 404 });
@@ -142,7 +156,10 @@ route("POST", "/api/hosted/verify", "public", async (req) => {
   if (!body.success) return json({ error: "Enter the code from the email." }, 400);
   const db = getDb();
   const { email, code } = body.data;
-  if (await controlRateLimited(db, `verify:${email}`, 10, HOUR)) {
+  if (
+    (await controlRateLimited(db, `verify:${email}`, 10, HOUR)) ||
+    (await controlRateLimited(db, `verify-ip:${clientIp(req) ?? "unknown"}`, 30, HOUR))
+  ) {
     return json({ error: "Too many attempts. Request a new code in an hour." }, 429);
   }
   let ok: boolean;
@@ -155,11 +172,20 @@ route("POST", "/api/hosted/verify", "public", async (req) => {
   if (!ok) return json({ error: "That code is wrong or has expired." }, 401);
 
   const member = await membershipFor(db, email);
-  if (!member) {
+  if (!member || member.status === "invited") {
     const token = ulid() + ulid();
     await db
       .query("INSERT INTO control.pending_signups (token, email, expires_at) VALUES (?, ?, ?)")
       .run(token, email, new Date(Date.now() + SIGNUP_TOKEN_TTL_MS).toISOString());
+    if (member) {
+      // An invite never signs anyone in by itself: show who invited them and
+      // let them join, or decline by creating their own workspace.
+      return json({
+        invite: { workspace: member.workspace.name, invited_by: member.invitedBy },
+        needs_workspace: true,
+        signup_token: token,
+      });
+    }
     return json({ needs_workspace: true, signup_token: token });
   }
   const sid = await openSession(db, member.workspace, member.userId, {
@@ -175,11 +201,11 @@ route("POST", "/api/hosted/create-workspace", "public", async (req) => {
   const body = CreateSchema.safeParse(await readJson(req));
   if (!body.success) return json({ error: "Name your company or product (up to 80 characters)." }, 400);
   const db = getDb();
-  // Single use: delete and read back in one statement.
-  const pending = (await db
-    .query("DELETE FROM control.pending_signups WHERE token = ? AND expires_at > ? RETURNING email")
-    .get(body.data.signup_token, nowIso())) as { email: string } | null;
+  const pending = await takeSignupToken(body.data.signup_token);
   if (!pending) return json({ error: "That sign-up link expired. Request a new code." }, 401);
+  // Creating your own workspace declines a pending invite.
+  const invited = await membershipFor(db, pending.email);
+  if (invited?.status === "invited") await declineInvite(invited, pending.email);
   try {
     const { workspace, userId } = await createWorkspace(db, {
       email: pending.email,
@@ -195,6 +221,36 @@ route("POST", "/api/hosted/create-workspace", "public", async (req) => {
     if (err instanceof AlreadyMemberError) return json({ error: "That email already has a workspace. Sign in instead." }, 409);
     throw err;
   }
+});
+
+/** Single use: delete and read back in one statement. */
+async function takeSignupToken(token: string): Promise<{ email: string } | null> {
+  return (await getDb()
+    .query("DELETE FROM control.pending_signups WHERE token = ? AND expires_at > ? RETURNING email")
+    .get(token, nowIso())) as { email: string } | null;
+}
+
+async function declineInvite(m: Membership, email: string): Promise<void> {
+  const db = getDb();
+  await removeMember(db, email);
+  await withTenant(m.workspace.schema_name, () =>
+    db.query("UPDATE users SET disabled_at = ? WHERE id = ? AND disabled_at IS NULL").run(nowIso(), m.userId),
+  );
+}
+
+route("POST", "/api/hosted/accept-invite", "public", async (req) => {
+  const off = hostedOnly();
+  if (off) return off;
+  const body = z.object({ signup_token: z.string().min(20) }).safeParse(await readJson(req));
+  if (!body.success) return json({ error: "Request a new code." }, 400);
+  const pending = await takeSignupToken(body.data.signup_token);
+  if (!pending) return json({ error: "That link expired. Request a new code." }, 401);
+  const db = getDb();
+  const m = await membershipFor(db, pending.email);
+  if (!m || m.status !== "invited") return json({ error: "There is no pending invite for this email." }, 404);
+  await acceptInvite(db, pending.email);
+  const sid = await openSession(db, m.workspace, m.userId, { ip: clientIp(req), userAgent: req.headers.get("user-agent") });
+  return json({ ok: true }, 200, { "set-cookie": sessionCookie(sid, secure(req)) });
 });
 
 // Inside the caller's workspace (hostedDispatch pinned it).

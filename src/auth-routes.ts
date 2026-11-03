@@ -15,7 +15,13 @@ import {
   GUEST_USER_ID,
 } from "./auth.ts";
 import { allowedEmailDomains, demoMode, hostedMode, writableRepos } from "./config.ts";
-import { AlreadyMemberError, addMember, currentWorkspaceId } from "./hosted/tenancy.ts";
+import {
+  AlreadyMemberError,
+  TooManyMembersError,
+  addMember,
+  currentWorkspaceId,
+  removeMemberByUser,
+} from "./hosted/tenancy.ts";
 import { clientIp } from "./demo.ts";
 import { authRequired, loginForcedByEnv, setAuthRequired } from "./settings.ts";
 import { appendEvent } from "./events.ts";
@@ -135,17 +141,18 @@ route("POST", "/api/users", "admin", async (req, admin) => {
   await db.query(
     "INSERT INTO users (id, email, name, role, code_hash, invited_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
   ).run(id, body.data.email.toLowerCase(), body.data.name, body.data.role, await hashCode(code), admin!.id, nowIso());
-  // Hosted: teammates sign in with an email code, so register them with the
-  // workspace too (refused, and the user row undone, if the email already
-  // belongs to a workspace).
+  // Hosted: record an invite. It grants nothing until the invitee signs in
+  // with their own email code and accepts. Refused (and the user row undone)
+  // if the email is taken or the workspace is full; the message does not say
+  // which, so admins cannot probe who else uses Followthrough.
   const ws = hostedMode() ? currentWorkspaceId() : null;
   if (ws) {
     try {
-      await addMember(db, ws, body.data.email, id);
+      await addMember(db, ws, body.data.email, id, admin!.email);
     } catch (err) {
       await db.query("DELETE FROM users WHERE id = ?").run(id);
-      if (err instanceof AlreadyMemberError) {
-        return json({ error: "That email already belongs to a Followthrough workspace." }, 409);
+      if (err instanceof AlreadyMemberError || err instanceof TooManyMembersError) {
+        return json({ error: "That email can't be invited to this workspace." }, 409);
       }
       throw err;
     }
@@ -190,6 +197,9 @@ route("POST", "/api/users/:id/revoke", "admin", async (_req, admin, params) => {
   if (params.id === GUEST_USER_ID) return json({ error: "Cannot revoke the open-access guest." }, 400);
   const db = getDb();
   await revokeCode(db, params.id!);
+  // Hosted: free the email so the person can sign in elsewhere.
+  const ws = hostedMode() ? currentWorkspaceId() : null;
+  if (ws) await removeMemberByUser(db, ws, params.id!);
   await appendEvent(db, { actorUserId: admin!.id, entityType: "user", entityId: params.id!, eventType: "user.code_revoked" });
   return json({ ok: true });
 });

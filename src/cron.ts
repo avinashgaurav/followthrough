@@ -61,7 +61,17 @@ async function runHostedDailyJobs(now: Date): Promise<Record<string, unknown>> {
   const out: Record<string, unknown> = { control: await pruneControl(db, now.getTime()) };
   let ok = 0;
   const failed: string[] = [];
-  for (const ws of await listWorkspaces(db)) {
+  // Stay well inside the function's 300s limit. The start rotates by day, so
+  // workspaces past the deadline one day are swept first on a later day.
+  const all = await listWorkspaces(db);
+  const start = all.length ? Math.floor(now.getTime() / 86_400_000) % all.length : 0;
+  const ordered = [...all.slice(start), ...all.slice(0, start)];
+  const deadline = Date.now() + 240_000;
+  for (const ws of ordered) {
+    if (Date.now() > deadline) {
+      out.stopped_early = true;
+      break;
+    }
     try {
       await withTenant(ws.schema_name, async () => {
         await failStaleExtractionRuns(db, staleRunMinutes());

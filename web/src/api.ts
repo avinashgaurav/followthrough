@@ -511,7 +511,13 @@ export const api = {
   hostedConfig: () => get<{ hosted: boolean; free_meetings?: number; signups_open?: boolean }>("/api/hosted/config"),
   sendCode: (email: string) => post<{ ok: true }>("/api/hosted/send-code", { email }),
   verifyCode: (email: string, code: string) =>
-    post<{ ok?: true; needs_workspace?: boolean; signup_token?: string }>("/api/hosted/verify", { email, code }),
+    post<{
+      ok?: true;
+      needs_workspace?: boolean;
+      signup_token?: string;
+      invite?: { workspace: string; invited_by: string | null };
+    }>("/api/hosted/verify", { email, code }),
+  acceptInvite: (signup_token: string) => post<{ ok: true }>("/api/hosted/accept-invite", { signup_token }),
   createWorkspace: (signup_token: string, product_name: string, product_description?: string) =>
     post<{ ok: true }>("/api/hosted/create-workspace", { signup_token, product_name, product_description }),
   workspace: () =>

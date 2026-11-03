@@ -3,6 +3,7 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { tmpdir } from "node:os";
 import { z } from "zod";
 import { env, hostedMode, llmDailyBudgetUsd } from "../config.ts";
+import { currentWorkspaceId } from "../hosted/tenancy.ts";
 import { databaseUrl, getDb } from "../db.ts";
 
 /**
@@ -132,6 +133,49 @@ export function dbSpendLedger(
     async adjust(day, usd) {
       if (usd === 0) return;
       await db().query(`UPDATE ${table} SET usd = GREATEST(usd + ?1, 0) WHERE day = ?2`).run(usd, day);
+    },
+  };
+}
+
+/**
+ * Hosted mode: the deployment-wide cap (control.llm_spend) plus each
+ * workspace's own daily cap (control.llm_spend_ws), so one workspace cannot
+ * spend everyone's budget. Both reservations are atomic conditional UPDATEs;
+ * if the global one fails the workspace reservation is given back.
+ */
+export function hostedSpendLedger(db: () => import("../db.ts").Database, workspaceCapUsd: number): SpendLedger {
+  const global = dbSpendLedger(db, "control.llm_spend");
+  return {
+    spent: global.spent,
+    async reserve(day, usd, cap) {
+      const ws = currentWorkspaceId();
+      if (ws) {
+        await db()
+          .query("INSERT INTO control.llm_spend_ws (workspace_id, day, usd) VALUES (?, ?, 0) ON CONFLICT (workspace_id, day) DO NOTHING")
+          .run(ws, day);
+        const r = await db()
+          .query(
+            "UPDATE control.llm_spend_ws SET usd = usd + ?1 WHERE workspace_id = ?2 AND day = ?3 AND usd + ?1 <= ?4 RETURNING usd",
+          )
+          .run(usd, ws, day, workspaceCapUsd);
+        if (r.rows.length === 0) return false;
+      }
+      const ok = await global.reserve(day, usd, cap);
+      if (!ok && ws) {
+        await db()
+          .query("UPDATE control.llm_spend_ws SET usd = GREATEST(usd - ?1, 0) WHERE workspace_id = ?2 AND day = ?3")
+          .run(usd, ws, day);
+      }
+      return ok;
+    },
+    async adjust(day, usd) {
+      await global.adjust(day, usd);
+      const ws = currentWorkspaceId();
+      if (ws && usd !== 0) {
+        await db()
+          .query("UPDATE control.llm_spend_ws SET usd = GREATEST(usd + ?1, 0) WHERE workspace_id = ?2 AND day = ?3")
+          .run(usd, ws, day);
+      }
     },
   };
 }
@@ -737,9 +781,11 @@ export function getLLM(): LLM {
   if (cap) {
     // Shared across serverless instances when a database is configured.
     // Hosted: one cap across every workspace, kept in the control registry.
-    const ledger = databaseUrl()
-      ? dbSpendLedger(getDb, hostedMode() ? "control.llm_spend" : "llm_spend")
-      : memorySpendLedger();
+    const ledger = !databaseUrl()
+      ? memorySpendLedger()
+      : hostedMode()
+        ? hostedSpendLedger(getDb, env.WORKSPACE_DAILY_BUDGET_USD)
+        : dbSpendLedger(getDb);
     instance = new BudgetedLLM(instance, cap, undefined, ledger);
   }
   return instance;

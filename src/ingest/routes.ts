@@ -1,6 +1,6 @@
 import { route, json } from "../router.ts";
 import { hostedMode } from "../config.ts";
-import { currentWorkspaceId, refundMeeting, reserveMeeting } from "../hosted/tenancy.ts";
+import { controlRateLimited, currentWorkspaceId, getWorkspace, refundMeeting, reserveMeeting } from "../hosted/tenancy.ts";
 import { getDb } from "../db.ts";
 import type { AuthedUser } from "../auth.ts";
 import {
@@ -43,12 +43,30 @@ route("POST", "/api/meetings", "user", async (req, user) => {
       402,
     );
   }
-  const res = await handleCreateMeeting(getDb(), user as AuthedUser, req);
-  if (ws && res.status !== 201) await refundMeeting(getDb(), ws);
-  return res;
+  let res: Response | null = null;
+  try {
+    res = await handleCreateMeeting(getDb(), user as AuthedUser, req);
+    return res;
+  } finally {
+    if (ws && res?.status !== 201) await refundMeeting(getDb(), ws);
+  }
 });
 
-route("POST", "/api/uploads", "user", (req) => handleStartUpload(req));
+// Hosted: no signed upload URLs once the free meetings are gone, and at most
+// 30 a day per workspace, so storage cannot be filled without meetings.
+route("POST", "/api/uploads", "user", async (req) => {
+  const ws = hostedMode() ? currentWorkspaceId() : null;
+  if (ws) {
+    const w = await getWorkspace(getDb(), ws);
+    if (!w || w.meetings_used >= w.meetings_quota) {
+      return json({ error: "You've used all your free meetings.", kind: "quota" }, 402);
+    }
+    if (await controlRateLimited(getDb(), `uploads:${ws}`, 30, 86_400_000)) {
+      return json({ error: "Too many uploads today. Try again tomorrow." }, 429);
+    }
+  }
+  return handleStartUpload(req);
+});
 
 route("GET", "/api/meetings", "user", (req) => handleListMeetings(getDb(), req));
 

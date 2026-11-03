@@ -4,7 +4,7 @@ import { api, ApiError } from "../api";
 import { useAuth } from "../auth";
 import { Alert, Btn, Field } from "../components/ui";
 
-type Step = "email" | "code" | "workspace";
+type Step = "email" | "code" | "invite" | "workspace";
 
 /**
  * Hosted sign-in: email, then the code Supabase emails, then (first time
@@ -23,6 +23,7 @@ export function HostedLogin({ freeMeetings }: { freeMeetings: number }) {
   const [token, setToken] = useState("");
   const [product, setProduct] = useState("");
   const [what, setWhat] = useState("");
+  const [invite, setInvite] = useState<{ workspace: string; invited_by: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -94,7 +95,8 @@ export function HostedLogin({ freeMeetings }: { freeMeetings: number }) {
                 const r = await api.verifyCode(email.trim(), code.trim());
                 if (r.needs_workspace && r.signup_token) {
                   setToken(r.signup_token);
-                  setStep("workspace");
+                  setInvite(r.invite ?? null);
+                  setStep(r.invite ? "invite" : "workspace");
                 } else {
                   await done();
                 }
@@ -116,6 +118,33 @@ export function HostedLogin({ freeMeetings }: { freeMeetings: number }) {
               </Btn>
             </div>
           </form>
+        )}
+
+        {step === "invite" && invite && (
+          <div className="stack">
+            <p className="small" style={{ margin: 0 }}>
+              {invite.invited_by ? <b>{invite.invited_by}</b> : "Someone"} invited you to join <b>{invite.workspace}</b> on
+              Followthrough. Only join if you know them: the workspace's admins will see the meetings you add.
+            </p>
+            <div className="form-actions" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <Btn
+                variant="primary"
+                type="button"
+                disabled={busy}
+                onClick={() =>
+                  void run(async () => {
+                    await api.acceptInvite(token);
+                    await done();
+                  })
+                }
+              >
+                {busy ? "Joining" : `Join ${invite.workspace}`}
+              </Btn>
+              <Btn variant="ghost" type="button" disabled={busy} onClick={() => setStep("workspace")}>
+                Create my own workspace
+              </Btn>
+            </div>
+          </div>
         )}
 
         {step === "workspace" && (

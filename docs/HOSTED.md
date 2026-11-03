@@ -26,17 +26,24 @@ from this deployment's AI key.
 | `FREE_MEETINGS_PER_WORKSPACE` | 5 | Meetings a workspace may create (transcribe + extract) |
 | `MAX_WORKSPACES` | 300 | Sign-ups stop here |
 | `LLM_DAILY_BUDGET_USD` | 5 | One daily AI cap across every workspace; over it, AI calls return 503 until the next UTC day |
+| `WORKSPACE_DAILY_BUDGET_USD` | 1 | Each workspace's own daily AI cap inside the one above, so one workspace cannot spend everyone's budget |
+| `MAX_MEMBERS_PER_WORKSPACE` | 10 | Teammates a workspace admin can invite |
 
 Single-tenant features that would act with this deployment's credentials are
 off: GitHub issue creation, the release poller, the digest webhook, the watch
-folder, and team-password / admin-code sign-in.
+folder, team-password / admin-code sign-in, the release poll, iCal calendar
+feeds (server-side fetches), the evidence-link liveness check, and the
+operator's chat webhook.
+
+Invites are pending until the invitee signs in with their own email code and
+chooses to join; they can create their own workspace instead.
 
 ## Set up
 
 1. **Supabase**: create a new project.
    - Database URL: Project Settings, Database, Connection string, **Transaction pooler** (port 6543) → `DATABASE_URL`.
    - Project URL and **anon** key: Project Settings, API → `SUPABASE_URL`, `SUPABASE_ANON_KEY`.
-   - Authentication, Email Templates, "Magic Link": include `{{ .Token }}` so the email carries a code.
+   - Authentication, Emails, Templates: put `{{ .Token }}` in both **Confirm signup** (first sign-in) and **Magic Link** (returning users), so the email carries a code.
    - Authentication, SMTP: connect a sender (e.g. Resend). Supabase's built-in sender only allows a few emails an hour, which a launch will exceed.
 2. **Vercel**: import the repo (root directory: repo root) and set
    `HOSTED_MODE=true`, `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`,

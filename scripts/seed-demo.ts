@@ -47,6 +47,10 @@ if (!env.ANTHROPIC_API_KEY && !env.OPENROUTER_API_KEY && !env.GEMINI_API_KEY && 
 }
 
 const db = getDb();
+if (["1", "true", "yes", "on"].includes((process.env.HOSTED_MODE ?? "").toLowerCase())) {
+  console.error("Refusing to seed a HOSTED_MODE database: it would create app tables outside any workspace.");
+  process.exit(1);
+}
 await migrate(db);
 const existing = ((await db.query("SELECT COUNT(*) AS n FROM meetings").get()) as { n: number }).n;
 if (existing > 0 && !force) {

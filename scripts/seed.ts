@@ -9,6 +9,10 @@ const email = (process.argv[2] ?? process.env.ADMIN_EMAIL ?? "admin@example.com"
 const name = process.argv[3] ?? process.env.ADMIN_NAME ?? "Admin";
 
 const db = getDb();
+if (["1", "true", "yes", "on"].includes((process.env.HOSTED_MODE ?? "").toLowerCase())) {
+  console.error("Refusing to seed a HOSTED_MODE database: it would create app tables outside any workspace.");
+  process.exit(1);
+}
 await migrate(db);
 const existing = await db.query("SELECT id FROM users WHERE email = ?").get(email);
 if (existing) {
