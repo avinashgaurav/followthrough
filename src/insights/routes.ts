@@ -182,13 +182,28 @@ const AskSchema = z.object({
 const ASK_LIMIT = 30;
 const ASK_WINDOW_MS = 60 * 60 * 1000;
 
+export const ASK_WINDOW = ASK_WINDOW_MS;
+
+/**
+ * Count-then-insert under a per-key advisory lock held for the transaction, so
+ * two requests for the same key cannot both see room for one more. Old hits
+ * are pruned by the daily cron (pruneRateHits).
+ */
 export async function askRateLimited(db: Database, key: string, limit = ASK_LIMIT, now = Date.now()): Promise<boolean> {
-  const since = now - ASK_WINDOW_MS;
-  await db.query("DELETE FROM rate_hits WHERE at < ?").run(since);
-  const { n } = (await db.query("SELECT COUNT(*) AS n FROM rate_hits WHERE key = ? AND at >= ?").get(key, since)) as { n: number };
-  if (n >= limit) return true;
-  await db.query("INSERT INTO rate_hits (key, at) VALUES (?, ?)").run(key, now);
-  return false;
+  return db.transaction(async () => {
+    await db.query("SELECT pg_advisory_xact_lock(hashtext(?))").get(`rate:${key}`);
+    const { n } = (await db
+      .query("SELECT COUNT(*) AS n FROM rate_hits WHERE key = ? AND at >= ?")
+      .get(key, now - ASK_WINDOW_MS)) as { n: number };
+    if (n >= limit) return true;
+    await db.query("INSERT INTO rate_hits (key, at) VALUES (?, ?)").run(key, now);
+    return false;
+  });
+}
+
+/** Drop hits older than the window (daily cron). Returns rows removed. */
+export async function pruneRateHits(db: Database, now = Date.now()): Promise<number> {
+  return (await db.query("DELETE FROM rate_hits WHERE at < ?").run(now - ASK_WINDOW_MS)).changes;
 }
 
 route("POST", "/api/ask", "user", async (req, user) => {

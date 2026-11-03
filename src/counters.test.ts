@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { openTestDb } from "./db.ts";
 import { BudgetedLLM, LLMBudgetError, MockLLM, dbSpendLedger, type LLM } from "./llm/provider.ts";
-import { askRateLimited } from "./insights/routes.ts";
+import { askRateLimited, pruneRateHits } from "./insights/routes.ts";
 
 describe("database-backed daily AI budget", () => {
   test("two instances share one tally, so the cap holds across serverless instances", async () => {
@@ -79,5 +79,21 @@ describe("Ask rate limit", () => {
     expect(await askRateLimited(db, "u1", 2, t0 + 2)).toBe(true);
     expect(await askRateLimited(db, "u2", 2, t0 + 3)).toBe(false); // per key
     expect(await askRateLimited(db, "u1", 2, t0 + 61 * 60 * 1000)).toBe(false); // an hour later
+  });
+
+  test("concurrent requests for one key never exceed the limit", async () => {
+    const db = await openTestDb();
+    const t = Date.parse("2026-11-03T10:00:00Z");
+    const results = await Promise.all(Array.from({ length: 6 }, (_, i) => askRateLimited(db, "burst", 3, t + i)));
+    expect(results.filter((limited) => !limited)).toHaveLength(3);
+    expect(await db.query("SELECT COUNT(*) AS n FROM rate_hits WHERE key = 'burst'").get()).toEqual({ n: 3 });
+  });
+
+  test("the cron prunes hits older than the window", async () => {
+    const db = await openTestDb();
+    const t0 = Date.parse("2026-11-03T10:00:00Z");
+    await askRateLimited(db, "old", 5, t0);
+    await askRateLimited(db, "new", 5, t0 + 90 * 60 * 1000);
+    expect(await pruneRateHits(db, t0 + 90 * 60 * 1000)).toBe(1);
   });
 });

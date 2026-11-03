@@ -8,6 +8,7 @@ import { getLLM } from "./llm/provider.ts";
 import { failStaleExtractionRuns, staleRunMinutes } from "./extract/pipeline.ts";
 import { markStaleDrafts } from "./tickets/routes.ts";
 import { secretsEqual } from "./auth.ts";
+import { pruneRateHits } from "./insights/routes.ts";
 
 /**
  * Scheduled work on Vercel (vercel.json "crons"). The Hobby plan runs a cron at
@@ -32,6 +33,7 @@ export async function runDailyJobs(now: Date = new Date()): Promise<Record<strin
   };
   await step("stale_extraction_runs", () => failStaleExtractionRuns(db, staleRunMinutes()));
   await step("stale_ticket_drafts", () => markStaleDrafts(db));
+  await step("rate_hits_pruned", () => pruneRateHits(db, now.getTime()));
   if (!demoMode()) {
     await step("digest_sent", () => maybeSendDigest(db, now));
     if (env.DIGEST_WEBHOOK_URL) {
