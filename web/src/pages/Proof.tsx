@@ -75,6 +75,7 @@ export function Proof() {
   // per-card busy + a confirmed flash so the row reads as resolved before refetch
   const [busyId, setBusyId] = useState<string | null>(null);
   const [rejectFor, setRejectFor] = useState<MatchProposal | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   const loadMatches = useCallback(async () => {
     setMatchesError(null);
@@ -127,13 +128,18 @@ export function Proof() {
 
   async function doReject() {
     if (!rejectFor) return;
+    if (!rejectReason.trim()) {
+      toast.push("Add a short reason first.", "warning");
+      return;
+    }
     const m = rejectFor;
     setBusyId(m.id);
     try {
-      await api.rejectMatch(m.id);
+      await api.rejectMatch(m.id, rejectReason.trim());
       toast.push("Proof rejected.", "info");
       setMatches((prev) => (prev ? prev.filter((x) => x.id !== m.id) : prev));
       setRejectFor(null);
+      setRejectReason("");
     } catch (e) {
       toast.push(e instanceof ApiError ? e.message : "Could not reject. Try again.", "critical");
     } finally {
@@ -222,11 +228,30 @@ export function Proof() {
       <ConfirmModal
         open={!!rejectFor}
         title="Reject this proof"
-        body="This release does not deliver the insight. The insight stays open and the AI can propose a different release later."
+        body={
+          <div className="stack-sm">
+            <p style={{ margin: 0 }}>
+              This release does not deliver the insight. The insight stays open and the AI can propose a
+              different release later.
+            </p>
+            <Field label="Why reject it" htmlFor="match-reject" hint="Required. A short note is enough.">
+              <textarea
+                id="match-reject"
+                className="ctrl"
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="e.g. This release fixed exports, not the scheduling the client asked for."
+              />
+            </Field>
+          </div>
+        }
         confirmLabel="Reject proof"
         busy={busyId === rejectFor?.id}
         onConfirm={() => void doReject()}
-        onClose={() => setRejectFor(null)}
+        onClose={() => {
+          setRejectFor(null);
+          setRejectReason("");
+        }}
       />
     </>
   );

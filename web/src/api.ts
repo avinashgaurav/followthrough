@@ -142,6 +142,9 @@ export const EVIDENCE_KINDS = [
   "manual_attestation",
 ] as const;
 
+/** Kinds a person can add by hand. release_match only comes from confirming a proposed match. */
+export const MANUAL_EVIDENCE_KINDS = EVIDENCE_KINDS.filter((k) => k !== "release_match");
+
 /** Account email rule from the server's ALLOWED_EMAIL_DOMAINS. Empty list → any email. */
 export function emailAllowed(email: string, domains: string[]): boolean {
   const mail = email.trim().toLowerCase();
@@ -691,7 +694,8 @@ export const api = {
   listMatches: async (status = "proposed"): Promise<MatchProposal[]> =>
     asArray<MatchProposal>(await get<unknown>(`/api/matches${qs({ status })}`)),
   confirmMatch: (id: string) => post<unknown>(`/api/matches/${encodeURIComponent(id)}/confirm`),
-  rejectMatch: (id: string) => post<unknown>(`/api/matches/${encodeURIComponent(id)}/reject`),
+  rejectMatch: (id: string, reason: string) =>
+    post<unknown>(`/api/matches/${encodeURIComponent(id)}/reject`, { reason }),
 
   // ---------------- exports / admin extras
   exportCsv: (client_id?: string) =>
