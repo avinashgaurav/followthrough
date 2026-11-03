@@ -4,7 +4,7 @@ import { openTestDb, nowIso } from "../db.ts";
 import { ulid } from "../ids.ts";
 import { MockLLM } from "../llm/provider.ts";
 import { cleanTranscript } from "./segment.ts";
-import { ExtractionError, manualAddInsight, runExtraction } from "./pipeline.ts";
+import { ExtractionError, isUniqueViolation, manualAddInsight, runExtraction } from "./pipeline.ts";
 
 const RAW_TRANSCRIPT = [
   "00:00:01",
@@ -591,5 +591,40 @@ describe("manualAddInsight", () => {
         userId,
       ),
     ).rejects.toThrow(/no transcript/);
+  });
+});
+
+describe("duplicate extraction guard", () => {
+  test("the database refuses a second running run for the same meeting", async () => {
+    const { db, meetingId } = await seed();
+    const t = (await db.query("SELECT id FROM transcripts WHERE meeting_id = ?").get(meetingId)) as { id: string };
+    const insert = (id: string) =>
+      db.query(
+        `INSERT INTO extraction_runs (id, meeting_id, transcript_id, llm_model, prompt_version, status, started_at)
+         VALUES (?, ?, ?, 'm', 'v', 'running', ?)`,
+      ).run(id, meetingId, t.id, new Date().toISOString());
+    await insert("RUN-A");
+    const err = await insert("RUN-B").then(() => null, (e: unknown) => e);
+    expect(isUniqueViolation(err)).toBe(true);
+  });
+
+  test("a request that slipped past the running check still gets already_running", async () => {
+    const { db, userId, meetingId } = await seed();
+    const t = (await db.query("SELECT id FROM transcripts WHERE meeting_id = ?").get(meetingId)) as { id: string };
+    await db.query(
+      `INSERT INTO extraction_runs (id, meeting_id, transcript_id, llm_model, prompt_version, status, started_at)
+       VALUES ('RUN-A', ?, ?, 'm', 'v', 'running', ?)`,
+    ).run(meetingId, t.id, new Date().toISOString());
+    // Simulate losing the race: the "is one running?" check sees nothing.
+    const racing: typeof db = {
+      ...db,
+      query: (sql: string) =>
+        sql.includes("status = 'running' LIMIT 1")
+          ? { get: async () => null, all: async () => [], run: async () => ({ changes: 0, rows: [] }) }
+          : db.query(sql),
+    };
+    const err = await runExtraction(racing, new MockLLM(), meetingId, userId).then(() => null, (e: unknown) => e);
+    expect(err).toBeInstanceOf(ExtractionError);
+    expect((err as ExtractionError).code).toBe("already_running");
   });
 });

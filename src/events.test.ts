@@ -114,3 +114,11 @@ describe("insight state machine", () => {
     expect(canTransition("merged", "extracted")).toBeNull();
   });
 });
+
+describe("events append-only: TRUNCATE", () => {
+  test("is refused by the statement-level trigger", async () => {
+    const db = await openTestDb();
+    await appendEvent(db, { actorUserId: null, entityType: "x", entityId: "1", eventType: "t.e" });
+    await expect(db.exec("TRUNCATE events")).rejects.toThrow(/append-only/);
+  });
+});

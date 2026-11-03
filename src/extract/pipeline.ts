@@ -286,6 +286,11 @@ export async function failStaleExtractionRuns(db: Database, maxAgeMinutes = 30):
   return stale.length;
 }
 
+/** Postgres unique_violation (23505), from postgres.js or PGlite. */
+export function isUniqueViolation(err: unknown): boolean {
+  return !!err && typeof err === "object" && (err as { code?: unknown }).code === "23505";
+}
+
 export async function runExtraction(
   db: Database,
   llm: LLM,
@@ -322,10 +327,18 @@ export async function runExtraction(
   }
 
   const runId = ulid();
-  await db.query(
-    `INSERT INTO extraction_runs (id, meeting_id, transcript_id, llm_model, prompt_version, status, started_at)
-     VALUES (?, ?, ?, ?, ?, 'running', ?)`,
-  ).run(runId, meetingId, transcript.id, DEFAULT_MODEL, PROMPT_VERSION, nowIso());
+  try {
+    await db.query(
+      `INSERT INTO extraction_runs (id, meeting_id, transcript_id, llm_model, prompt_version, status, started_at)
+       VALUES (?, ?, ?, ?, ?, 'running', ?)`,
+    ).run(runId, meetingId, transcript.id, DEFAULT_MODEL, PROMPT_VERSION, nowIso());
+  } catch (err) {
+    // A concurrent request won the race past the check above (unique index on running runs).
+    if (isUniqueViolation(err)) {
+      throw new ExtractionError("already_running", "An extraction is already running for this meeting");
+    }
+    throw err;
+  }
 
   try {
     return await execute(db, llm, meeting, transcript, runId, actorUserId);
