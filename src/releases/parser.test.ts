@@ -213,19 +213,19 @@ describe("golden: v1.16.0 (large mixed release)", () => {
 });
 
 describe("persistEntries", () => {
-  test("writes rows that round-trip the parsed fields", () => {
-    const db = openTestDb();
+  test("writes rows that round-trip the parsed fields", async () => {
+    const db = await openTestDb();
     const releaseId = ulid();
-    db.query(
+    await db.query(
       `INSERT INTO releases (id, repo, github_release_id, tag_name, body_md, published_at, fetched_at)
        VALUES (?, 'tallyhall/app', 1, 'v1.18.0', ?, ?, ?)`,
     ).run(releaseId, fixture("v1.18.0").body, nowIso(), nowIso());
 
     const parsed = parse("v1.18.0");
-    const ids = persistEntries(db, releaseId, parsed);
+    const ids = await persistEntries(db, releaseId, parsed);
     expect(ids).toHaveLength(parsed.length);
 
-    const rows = db
+    const rows = await db
       .query("SELECT * FROM release_entries WHERE release_id = ? ORDER BY rowid")
       .all(releaseId) as Array<{
       id: string;

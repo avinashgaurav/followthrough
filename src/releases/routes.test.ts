@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { Database } from "bun:sqlite";
+import type { Database } from "../db.ts";
 import { MockLLM } from "../llm/provider.ts";
 import { ulid } from "../ids.ts";
 import { nowIso } from "../db.ts";
@@ -12,22 +12,22 @@ import {
 import type { FetchLike } from "./poller.ts";
 import { seed, makeInsight, makeRelease, entry, fixtureGitHubRelease, type Seeded } from "./test-helpers.ts";
 
-function insightState(db: Database, id: string): string {
-  return (db.query("SELECT state FROM insights WHERE id = ?").get(id) as { state: string }).state;
+async function insightState(db: Database, id: string): Promise<string> {
+  return (await db.query("SELECT state FROM insights WHERE id = ?").get(id) as { state: string }).state;
 }
 
-function proposeMatch(
+async function proposeMatch(
   s: Seeded,
   insightId: string,
   opts: { confidence?: number; verdict?: string } = {},
-): { matchId: string; entryId: string } {
-  const { entryIds } = makeRelease(s.db, {
+): Promise<{ matchId: string; entryId: string }> {
+  const { entryIds } = await makeRelease(s.db, {
     tag: `v9.${Math.floor(Math.random() * 1_000_000)}`,
     githubId: Math.floor(Math.random() * 1_000_000_000),
     entries: [entry()],
   });
   const matchId = ulid();
-  s.db
+  await s.db
     .query(
       `INSERT INTO release_matches
          (id, release_entry_id, insight_id, confidence, method, verdict, evidence_quotes_json, rationale, status, created_at)
@@ -38,17 +38,17 @@ function proposeMatch(
 }
 
 describe("confirmMatch", () => {
-  test("assignee confirm ships a ticketed insight with confirmed 100-confidence evidence", () => {
-    const s = seed();
-    const insightId = makeInsight(s, { state: "ticketed", track: "engineering", assignee: s.alice.id });
-    const { matchId } = proposeMatch(s, insightId);
+  test("assignee confirm ships a ticketed insight with confirmed 100-confidence evidence", async () => {
+    const s = await seed();
+    const insightId = await makeInsight(s, { state: "ticketed", track: "engineering", assignee: s.alice.id });
+    const { matchId } = await proposeMatch(s, insightId);
 
-    const match = confirmMatch(s.db, { matchId, actor: s.alice });
+    const match = await confirmMatch(s.db, { matchId, actor: s.alice });
     expect(match.status).toBe("confirmed");
     expect(match.decided_by).toBe(s.alice.id);
     expect(match.decided_at).not.toBeNull();
 
-    const evidence = s.db
+    const evidence = await s.db
       .query("SELECT * FROM completion_evidence WHERE insight_id = ?")
       .all(insightId) as Array<{
       kind: string;
@@ -66,127 +66,127 @@ describe("confirmMatch", () => {
     expect(evidence[0]!.confirmed_by).toBe(s.alice.id);
     expect(evidence[0]!.confirmed_at).not.toBeNull();
 
-    expect(insightState(s.db, insightId)).toBe("shipped");
+    expect(await insightState(s.db, insightId)).toBe("shipped");
 
     const eventTypes = (
-      s.db
+      await s.db
         .query("SELECT event_type FROM events WHERE event_type IN ('match.confirmed','evidence.confirmed','insight.state_changed') ORDER BY id")
         .all() as Array<{ event_type: string }>
     ).map((e) => e.event_type);
     expect(eventTypes).toEqual(["match.confirmed", "evidence.confirmed", "insight.state_changed"]);
   });
 
-  test("ships a finalized insight on the no-ticket path", () => {
-    const s = seed();
-    const insightId = makeInsight(s, { state: "finalized", track: "product_polish", assignee: s.alice.id });
-    const { matchId } = proposeMatch(s, insightId);
-    confirmMatch(s.db, { matchId, actor: s.admin });
-    expect(insightState(s.db, insightId)).toBe("shipped");
+  test("ships a finalized insight on the no-ticket path", async () => {
+    const s = await seed();
+    const insightId = await makeInsight(s, { state: "finalized", track: "product_polish", assignee: s.alice.id });
+    const { matchId } = await proposeMatch(s, insightId);
+    await confirmMatch(s.db, { matchId, actor: s.admin });
+    expect(await insightState(s.db, insightId)).toBe("shipped");
   });
 
-  test("a non-assignee member is rejected with 403", () => {
-    const s = seed();
-    const insightId = makeInsight(s, { state: "ticketed", assignee: s.alice.id });
-    const { matchId } = proposeMatch(s, insightId);
-    expect(() => confirmMatch(s.db, { matchId, actor: s.bob })).toThrow(MatchActionError);
+  test("a non-assignee member is rejected with 403", async () => {
+    const s = await seed();
+    const insightId = await makeInsight(s, { state: "ticketed", assignee: s.alice.id });
+    const { matchId } = await proposeMatch(s, insightId);
+    await expect(confirmMatch(s.db, { matchId, actor: s.bob })).rejects.toThrow(MatchActionError);
     try {
-      confirmMatch(s.db, { matchId, actor: s.bob });
+      await confirmMatch(s.db, { matchId, actor: s.bob });
     } catch (err) {
       expect((err as MatchActionError).status).toBe(403);
     }
-    expect(insightState(s.db, insightId)).toBe("ticketed");
+    expect(await insightState(s.db, insightId)).toBe("ticketed");
     expect(
-      (s.db.query("SELECT COUNT(*) AS n FROM completion_evidence").get() as { n: number }).n,
+      (await s.db.query("SELECT COUNT(*) AS n FROM completion_evidence").get() as { n: number }).n,
     ).toBe(0);
   });
 
-  test("confirm is idempotent: a second confirm adds no evidence", () => {
-    const s = seed();
-    const insightId = makeInsight(s, { state: "ticketed", assignee: s.alice.id });
-    const { matchId } = proposeMatch(s, insightId);
-    confirmMatch(s.db, { matchId, actor: s.alice });
-    const again = confirmMatch(s.db, { matchId, actor: s.alice });
+  test("confirm is idempotent: a second confirm adds no evidence", async () => {
+    const s = await seed();
+    const insightId = await makeInsight(s, { state: "ticketed", assignee: s.alice.id });
+    const { matchId } = await proposeMatch(s, insightId);
+    await confirmMatch(s.db, { matchId, actor: s.alice });
+    const again = await confirmMatch(s.db, { matchId, actor: s.alice });
     expect(again.status).toBe("confirmed");
     expect(
-      (s.db.query("SELECT COUNT(*) AS n FROM completion_evidence").get() as { n: number }).n,
+      (await s.db.query("SELECT COUNT(*) AS n FROM completion_evidence").get() as { n: number }).n,
     ).toBe(1);
   });
 
-  test("an insight already shipped just gets the confirmed evidence, no transition", () => {
-    const s = seed();
-    const insightId = makeInsight(s, { state: "shipped", assignee: s.alice.id });
-    const { matchId } = proposeMatch(s, insightId);
-    const match = confirmMatch(s.db, { matchId, actor: s.alice });
+  test("an insight already shipped just gets the confirmed evidence, no transition", async () => {
+    const s = await seed();
+    const insightId = await makeInsight(s, { state: "shipped", assignee: s.alice.id });
+    const { matchId } = await proposeMatch(s, insightId);
+    const match = await confirmMatch(s.db, { matchId, actor: s.alice });
     expect(match.status).toBe("confirmed");
-    expect(insightState(s.db, insightId)).toBe("shipped");
+    expect(await insightState(s.db, insightId)).toBe("shipped");
     expect(
-      (s.db
+      (await s.db
         .query("SELECT COUNT(*) AS n FROM events WHERE event_type = 'insight.state_changed'")
         .get() as { n: number }).n,
     ).toBe(0);
   });
 
-  test("404 on unknown match; 409 when confirming a rejected match", () => {
-    const s = seed();
-    const insightId = makeInsight(s, { state: "ticketed", assignee: s.alice.id });
-    const { matchId } = proposeMatch(s, insightId);
+  test("404 on unknown match; 409 when confirming a rejected match", async () => {
+    const s = await seed();
+    const insightId = await makeInsight(s, { state: "ticketed", assignee: s.alice.id });
+    const { matchId } = await proposeMatch(s, insightId);
 
     try {
-      confirmMatch(s.db, { matchId: "missing", actor: s.admin });
+      await confirmMatch(s.db, { matchId: "missing", actor: s.admin });
       expect.unreachable();
     } catch (err) {
       expect((err as MatchActionError).status).toBe(404);
     }
 
-    rejectMatch(s.db, { matchId, reason: "wrong feature", actor: s.alice });
+    await rejectMatch(s.db, { matchId, reason: "wrong feature", actor: s.alice });
     try {
-      confirmMatch(s.db, { matchId, actor: s.alice });
+      await confirmMatch(s.db, { matchId, actor: s.alice });
       expect.unreachable();
     } catch (err) {
       expect((err as MatchActionError).status).toBe(409);
     }
   });
 
-  test("rolls back the confirm when the insight cannot transition", () => {
-    const s = seed();
-    const insightId = makeInsight(s, { state: "triaged", assignee: s.alice.id });
-    const { matchId } = proposeMatch(s, insightId);
-    expect(() => confirmMatch(s.db, { matchId, actor: s.alice })).toThrow();
-    const row = s.db
+  test("rolls back the confirm when the insight cannot transition", async () => {
+    const s = await seed();
+    const insightId = await makeInsight(s, { state: "triaged", assignee: s.alice.id });
+    const { matchId } = await proposeMatch(s, insightId);
+    await expect(confirmMatch(s.db, { matchId, actor: s.alice })).rejects.toThrow();
+    const row = await s.db
       .query("SELECT status FROM release_matches WHERE id = ?")
       .get(matchId) as { status: string };
     expect(row.status).toBe("proposed"); // transaction rolled back
     expect(
-      (s.db.query("SELECT COUNT(*) AS n FROM completion_evidence").get() as { n: number }).n,
+      (await s.db.query("SELECT COUNT(*) AS n FROM completion_evidence").get() as { n: number }).n,
     ).toBe(0);
   });
 });
 
 describe("rejectMatch", () => {
-  test("records the decision and reason without touching the insight", () => {
-    const s = seed();
-    const insightId = makeInsight(s, { state: "ticketed", assignee: s.alice.id });
-    const { matchId } = proposeMatch(s, insightId);
+  test("records the decision and reason without touching the insight", async () => {
+    const s = await seed();
+    const insightId = await makeInsight(s, { state: "ticketed", assignee: s.alice.id });
+    const { matchId } = await proposeMatch(s, insightId);
 
-    const match = rejectMatch(s.db, { matchId, reason: "entry covers a different module", actor: s.bob });
+    const match = await rejectMatch(s.db, { matchId, reason: "entry covers a different module", actor: s.bob });
     expect(match.status).toBe("rejected");
     expect(match.decided_by).toBe(s.bob.id);
     expect(match.decided_at).not.toBeNull();
-    expect(insightState(s.db, insightId)).toBe("ticketed");
+    expect(await insightState(s.db, insightId)).toBe("ticketed");
 
-    const ev = s.db
+    const ev = await s.db
       .query("SELECT payload_json FROM events WHERE event_type = 'match.rejected'")
       .get() as { payload_json: string };
     expect(JSON.parse(ev.payload_json).reason).toBe("entry covers a different module");
   });
 
-  test("409 when rejecting a confirmed match", () => {
-    const s = seed();
-    const insightId = makeInsight(s, { state: "ticketed", assignee: s.alice.id });
-    const { matchId } = proposeMatch(s, insightId);
-    confirmMatch(s.db, { matchId, actor: s.alice });
+  test("409 when rejecting a confirmed match", async () => {
+    const s = await seed();
+    const insightId = await makeInsight(s, { state: "ticketed", assignee: s.alice.id });
+    const { matchId } = await proposeMatch(s, insightId);
+    await confirmMatch(s.db, { matchId, actor: s.alice });
     try {
-      rejectMatch(s.db, { matchId, reason: "changed my mind", actor: s.alice });
+      await rejectMatch(s.db, { matchId, reason: "changed my mind", actor: s.alice });
       expect.unreachable();
     } catch (err) {
       expect((err as MatchActionError).status).toBe(409);
@@ -205,8 +205,8 @@ describe("runPollPipeline", () => {
     });
 
   test("polls, parses, matches, and reports counts; second run is a no-op", async () => {
-    const s = seed();
-    makeInsight(s, {
+    const s = await seed();
+    await makeInsight(s, {
       title: "Receipt preview on mobile approvals",
       body: "Acme approvers want to see the receipt image without opening a laptop.",
       state: "ticketed",
@@ -244,7 +244,7 @@ describe("runPollPipeline", () => {
     expect(counts2).toEqual({ fetched: 1, new_releases: 0, new_entries: 0, matches_proposed: 0 });
     expect(llm.calls).toHaveLength(1);
     expect(
-      (s.db.query("SELECT COUNT(*) AS n FROM release_matches").get() as { n: number }).n,
+      (await s.db.query("SELECT COUNT(*) AS n FROM release_matches").get() as { n: number }).n,
     ).toBe(1);
   });
 });

@@ -609,7 +609,7 @@ function ReleasesSection() {
             size="sm"
             onClick={() => void poll()}
             disabled={polling}
-            tooltip="Check GitHub right now instead of waiting for the hourly check. New releases get matched against open insights."
+            tooltip="Check GitHub right now instead of waiting for the daily check. New releases get matched against open insights."
           >
             {polling ? "Checking" : "Check GitHub now"}
           </Btn>

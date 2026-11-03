@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import type { Database } from "bun:sqlite";
+import type { Database } from "../db.ts";
 import { nowIso, openTestDb } from "../db.ts";
 import { ulid } from "../ids.ts";
 import {
@@ -16,17 +16,17 @@ import {
 
 const FEED_URL = "https://calendar.example.com/feed.ics";
 
-function seedUser(db: Database): string {
+async function seedUser(db: Database): Promise<string> {
   const id = ulid();
-  db.query(
+  await db.query(
     "INSERT INTO users (id, email, name, role, created_at) VALUES (?, ?, 'Tester', 'admin', ?)",
   ).run(id, `${id}@tallyhall.com`, nowIso());
   return id;
 }
 
-function seedClient(db: Database, name: string, domain: string | null): string {
+async function seedClient(db: Database, name: string, domain: string | null): Promise<string> {
   const id = ulid();
-  db.query("INSERT INTO clients (id, name, domain, created_at) VALUES (?, ?, ?, ?)").run(
+  await db.query("INSERT INTO clients (id, name, domain, created_at) VALUES (?, ?, ?, ?)").run(
     id,
     name,
     domain,
@@ -64,24 +64,24 @@ function stubFetch(body: string, status = 200): { impl: typeof fetch; calls: () 
 beforeEach(() => clearCalendarCache());
 
 describe("feed url settings", () => {
-  test("roundtrip: set, read, overwrite, clear, with settings.updated events", () => {
-    const db = openTestDb();
-    const userId = seedUser(db);
+  test("roundtrip: set, read, overwrite, clear, with settings.updated events", async () => {
+    const db = await openTestDb();
+    const userId = await seedUser(db);
 
-    expect(getFeedUrl(db)).toBeNull();
+    expect(await getFeedUrl(db)).toBeNull();
 
-    setFeedUrl(db, FEED_URL, userId);
-    expect(getFeedUrl(db)).toBe(FEED_URL);
+    await setFeedUrl(db, FEED_URL, userId);
+    expect(await getFeedUrl(db)).toBe(FEED_URL);
 
-    setFeedUrl(db, "https://other.example.com/cal.ics", userId);
-    expect(getFeedUrl(db)).toBe("https://other.example.com/cal.ics");
-    const rows = db.query("SELECT COUNT(*) AS n FROM app_settings").get() as { n: number };
+    await setFeedUrl(db, "https://other.example.com/cal.ics", userId);
+    expect(await getFeedUrl(db)).toBe("https://other.example.com/cal.ics");
+    const rows = await db.query("SELECT COUNT(*) AS n FROM app_settings").get() as { n: number };
     expect(rows.n).toBe(1); // upsert, not duplicate keys
 
-    clearFeedUrl(db, userId);
-    expect(getFeedUrl(db)).toBeNull();
+    await clearFeedUrl(db, userId);
+    expect(await getFeedUrl(db)).toBeNull();
 
-    const events = db
+    const events = await db
       .query(
         "SELECT event_type, entity_id, payload_json FROM events WHERE event_type = 'settings.updated' ORDER BY id",
       )
@@ -92,28 +92,28 @@ describe("feed url settings", () => {
     expect(JSON.parse(events[2]!.payload_json).removed).toBe(true);
   });
 
-  test("rejects non-https and malformed URLs", () => {
-    const db = openTestDb();
-    const userId = seedUser(db);
-    expect(() => setFeedUrl(db, "http://insecure.example.com/cal.ics", userId)).toThrow(
+  test("rejects non-https and malformed URLs", async () => {
+    const db = await openTestDb();
+    const userId = await seedUser(db);
+    await expect(setFeedUrl(db, "http://insecure.example.com/cal.ics", userId)).rejects.toThrow(
       CalendarConfigError,
     );
-    expect(() => setFeedUrl(db, "not a url", userId)).toThrow(CalendarConfigError);
-    expect(getFeedUrl(db)).toBeNull();
+    await expect(setFeedUrl(db, "not a url", userId)).rejects.toThrow(CalendarConfigError);
+    expect(await getFeedUrl(db)).toBeNull();
   });
 
-  test("clearing when unset appends no event", () => {
-    const db = openTestDb();
-    const userId = seedUser(db);
-    clearFeedUrl(db, userId);
-    const n = (db.query("SELECT COUNT(*) AS n FROM events").get() as { n: number }).n;
+  test("clearing when unset appends no event", async () => {
+    const db = await openTestDb();
+    const userId = await seedUser(db);
+    await clearFeedUrl(db, userId);
+    const n = (await db.query("SELECT COUNT(*) AS n FROM events").get() as { n: number }).n;
     expect(n).toBe(0);
   });
 });
 
 describe("fetchEvents", () => {
   test("unconfigured: {configured:false, events:[]} and no fetch attempted", async () => {
-    const db = openTestDb();
+    const db = await openTestDb();
     const { impl, calls } = stubFetch("should not be fetched");
     const result = await fetchEvents(db, impl);
     expect(result).toEqual({ configured: false, events: [] });
@@ -121,9 +121,9 @@ describe("fetchEvents", () => {
   });
 
   test("window filter (past 14d to future 7d) and start-desc sort", async () => {
-    const db = openTestDb();
-    const userId = seedUser(db);
-    setFeedUrl(db, FEED_URL, userId);
+    const db = await openTestDb();
+    const userId = await seedUser(db);
+    await setFeedUrl(db, FEED_URL, userId);
 
     const body = feed([
       ["UID:too-old", "SUMMARY:Thirty days ago", `DTSTART:${icsAt(-30 * DAY)}`],
@@ -138,11 +138,11 @@ describe("fetchEvents", () => {
   });
 
   test("maps to the UI contract with domain-based client suggestion", async () => {
-    const db = openTestDb();
-    const userId = seedUser(db);
-    const acmeId = seedClient(db, "Acme", "acme.com");
-    seedClient(db, "Globex", null);
-    setFeedUrl(db, FEED_URL, userId);
+    const db = await openTestDb();
+    const userId = await seedUser(db);
+    const acmeId = await seedClient(db, "Acme", "acme.com");
+    await seedClient(db, "Globex", null);
+    await setFeedUrl(db, FEED_URL, userId);
 
     const start = icsAt(-1 * DAY);
     const end = icsAt(-1 * DAY + 3_600_000);
@@ -169,11 +169,11 @@ describe("fetchEvents", () => {
   });
 
   test("falls back to title match, else nulls", async () => {
-    const db = openTestDb();
-    const userId = seedUser(db);
-    const globexId = seedClient(db, "Globex", null);
-    seedClient(db, "Acme", "acme.com");
-    setFeedUrl(db, FEED_URL, userId);
+    const db = await openTestDb();
+    const userId = await seedUser(db);
+    const globexId = await seedClient(db, "Globex", null);
+    await seedClient(db, "Acme", "acme.com");
+    await setFeedUrl(db, FEED_URL, userId);
 
     const body = feed([
       ["UID:title-match", "SUMMARY:globex weekly review", `DTSTART:${icsAt(1 * DAY)}`],
@@ -189,9 +189,9 @@ describe("fetchEvents", () => {
   });
 
   test("caches the parsed feed for repeat calls", async () => {
-    const db = openTestDb();
-    const userId = seedUser(db);
-    setFeedUrl(db, FEED_URL, userId);
+    const db = await openTestDb();
+    const userId = await seedUser(db);
+    await setFeedUrl(db, FEED_URL, userId);
     const body = feed([["UID:c1", "SUMMARY:Cached", `DTSTART:${icsAt(1 * DAY)}`]]);
     const { impl, calls } = stubFetch(body);
 
@@ -200,23 +200,23 @@ describe("fetchEvents", () => {
     expect(calls()).toBe(1);
 
     // Changing the feed URL invalidates the cache.
-    setFeedUrl(db, "https://other.example.com/cal.ics", userId);
+    await setFeedUrl(db, "https://other.example.com/cal.ics", userId);
     await fetchEvents(db, impl);
     expect(calls()).toBe(2);
   });
 
   test("non-2xx response throws CalendarFetchError", async () => {
-    const db = openTestDb();
-    const userId = seedUser(db);
-    setFeedUrl(db, FEED_URL, userId);
+    const db = await openTestDb();
+    const userId = await seedUser(db);
+    await setFeedUrl(db, FEED_URL, userId);
     const { impl } = stubFetch("nope", 500);
     expect(fetchEvents(db, impl)).rejects.toThrow(CalendarFetchError);
   });
 
   test("network failure throws CalendarFetchError", async () => {
-    const db = openTestDb();
-    const userId = seedUser(db);
-    setFeedUrl(db, FEED_URL, userId);
+    const db = await openTestDb();
+    const userId = await seedUser(db);
+    await setFeedUrl(db, FEED_URL, userId);
     const impl = (async () => {
       throw new Error("connection refused");
     }) as unknown as typeof fetch;

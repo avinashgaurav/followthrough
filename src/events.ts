@@ -1,4 +1,4 @@
-import type { Database } from "bun:sqlite";
+import type { Database } from "./db.ts";
 import { nowIso } from "./db.ts";
 
 /**
@@ -86,18 +86,19 @@ export interface EventInput {
 }
 
 /** Append an event. Returns the event row id, or null if idempotency key already seen. */
-export function appendEvent(db: Database, e: EventInput): number | null {
+export async function appendEvent(db: Database, e: EventInput): Promise<number | null> {
   if (e.idempotencyKey) {
-    const dup = db
+    const dup = await db
       .query("SELECT id FROM events WHERE idempotency_key = ?")
       .get(e.idempotencyKey) as { id: number } | null;
     if (dup) return null;
   }
-  const res = db
+  const res = await db
     .query(
       `INSERT INTO events (occurred_at, actor_user_id, entity_type, entity_id, event_type,
                            from_state, to_state, payload_json, idempotency_key)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       RETURNING id`,
     )
     .run(
       e.occurredAt ?? nowIso(),
@@ -110,7 +111,7 @@ export function appendEvent(db: Database, e: EventInput): number | null {
       e.payload ? JSON.stringify(e.payload) : null,
       e.idempotencyKey ?? null,
     );
-  return Number(res.lastInsertRowid);
+  return Number(res.rows[0]!.id);
 }
 
 export class TransitionError extends Error {}
@@ -119,7 +120,7 @@ export class TransitionError extends Error {}
  * Validated insight state transition: checks the transition map and actor,
  * appends the event and updates the cached state column in one transaction.
  */
-export function transitionInsight(
+export async function transitionInsight(
   db: Database,
   opts: {
     insightId: string;
@@ -129,8 +130,8 @@ export function transitionInsight(
     /** admin-only escape hatch for revert/reopen paths outside the map */
     adminOverride?: boolean;
   },
-): void {
-  const row = db
+): Promise<void> {
+  const row = await db
     .query("SELECT state, assignee_user_id FROM insights WHERE id = ?")
     .get(opts.insightId) as { state: InsightState; assignee_user_id: string | null } | null;
   if (!row) throw new TransitionError(`Insight not found: ${opts.insightId}`);
@@ -151,8 +152,8 @@ export function transitionInsight(
     throw new TransitionError("Transition to merged requires payload.merged_into");
   }
 
-  const tx = db.transaction(() => {
-    appendEvent(db, {
+  const tx = () => db.transaction(async () => {
+    await appendEvent(db, {
       actorUserId: opts.actor.id,
       entityType: "insight",
       entityId: opts.insightId,
@@ -161,17 +162,17 @@ export function transitionInsight(
       toState: opts.to,
       payload: opts.payload,
     });
-    db.query("UPDATE insights SET state = ?, updated_at = ? WHERE id = ?").run(
+    await db.query("UPDATE insights SET state = ?, updated_at = ? WHERE id = ?").run(
       opts.to,
       nowIso(),
       opts.insightId,
     );
     if (opts.to === "merged" && opts.payload?.merged_into) {
-      db.query("UPDATE insights SET merged_into_insight_id = ? WHERE id = ?").run(
+      await db.query("UPDATE insights SET merged_into_insight_id = ? WHERE id = ?").run(
         String(opts.payload.merged_into),
         opts.insightId,
       );
     }
   });
-  tx();
+  await tx();
 }

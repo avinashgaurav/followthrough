@@ -11,6 +11,7 @@ import {
   handleGetMeeting,
   handleListClients,
   handleListMeetings,
+  handleStartUpload,
 } from "./service.ts";
 
 // Auth tier "user" guarantees a non-null user; the router rejects with 401 first.
@@ -32,6 +33,8 @@ route("POST", "/api/clients/:id/contacts", "user", (req, user, params) =>
 route("POST", "/api/meetings", "user", (req, user) =>
   handleCreateMeeting(getDb(), user as AuthedUser, req),
 );
+
+route("POST", "/api/uploads", "user", (req) => handleStartUpload(req));
 
 route("GET", "/api/meetings", "user", (req) => handleListMeetings(getDb(), req));
 

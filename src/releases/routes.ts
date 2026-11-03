@@ -1,11 +1,11 @@
-import type { Database } from "bun:sqlite";
+import type { Database } from "../db.ts";
 import { z } from "zod";
 import { env } from "../config.ts";
 import { route, json } from "../router.ts";
 import { getDb, nowIso } from "../db.ts";
 import { ulid, insightHandle } from "../ids.ts";
 import { appendEvent, transitionInsight, TransitionError, type Role } from "../events.ts";
-import { getLLM, type LLM } from "../llm/provider.ts";
+import { getLLM, LLMBudgetError, LLMRateLimitError, type LLM } from "../llm/provider.ts";
 import { addManualRelease, fetchReleases, upsertReleases, type FetchLike } from "./poller.ts";
 import { matchRelease } from "./matcher.ts";
 
@@ -50,11 +50,11 @@ export async function runPollPipeline(
   fetchImpl: FetchLike = fetch,
 ): Promise<PollCounts> {
   const list = await fetchReleases(fetchImpl);
-  const newIds = upsertReleases(db, list);
+  const newIds = await upsertReleases(db, list);
   let newEntries = 0;
   let proposed = 0;
   for (const releaseId of newIds) {
-    const row = db
+    const row = await db
       .query("SELECT COUNT(*) AS n FROM release_entries WHERE release_id = ?")
       .get(releaseId) as { n: number };
     newEntries += row.n;
@@ -102,8 +102,8 @@ export interface MatchRow {
   created_at: string;
 }
 
-export function getMatch(db: Database, id: string): MatchRow | null {
-  return db.query("SELECT * FROM release_matches WHERE id = ?").get(id) as MatchRow | null;
+export async function getMatch(db: Database, id: string): Promise<MatchRow | null> {
+  return await db.query("SELECT * FROM release_matches WHERE id = ?").get(id) as MatchRow | null;
 }
 
 /**
@@ -112,8 +112,8 @@ export function getMatch(db: Database, id: string): MatchRow | null {
  * confidence 100, and the insight transitions to 'shipped' (from ticketed or
  * finalized; an insight already at or past shipped just gets the evidence).
  */
-export function confirmMatch(db: Database, opts: { matchId: string; actor: Actor }): MatchRow {
-  const row = db
+export async function confirmMatch(db: Database, opts: { matchId: string; actor: Actor }): Promise<MatchRow> {
+  const row = await db
     .query(
       `SELECT m.id, m.status, m.insight_id, i.state AS insight_state, i.assignee_user_id
        FROM release_matches m JOIN insights i ON i.id = m.insight_id
@@ -130,7 +130,7 @@ export function confirmMatch(db: Database, opts: { matchId: string; actor: Actor
   if (opts.actor.role !== "admin" && row.assignee_user_id !== opts.actor.id) {
     throw new MatchActionError(403, "Only the insight assignee or an admin can confirm a match");
   }
-  if (row.status === "confirmed") return getMatch(db, row.id)!; // idempotent
+  if (row.status === "confirmed") return (await getMatch(db, row.id))!; // idempotent
   if (row.status === "rejected") {
     throw new MatchActionError(409, "Match was rejected; re-run matching to propose a new one");
   }
@@ -138,23 +138,23 @@ export function confirmMatch(db: Database, opts: { matchId: string; actor: Actor
   const now = nowIso();
   const evidenceId = ulid();
   const pastShipped = ["shipped", "client_notified", "closed"].includes(row.insight_state);
-  const tx = db.transaction(() => {
-    db.query(
+  const tx = () => db.transaction(async () => {
+    await db.query(
       "UPDATE release_matches SET status = 'confirmed', decided_by = ?, decided_at = ? WHERE id = ?",
     ).run(opts.actor.id, now, row.id);
-    appendEvent(db, {
+    await appendEvent(db, {
       actorUserId: opts.actor.id,
       entityType: "match",
       entityId: row.id,
       eventType: "match.confirmed",
       payload: { insight_id: row.insight_id },
     });
-    db.query(
+    await db.query(
       `INSERT INTO completion_evidence
          (id, insight_id, kind, ref_match_id, confidence, status, confirmed_by, confirmed_at, created_at)
        VALUES (?, ?, 'release_match', ?, 100, 'confirmed', ?, ?, ?)`,
     ).run(evidenceId, row.insight_id, row.id, opts.actor.id, now, now);
-    appendEvent(db, {
+    await appendEvent(db, {
       actorUserId: opts.actor.id,
       entityType: "evidence",
       entityId: evidenceId,
@@ -164,7 +164,7 @@ export function confirmMatch(db: Database, opts: { matchId: string; actor: Actor
     if (!pastShipped) {
       // Valid from 'ticketed' and 'finalized'; anything else throws
       // TransitionError and rolls back the whole confirm.
-      transitionInsight(db, {
+      await transitionInsight(db, {
         insightId: row.insight_id,
         to: "shipped",
         actor: opts.actor,
@@ -172,28 +172,28 @@ export function confirmMatch(db: Database, opts: { matchId: string; actor: Actor
       });
     }
   });
-  tx();
-  return getMatch(db, row.id)!;
+  await tx();
+  return (await getMatch(db, row.id))!;
 }
 
-export function rejectMatch(
+export async function rejectMatch(
   db: Database,
   opts: { matchId: string; reason: string; actor: Actor },
-): MatchRow {
-  const row = db
+): Promise<MatchRow> {
+  const row = await db
     .query("SELECT id, status, insight_id FROM release_matches WHERE id = ?")
     .get(opts.matchId) as { id: string; status: string; insight_id: string } | null;
   if (!row) throw new MatchActionError(404, "Match not found");
   if (row.status === "confirmed") {
     throw new MatchActionError(409, "Match already confirmed; rejection would contradict the event log");
   }
-  if (row.status === "rejected") return getMatch(db, row.id)!; // idempotent
+  if (row.status === "rejected") return (await getMatch(db, row.id))!; // idempotent
 
-  const tx = db.transaction(() => {
-    db.query(
+  const tx = () => db.transaction(async () => {
+    await db.query(
       "UPDATE release_matches SET status = 'rejected', decided_by = ?, decided_at = ? WHERE id = ?",
     ).run(opts.actor.id, nowIso(), row.id);
-    appendEvent(db, {
+    await appendEvent(db, {
       actorUserId: opts.actor.id,
       entityType: "match",
       entityId: row.id,
@@ -201,8 +201,8 @@ export function rejectMatch(
       payload: { insight_id: row.insight_id, reason: opts.reason },
     });
   });
-  tx();
-  return getMatch(db, row.id)!;
+  await tx();
+  return (await getMatch(db, row.id))!;
 }
 
 // -------------------------------------------------------------------- routes
@@ -240,18 +240,23 @@ route("POST", "/api/releases/manual", "admin", async (req, user) => {
   const db = getDb();
   let rel: { id: string; entry_count: number };
   try {
-    rel = addManualRelease(db, body.data, user!.id);
+    rel = await addManualRelease(db, body.data, user!.id);
   } catch (e) {
-    return json({ error: e instanceof Error ? e.message : "Could not save the changelog" }, 409);
+    // The duplicate-tag message is ours and safe to show; anything else is logged.
+    if (e instanceof Error && e.message.startsWith("A manual changelog for tag")) return json({ error: e.message }, 409);
+    console.error("manual changelog failed:", e);
+    return json({ error: "Could not save the changelog.", code: "changelog_failed" }, 500);
   }
   try {
     const run = await matchRelease(db, getLLM(), rel.id);
     return json({ release_id: rel.id, entry_count: rel.entry_count, matches_proposed: run.proposed }, 201);
   } catch (e) {
     // The changelog is saved even when matching fails; the admin can re-poll later.
+    if (e instanceof LLMBudgetError || e instanceof LLMRateLimitError) throw e;
+    console.error("release matching failed:", e);
     return json(
       { release_id: rel.id, entry_count: rel.entry_count, matches_proposed: 0,
-        match_error: e instanceof Error ? e.message : "matching failed" },
+        match_error: "Matching failed; the changelog was saved. Try matching again later.", code: "match_failed" },
       201,
     );
   }
@@ -268,21 +273,21 @@ route("POST", "/api/releases/poll", "admin", async () => {
     const counts = await runPollPipeline(getDb(), getLLM());
     return json(counts);
   } catch (err) {
+    if (err instanceof LLMBudgetError || err instanceof LLMRateLimitError) throw err;
     console.warn("release poll failed:", err);
-    const message = err instanceof Error ? err.message : "release poll failed";
     // A private RELEASE_REPO 404s without auth; tell the admin what to fix.
     const hint = env.GITHUB_READ_TOKEN
-      ? ""
-      : ` No GITHUB_READ_TOKEN is configured — add a read-only token for ${env.RELEASE_REPO} to .env and restart.`;
+      ? " Check that the token can read the repo."
+      : ` No GITHUB_READ_TOKEN is configured: add a read-only token for ${env.RELEASE_REPO} and redeploy.`;
     return json(
-      { error: message + hint, github_token_configured: Boolean(env.GITHUB_READ_TOKEN) },
+      { error: `Checking GitHub releases failed.${hint}`, code: "release_poll_failed", github_token_configured: Boolean(env.GITHUB_READ_TOKEN) },
       502,
     );
   }
 });
 
-route("GET", "/api/releases", "user", () => {
-  const releases = getDb()
+route("GET", "/api/releases", "user", async () => {
+  const releases = await getDb()
     .query(
       `SELECT r.id, r.repo, r.tag_name, r.name, r.published_at, r.fetched_at,
               (SELECT COUNT(*) FROM release_entries e WHERE e.release_id = r.id) AS entry_count,
@@ -302,12 +307,12 @@ route("GET", "/api/releases", "user", () => {
   });
 });
 
-route("GET", "/api/matches", "user", (req) => {
+route("GET", "/api/matches", "user", async (req) => {
   const status = new URL(req.url).searchParams.get("status");
   if (status && !["proposed", "confirmed", "rejected"].includes(status)) {
     return json({ error: "status must be proposed, confirmed, or rejected" }, 400);
   }
-  const rows = getDb()
+  const rows = await getDb()
     .query(
       `SELECT m.id, m.status, m.verdict, m.confidence, m.method, m.rationale,
               m.evidence_quotes_json, m.decided_by, m.decided_at, m.created_at,
@@ -338,9 +343,9 @@ route("GET", "/api/matches", "user", (req) => {
   return json({ matches });
 });
 
-route("POST", "/api/matches/:id/confirm", "user", (_req, user, params) => {
+route("POST", "/api/matches/:id/confirm", "user", async (_req, user, params) => {
   try {
-    const match = confirmMatch(getDb(), {
+    const match = await confirmMatch(getDb(), {
       matchId: params.id ?? "",
       actor: { id: user!.id, role: user!.role },
     });
@@ -354,7 +359,7 @@ route("POST", "/api/matches/:id/reject", "user", async (req, user, params) => {
   const parsed = RejectBody.safeParse(await readBody(req));
   if (!parsed.success) return json({ error: "reason is required", issues: parsed.error.issues }, 400);
   try {
-    const match = rejectMatch(getDb(), {
+    const match = await rejectMatch(getDb(), {
       matchId: params.id ?? "",
       reason: parsed.data.reason,
       actor: { id: user!.id, role: user!.role },

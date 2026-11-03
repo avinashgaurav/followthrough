@@ -16,12 +16,12 @@ import {
 } from "./auth.ts";
 import { allowedEmailDomains, demoMode, writableRepos } from "./config.ts";
 import { clientIp } from "./demo.ts";
-import { authRequired, setAuthRequired } from "./settings.ts";
+import { authRequired, loginForcedByEnv, setAuthRequired } from "./settings.ts";
 import { appendEvent } from "./events.ts";
 
 /** Is there a real (non-guest) account that can actually log in? Gates require_login. */
-function hasLoginCapableUser(db: ReturnType<typeof getDb>): boolean {
-  const row = db
+async function hasLoginCapableUser(db: ReturnType<typeof getDb>): Promise<boolean> {
+  const row = await db
     .query(
       "SELECT COUNT(*) AS n FROM users WHERE code_hash IS NOT NULL AND disabled_at IS NULL AND id != ?",
     )
@@ -54,16 +54,20 @@ route("POST", "/api/auth/login", "public", async (req) => {
   });
 });
 
-route("POST", "/api/auth/logout", "user", (req) => {
+route("POST", "/api/auth/logout", "user", async (req) => {
   const sid = readSessionCookie(req);
-  if (sid) logout(getDb(), sid);
-  return json({ ok: true }, 200, { "set-cookie": "ie_session=; HttpOnly; Path=/; Max-Age=0" });
+  if (sid) await logout(getDb(), sid);
+  // Match the attributes the cookie was set with, Secure included on https.
+  const secure = req.url.startsWith("https") || req.headers.get("x-forwarded-proto") === "https";
+  return json({ ok: true }, 200, {
+    "set-cookie": `ie_session=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0${secure ? "; Secure" : ""}`,
+  });
 });
 
-route("GET", "/api/me", "user", (_req, user) =>
+route("GET", "/api/me", "user", async (_req, user) =>
   json({
     user,
-    require_login: authRequired(getDb()),
+    require_login: await authRequired(getDb()),
     is_guest: isGuestUser(user),
     allowed_email_domains: allowedEmailDomains(),
     writable_repos: writableRepos(),
@@ -77,9 +81,9 @@ route("GET", "/api/auth/config", "public", () =>
 );
 
 // Access mode: read + toggle whether login is required (admin only).
-route("GET", "/api/settings/access", "admin", () => {
+route("GET", "/api/settings/access", "admin", async () => {
   const db = getDb();
-  return json({ require_login: authRequired(db), can_require: hasLoginCapableUser(db) });
+  return json({ require_login: await authRequired(db), can_require: await hasLoginCapableUser(db) });
 });
 
 const AccessSchema = z.object({ require_login: z.boolean() });
@@ -88,17 +92,20 @@ route("POST", "/api/settings/access", "admin", async (req, admin) => {
   const db = getDb();
   const body = AccessSchema.safeParse(await req.json().catch(() => null));
   if (!body.success) return json({ error: "require_login (boolean) required" }, 400);
+  if (!body.data.require_login && loginForcedByEnv()) {
+    return json({ error: "Login is required by this server's REQUIRE_LOGIN setting, so it can't be turned off here." }, 400);
+  }
   // Anti-lockout: do not let anyone turn login ON until a real account with a
   // login code exists, or everyone (including this guest) would be locked out.
-  if (body.data.require_login && !hasLoginCapableUser(db)) {
+  if (body.data.require_login && !await hasLoginCapableUser(db)) {
     return json(
       { error: "Add a teammate with a login code first, or you would lock everyone out." },
       400,
     );
   }
   const actor = isGuestUser(admin) ? null : admin!.id;
-  setAuthRequired(db, body.data.require_login, actor);
-  appendEvent(db, {
+  await setAuthRequired(db, body.data.require_login, actor);
+  await appendEvent(db, {
     actorUserId: actor,
     entityType: "user",
     entityId: admin!.id,
@@ -123,10 +130,10 @@ route("POST", "/api/users", "admin", async (req, admin) => {
   }
   const code = generateLoginCode();
   const id = ulid();
-  db.query(
+  await db.query(
     "INSERT INTO users (id, email, name, role, code_hash, invited_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
   ).run(id, body.data.email.toLowerCase(), body.data.name, body.data.role, await hashCode(code), admin!.id, nowIso());
-  appendEvent(db, {
+  await appendEvent(db, {
     actorUserId: admin!.id,
     entityType: "user",
     entityId: id,
@@ -137,8 +144,8 @@ route("POST", "/api/users", "admin", async (req, admin) => {
   return json({ id, loginCode: code }, 201);
 });
 
-route("GET", "/api/users", "admin", () => {
-  const users = getDb()
+route("GET", "/api/users", "admin", async () => {
+  const users = await getDb()
     .query(
       "SELECT id, email, name, role, created_at, disabled_at, (code_hash IS NOT NULL) AS has_code FROM users WHERE id != ?",
     )
@@ -152,20 +159,20 @@ route("POST", "/api/users/:id/rotate-code", "admin", async (_req, admin, params)
   const db = getDb();
   const code = generateLoginCode();
   // Issuing a fresh code also re-enables a previously-revoked account.
-  const res = db
+  const res = await db
     .query("UPDATE users SET code_hash = ?, code_rotated_at = ?, disabled_at = NULL WHERE id = ?")
     .run(await hashCode(code), nowIso(), params.id!);
   if (res.changes === 0) return json({ error: "user not found" }, 404);
-  appendEvent(db, { actorUserId: admin!.id, entityType: "user", entityId: params.id!, eventType: "user.code_rotated" });
+  await appendEvent(db, { actorUserId: admin!.id, entityType: "user", entityId: params.id!, eventType: "user.code_rotated" });
   return json({ loginCode: code });
 });
 
-route("POST", "/api/users/:id/revoke", "admin", (_req, admin, params) => {
+route("POST", "/api/users/:id/revoke", "admin", async (_req, admin, params) => {
   // Disabling the open-access guest would transiently 401 every signed-out user
   // (the session/user lookups filter disabled_at). The guest is system-managed.
   if (params.id === GUEST_USER_ID) return json({ error: "Cannot revoke the open-access guest." }, 400);
   const db = getDb();
-  revokeCode(db, params.id!);
-  appendEvent(db, { actorUserId: admin!.id, entityType: "user", entityId: params.id!, eventType: "user.code_revoked" });
+  await revokeCode(db, params.id!);
+  await appendEvent(db, { actorUserId: admin!.id, entityType: "user", entityId: params.id!, eventType: "user.code_revoked" });
   return json({ ok: true });
 });

@@ -113,6 +113,46 @@ function teardownAudio(): void {
   }
 }
 
+/**
+ * Put the recording on the meeting form. The hosted app hands out a signed
+ * storage URL (functions cap request bodies at 4.5 MB), so the audio goes
+ * straight to storage and the form carries its key; a self-hosted server that
+ * cannot sign uploads takes the file in the form as before.
+ */
+async function attachAudio(baseUrl: string, form: FormData, blob: Blob, filename: string): Promise<void> {
+  const start = await fetch(`${baseUrl}/api/uploads`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ filename, content_type: blob.type || undefined, size_bytes: blob.size }),
+  });
+  // 404: an older server without direct uploads.
+  if (start.status === 404) {
+    form.set("audio_file", blob, filename);
+    return;
+  }
+  if (start.status === 401) throw new Error("Session expired. Log in again from the popup.");
+  if (!start.ok) throw new Error(`could not start the upload (${start.status})`);
+  const s = (await start.json()) as { mode: string; key?: string; upload_url?: string };
+  if (s.mode !== "direct" || !s.key || !s.upload_url) {
+    form.set("audio_file", blob, filename);
+    return;
+  }
+  const digest = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
+  const sha = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  const put = await fetch(s.upload_url, {
+    method: "PUT",
+    headers: { "content-type": blob.type || "application/octet-stream" },
+    body: blob,
+  });
+  if (!put.ok) throw new Error(`storage rejected the recording (${put.status})`);
+  form.set("audio_upload_key", s.key);
+  form.set("audio_sha256", sha);
+  form.set("audio_filename", filename);
+  if (blob.type) form.set("audio_content_type", blob.type);
+  form.set("audio_size", String(blob.size));
+}
+
 async function upload(): Promise<void> {
   if (!meta || !pendingBlob) {
     pushState({ phase: "error", error: "Nothing to upload.", canRetry: false });
@@ -135,10 +175,10 @@ async function upload(): Promise<void> {
   fd.set("title", meta.title.trim() || `Recorded meeting ${todayIso()}`);
   fd.set("source", "extension");
   fd.set("consent_confirmed", "true");
-  fd.set("audio_file", pendingBlob, `meeting-${Date.now()}.webm`);
 
   let res: Response;
   try {
+    await attachAudio(meta.baseUrl, fd, pendingBlob, `meeting-${Date.now()}.webm`);
     res = await fetch(`${meta.baseUrl}/api/meetings`, {
       method: "POST",
       body: fd,

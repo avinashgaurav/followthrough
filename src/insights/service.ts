@@ -1,4 +1,4 @@
-import type { Database } from "bun:sqlite";
+import type { Database } from "../db.ts";
 import { z } from "zod";
 import { nowIso } from "../db.ts";
 import { ulid, insightHandle } from "../ids.ts";
@@ -91,7 +91,7 @@ interface ListRowRaw {
   has_evidence: number;
 }
 
-export function listInsights(db: Database, filters: ListFilters) {
+export async function listInsights(db: Database, filters: ListFilters) {
   const where: string[] = [];
   const args: string[] = [];
   if (filters.state) {
@@ -114,7 +114,7 @@ export function listInsights(db: Database, filters: ListFilters) {
     where.push("i.item_type = ?");
     args.push(filters.item_type);
   }
-  const rows = db
+  const rows = await db
     .query(
       `SELECT i.id, i.title, i.state, i.track, i.item_type, i.priority, i.version,
               i.client_id, c.name AS client_name, i.assignee_user_id, i.ai_confidence,
@@ -146,8 +146,8 @@ export function listInsights(db: Database, filters: ListFilters) {
 
 const EDITING_STALE_MS = 10 * 60_000;
 
-export function getInsightDetail(db: Database, id: string): Record<string, unknown> | null {
-  const insight = db
+export async function getInsightDetail(db: Database, id: string): Promise<Record<string, unknown> | null> {
+  const insight = await db
     .query("SELECT i.*, c.name AS client_name FROM insights i JOIN clients c ON c.id = i.client_id WHERE i.id = ?")
     .get(id) as Record<string, unknown> | null;
   if (!insight) return null;
@@ -181,7 +181,7 @@ export function getInsightDetail(db: Database, id: string): Record<string, unkno
     });
   };
   const mentions = dedupeMentions(
-    db
+    await db
       .query(
         `SELECT m.id, m.meeting_id, m.client_id, m.quote, m.speaker, m.char_start, m.char_end, m.created_at,
                 mt.meeting_date, mt.seq AS meeting_seq, c.name AS client_name
@@ -192,28 +192,28 @@ export function getInsightDetail(db: Database, id: string): Record<string, unkno
       )
       .all(id) as Array<Record<string, unknown>>,
   );
-  const requesters = db
+  const requesters = await db
     .query(
       `SELECT r.client_id, c.name AS client_name, r.first_requested_at, r.last_requested_at
        FROM insight_requesters r JOIN clients c ON c.id = r.client_id
        WHERE r.insight_id = ? ORDER BY r.first_requested_at`,
     )
     .all(id);
-  const tags = db
+  const tags = await db
     .query(
       `SELECT t.id, t.name, t.kind FROM insight_tags it JOIN tags t ON t.id = it.tag_id
        WHERE it.insight_id = ? ORDER BY t.name`,
     )
     .all(id);
-  const tickets = db.query("SELECT * FROM tickets WHERE insight_id = ? ORDER BY drafted_at").all(id);
-  const evidence = db
+  const tickets = await db.query("SELECT * FROM tickets WHERE insight_id = ? ORDER BY drafted_at").all(id);
+  const evidence = await db
     .query("SELECT * FROM completion_evidence WHERE insight_id = ? ORDER BY created_at")
     .all(id);
-  const emailDrafts = db
+  const emailDrafts = await db
     .query("SELECT * FROM email_drafts WHERE insight_id = ? ORDER BY created_at")
     .all(id);
   const timeline = (
-    db
+    await db
       .query(
         `SELECT id, occurred_at, actor_user_id, event_type, from_state, to_state, payload_json
          FROM events WHERE entity_type = 'insight' AND entity_id = ? ORDER BY id`,
@@ -260,30 +260,30 @@ export const TriageSchema = z.object({
 });
 export type TriageInput = z.infer<typeof TriageSchema>;
 
-function upsertTag(db: Database, name: string): string {
+async function upsertTag(db: Database, name: string): Promise<string> {
   // tags.name is UNIQUE COLLATE NOCASE, so the lookup dedupes case-insensitively
-  const existing = db.query("SELECT id FROM tags WHERE name = ?").get(name) as { id: string } | null;
+  const existing = await db.query("SELECT id FROM tags WHERE name = ?").get(name) as { id: string } | null;
   if (existing) return existing.id;
   const id = ulid();
-  db.query("INSERT INTO tags (id, name, kind) VALUES (?, ?, 'freeform')").run(id, name);
+  await db.query("INSERT INTO tags (id, name, kind) VALUES (?, ?, 'freeform')").run(id, name);
   return id;
 }
 
-export function triageInsight(db: Database, id: string, actor: Actor, input: TriageInput): HttpResult {
-  const row = db
+export async function triageInsight(db: Database, id: string, actor: Actor, input: TriageInput): Promise<HttpResult> {
+  const row = await db
     .query("SELECT state, track, assignee_user_id, item_type FROM insights WHERE id = ?")
     .get(id) as
     | { state: string; track: string | null; assignee_user_id: string | null; item_type: string }
     | null;
   if (!row) return notFound();
   if (input.assignee_user_id) {
-    const u = db.query("SELECT 1 AS x FROM users WHERE id = ?").get(input.assignee_user_id);
+    const u = await db.query("SELECT 1 AS x FROM users WHERE id = ?").get(input.assignee_user_id);
     if (!u) return { status: 400, body: { error: "assignee user not found" } };
   }
 
   try {
-    const tx = db.transaction(() => {
-      db.query(
+    const tx = () => db.transaction(async () => {
+      await db.query(
         `UPDATE insights SET track = ?,
             assignee_user_id = COALESCE(?, assignee_user_id),
             item_type = COALESCE(?, item_type),
@@ -292,14 +292,14 @@ export function triageInsight(db: Database, id: string, actor: Actor, input: Tri
       ).run(input.track, input.assignee_user_id ?? null, input.item_type ?? null, nowIso(), id);
 
       for (const name of input.tags ?? []) {
-        const tagId = upsertTag(db, name);
-        db.query(
-          "INSERT OR IGNORE INTO insight_tags (insight_id, tag_id, applied_by, applied_at) VALUES (?, ?, ?, ?)",
+        const tagId = await upsertTag(db, name);
+        await db.query(
+          "INSERT INTO insight_tags (insight_id, tag_id, applied_by, applied_at) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
         ).run(id, tagId, actor.id, nowIso());
       }
 
       if (row.state === "extracted") {
-        transitionInsight(db, {
+        await transitionInsight(db, {
           insightId: id,
           to: "triaged",
           actor,
@@ -309,7 +309,7 @@ export function triageInsight(db: Database, id: string, actor: Actor, input: Tri
           },
         });
       } else {
-        appendEvent(db, {
+        await appendEvent(db, {
           actorUserId: actor.id,
           entityType: "insight",
           entityId: id,
@@ -326,14 +326,14 @@ export function triageInsight(db: Database, id: string, actor: Actor, input: Tri
           },
         });
       }
-      syncInsightFts(db, id);
+      await syncInsightFts(db, id);
     });
-    tx();
+    await tx();
   } catch (err) {
     return mapTransitionError(err);
   }
 
-  const updated = db.query("SELECT * FROM insights WHERE id = ?").get(id) as Record<string, unknown>;
+  const updated = await db.query("SELECT * FROM insights WHERE id = ?").get(id) as Record<string, unknown>;
   return { status: 200, body: { ok: true, insight: { ...updated, handle: insightHandle(id) } } };
 }
 
@@ -344,23 +344,23 @@ export const BodyEditSchema = z.object({
   version: z.number().int().min(1),
 });
 
-export function updateBody(
+export async function updateBody(
   db: Database,
   id: string,
   actor: Actor,
   bodyCurrent: string,
   version: number,
-): HttpResult {
+): Promise<HttpResult> {
   let result: HttpResult | null = null;
-  const tx = db.transaction(() => {
-    const row = db.query("SELECT body_current, version FROM insights WHERE id = ?").get(id) as
+  const tx = () => db.transaction(async () => {
+    const row = await db.query("SELECT body_current, version FROM insights WHERE id = ?").get(id) as
       | { body_current: string; version: number }
       | null;
     if (!row) {
       result = notFound();
       return;
     }
-    const res = db
+    const res = await db
       .query("UPDATE insights SET body_current = ?, version = version + 1, updated_at = ? WHERE id = ? AND version = ?")
       .run(bodyCurrent, nowIso(), id, version);
     if (res.changes === 0) {
@@ -371,24 +371,24 @@ export function updateBody(
       return;
     }
     // body_original is never touched here, by design
-    appendEvent(db, {
+    await appendEvent(db, {
       actorUserId: actor.id,
       entityType: "insight",
       entityId: id,
       eventType: "insight.body_edited",
       payload: { chars_before: row.body_current.length, chars_after: bodyCurrent.length },
     });
-    syncInsightFts(db, id);
+    await syncInsightFts(db, id);
     result = { status: 200, body: { ok: true, version: row.version + 1 } };
   });
-  tx();
+  await tx();
   return result ?? { status: 500, body: { error: "body update did not complete" } };
 }
 
 // ---------------------------------------------------------------- finalize / reject / merge
 
-export function finalizeInsight(db: Database, id: string, actor: Actor): HttpResult {
-  const row = db.query("SELECT state, body_current FROM insights WHERE id = ?").get(id) as
+export async function finalizeInsight(db: Database, id: string, actor: Actor): Promise<HttpResult> {
+  const row = await db.query("SELECT state, body_current FROM insights WHERE id = ?").get(id) as
     | { state: string; body_current: string }
     | null;
   if (!row) return notFound();
@@ -396,15 +396,15 @@ export function finalizeInsight(db: Database, id: string, actor: Actor): HttpRes
     return { status: 400, body: { error: "body_current is empty; polish the insight before finalizing" } };
   }
   try {
-    const tx = db.transaction(() => {
-      transitionInsight(db, { insightId: id, to: "finalized", actor });
-      db.query("UPDATE insights SET finalized_by = ?, updated_at = ? WHERE id = ?").run(
+    const tx = () => db.transaction(async () => {
+      await transitionInsight(db, { insightId: id, to: "finalized", actor });
+      await db.query("UPDATE insights SET finalized_by = ?, updated_at = ? WHERE id = ?").run(
         actor.id,
         nowIso(),
         id,
       );
     });
-    tx();
+    await tx();
   } catch (err) {
     return mapTransitionError(err);
   }
@@ -413,11 +413,11 @@ export function finalizeInsight(db: Database, id: string, actor: Actor): HttpRes
 
 export const RejectSchema = z.object({ reason: z.string().trim().min(1) });
 
-export function rejectInsight(db: Database, id: string, actor: Actor, reason: string): HttpResult {
-  const row = db.query("SELECT state FROM insights WHERE id = ?").get(id);
+export async function rejectInsight(db: Database, id: string, actor: Actor, reason: string): Promise<HttpResult> {
+  const row = await db.query("SELECT state FROM insights WHERE id = ?").get(id);
   if (!row) return notFound();
   try {
-    transitionInsight(db, { insightId: id, to: "rejected", actor, payload: { reason } });
+    await transitionInsight(db, { insightId: id, to: "rejected", actor, payload: { reason } });
   } catch (err) {
     return mapTransitionError(err);
   }
@@ -426,15 +426,15 @@ export function rejectInsight(db: Database, id: string, actor: Actor, reason: st
 
 export const MergeSchema = z.object({ into_insight_id: z.string().min(1) });
 
-export function mergeInsight(db: Database, sourceId: string, intoId: string, actor: Actor): HttpResult {
+export async function mergeInsight(db: Database, sourceId: string, intoId: string, actor: Actor): Promise<HttpResult> {
   if (sourceId === intoId) {
     return { status: 400, body: { error: "cannot merge an insight into itself" } };
   }
-  const source = db.query("SELECT id, priority FROM insights WHERE id = ?").get(sourceId) as
+  const source = await db.query("SELECT id, priority FROM insights WHERE id = ?").get(sourceId) as
     | { id: string; priority: number }
     | null;
   if (!source) return notFound();
-  const target = db.query("SELECT id, state FROM insights WHERE id = ?").get(intoId) as
+  const target = await db.query("SELECT id, state FROM insights WHERE id = ?").get(intoId) as
     | { id: string; state: string }
     | null;
   if (!target) return { status: 400, body: { error: "merge target not found" } };
@@ -443,15 +443,15 @@ export function mergeInsight(db: Database, sourceId: string, intoId: string, act
   }
 
   try {
-    const tx = db.transaction(() => {
-      transitionInsight(db, {
+    const tx = () => db.transaction(async () => {
+      await transitionInsight(db, {
         insightId: sourceId,
         to: "merged",
         actor,
         payload: { merged_into: intoId },
       });
 
-      const mentions = db
+      const mentions = await db
         .query(
           "SELECT meeting_id, client_id, quote, speaker, char_start, char_end, created_at FROM insight_mentions WHERE insight_id = ?",
         )
@@ -469,41 +469,41 @@ export function mergeInsight(db: Database, sourceId: string, intoId: string, act
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       );
       for (const m of mentions) {
-        insertMention.run(ulid(), intoId, m.meeting_id, m.client_id, m.quote, m.speaker, m.char_start, m.char_end, m.created_at);
+        await insertMention.run(ulid(), intoId, m.meeting_id, m.client_id, m.quote, m.speaker, m.char_start, m.char_end, m.created_at);
       }
 
-      const requesters = db
+      const requesters = await db
         .query("SELECT client_id, first_requested_at, last_requested_at FROM insight_requesters WHERE insight_id = ?")
         .all(sourceId) as Array<{ client_id: string; first_requested_at: string; last_requested_at: string }>;
       for (const r of requesters) {
-        db.query(
-          "INSERT OR IGNORE INTO insight_requesters (insight_id, client_id, first_requested_at, last_requested_at) VALUES (?, ?, ?, ?)",
+        await db.query(
+          "INSERT INTO insight_requesters (insight_id, client_id, first_requested_at, last_requested_at) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
         ).run(intoId, r.client_id, r.first_requested_at, r.last_requested_at);
         // ISO-8601 UTC strings compare chronologically, so MIN/MAX keep earliest/latest
-        db.query(
+        await db.query(
           `UPDATE insight_requesters SET
-              first_requested_at = MIN(first_requested_at, ?),
-              last_requested_at = MAX(last_requested_at, ?)
+              first_requested_at = LEAST(first_requested_at, ?),
+              last_requested_at = GREATEST(last_requested_at, ?)
            WHERE insight_id = ? AND client_id = ?`,
         ).run(r.first_requested_at, r.last_requested_at, intoId, r.client_id);
       }
 
-      db.query("UPDATE insights SET priority = priority + ? + 1, updated_at = ? WHERE id = ?").run(
+      await db.query("UPDATE insights SET priority = priority + ? + 1, updated_at = ? WHERE id = ?").run(
         source.priority,
         nowIso(),
         intoId,
       );
-      appendEvent(db, {
+      await appendEvent(db, {
         actorUserId: actor.id,
         entityType: "insight",
         entityId: intoId,
         eventType: "insight.absorbed_merge",
         payload: { from: sourceId },
       });
-      syncInsightFts(db, intoId);
-      syncInsightFts(db, sourceId);
+      await syncInsightFts(db, intoId);
+      await syncInsightFts(db, sourceId);
     });
-    tx();
+    await tx();
   } catch (err) {
     return mapTransitionError(err);
   }
@@ -514,17 +514,17 @@ export function mergeInsight(db: Database, sourceId: string, intoId: string, act
 
 export const EditingSchema = z.object({ on: z.boolean() });
 
-export function setEditing(db: Database, id: string, actor: Actor, on: boolean): HttpResult {
-  const row = db.query("SELECT editing_by FROM insights WHERE id = ?").get(id) as
+export async function setEditing(db: Database, id: string, actor: Actor, on: boolean): Promise<HttpResult> {
+  const row = await db.query("SELECT editing_by FROM insights WHERE id = ?").get(id) as
     | { editing_by: string | null }
     | null;
   if (!row) return notFound();
   if (on) {
-    db.query("UPDATE insights SET editing_by = ?, editing_at = ? WHERE id = ?").run(actor.id, nowIso(), id);
+    await db.query("UPDATE insights SET editing_by = ?, editing_at = ? WHERE id = ?").run(actor.id, nowIso(), id);
   } else if (row.editing_by === actor.id) {
-    db.query("UPDATE insights SET editing_by = NULL, editing_at = NULL WHERE id = ?").run(id);
+    await db.query("UPDATE insights SET editing_by = NULL, editing_at = NULL WHERE id = ?").run(id);
   }
-  const updated = db.query("SELECT editing_by, editing_at FROM insights WHERE id = ?").get(id) as {
+  const updated = await db.query("SELECT editing_by, editing_at FROM insights WHERE id = ?").get(id) as {
     editing_by: string | null;
     editing_at: string | null;
   };
@@ -558,8 +558,8 @@ function withHandles(rows: QueueItem[]): QueueItem[] {
   return rows.map((r) => ({ ...r, handle: insightHandle(r.id) }));
 }
 
-export function getQueue(db: Database, user: Actor): Record<string, unknown> {
-  const toReview = db
+export async function getQueue(db: Database, user: Actor): Promise<Record<string, unknown>> {
+  const toReview = await db
     .query(
       `${QUEUE_SELECT}
        WHERE i.state = 'extracted' AND (i.assignee_user_id IS NULL OR i.assignee_user_id = ?)
@@ -567,7 +567,7 @@ export function getQueue(db: Database, user: Actor): Record<string, unknown> {
     )
     .all(user.id) as QueueItem[];
 
-  const toFinalize = db
+  const toFinalize = await db
     .query(
       `${QUEUE_SELECT}
        WHERE i.state = 'triaged' AND (i.assignee_user_id IS NULL OR i.assignee_user_id = ?)
@@ -578,7 +578,7 @@ export function getQueue(db: Database, user: Actor): Record<string, unknown> {
   // All finalized insights without a raised ticket, regardless of track. Ticketing
   // is human-triggered, so non-engineering items stay visible here rather than
   // vanishing after they are locked (the "work goes invisible" failure, ISSUE-001).
-  const toTicket = db
+  const toTicket = await db
     .query(
       `${QUEUE_SELECT}
        WHERE i.state = 'finalized' AND (i.assignee_user_id IS NULL OR i.assignee_user_id = ?)
@@ -587,7 +587,7 @@ export function getQueue(db: Database, user: Actor): Record<string, unknown> {
     )
     .all(user.id) as QueueItem[];
 
-  const toConfirm = db
+  const toConfirm = await db
     .query(
       `SELECT ce.id AS evidence_id, ce.kind AS evidence_kind, ce.confidence, ce.created_at AS proposed_at,
               i.id, i.title, i.state, i.track, i.item_type, i.priority,
@@ -601,7 +601,7 @@ export function getQueue(db: Database, user: Actor): Record<string, unknown> {
     .all(user.id) as Array<QueueItem & { evidence_id: string; evidence_kind: string; confidence: number; proposed_at: string }>;
 
   // an email.copied event may target the insight directly or one of its drafts
-  const toEmail = db
+  const toEmail = await db
     .query(
       `${QUEUE_SELECT}
        WHERE i.state = 'shipped' AND (i.assignee_user_id IS NULL OR i.assignee_user_id = ?)
@@ -623,7 +623,7 @@ export function getQueue(db: Database, user: Actor): Record<string, unknown> {
   };
 
   if (user.role === "admin") {
-    const counts = db.query("SELECT state, COUNT(*) AS n FROM insights GROUP BY state").all() as Array<{
+    const counts = await db.query("SELECT state, COUNT(*) AS n FROM insights GROUP BY state").all() as Array<{
       state: string;
       n: number;
     }>;

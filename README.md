@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Bun](https://img.shields.io/badge/Bun-1.3+-fbf0df?logo=bun&logoColor=black)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-337%20passing-brightgreen.svg)](docs/SETUP.md#development)
+[![Tests](https://img.shields.io/badge/tests-349%20passing-brightgreen.svg)](docs/SETUP.md#development)
 [![LLM: Claude](https://img.shields.io/badge/LLM-Claude-d97757.svg)](https://www.anthropic.com/)
 
 </div>
@@ -40,16 +40,18 @@ A client asks for a feature on a call, it ships weeks later, and nobody tells th
 | Pull asks, complaints and commitments out of a transcript; verify them; draft tickets, emails and the meeting brief | Model (`src/extract/`, `src/emails/`, `src/tickets/`) | Reading intent and subtext from speech is a language task. |
 | Keep an item only if its quote appears word for word in the transcript | Code (`buildQuoteMatcher` in `src/extract/segment.ts`) | Whether a quote exists is a fact to check, not a judgment. No quote, no item. |
 | Triage, reword, route and finalize; confirm a release really shipped an ask | A person (Review and Confirm shipped screens) | The client relationship is on the line, so a human signs off every outward step. |
-| Pipeline state, allowed transitions, and every turnaround time | Code (`src/events.ts`, `schema.sql`, `src/metrics/queries.ts`) | Timings must be exact and auditable, so they come from an append-only event log. |
+| Pipeline state, allowed transitions, and every turnaround time | Code (`src/events.ts`, `migrations/001_init.sql`, `src/metrics/queries.ts`) | Timings must be exact and auditable, so they come from an append-only event log. |
 
 ## Quick start
 
-Needs [Bun](https://bun.sh) 1.3+.
+Deploys to **Vercel with Supabase** (Postgres + file storage): import the repo, add Supabase from the Vercel Marketplace, set an AI key (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY` or `OPENROUTER_API_KEY`), `PRODUCT_NAME` and `CRON_SECRET`, and deploy. Step by step: [docs/SETUP.md](docs/SETUP.md).
+
+Locally, with [Bun](https://bun.sh) 1.3+ and a Postgres URL:
 
 ```bash
 git clone https://github.com/avinashgaurav/followthrough.git && cd followthrough
 bun install
-echo 'ANTHROPIC_API_KEY=sk-ant-...' >> .env
+printf 'DATABASE_URL=postgres://...\nGEMINI_API_KEY=...\n' >> .env
 bun run build:web && bun run start   # http://localhost:4500, open by default: turn on Require login before exposing it
 ```
 
@@ -59,7 +61,7 @@ bun run build:web && bun run start   # http://localhost:4500, open by default: t
 - [EVALS.md](EVALS.md): how the tests were run, the results and every miss.
 - [docs/DESIGN-NOTES.md](docs/DESIGN-NOTES.md): screenshots, how it differs from a summarizer, and what each screen is for.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): the pipeline, multi-pass extraction, runtime and safety rules.
-- [docs/SETUP.md](docs/SETUP.md): full setup, every env var, public demo mode, development.
+- [docs/SETUP.md](docs/SETUP.md): deploying on Vercel + Supabase, running locally, every env var, public demo mode, development.
 - [SPEC.md](SPEC.md): the full product contract.
 
 ## License

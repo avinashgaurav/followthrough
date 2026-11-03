@@ -1,4 +1,4 @@
-import type { Database } from "bun:sqlite";
+import type { Database } from "../db.ts";
 import { nowIso } from "../db.ts";
 import { ulid, insightHandle } from "../ids.ts";
 import { appendEvent } from "../events.ts";
@@ -83,8 +83,8 @@ interface Candidate {
   match: QuoteMatch;
 }
 
-function loadMeeting(db: Database, meetingId: string): MeetingRow {
-  const meeting = db
+async function loadMeeting(db: Database, meetingId: string): Promise<MeetingRow> {
+  const meeting = await db
     .query("SELECT id, client_id, consent_confirmed, attendees_json, deleted_at FROM meetings WHERE id = ?")
     .get(meetingId) as MeetingRow | null;
   if (!meeting) throw new ExtractionError("meeting_not_found", `Meeting not found: ${meetingId}`);
@@ -92,8 +92,8 @@ function loadMeeting(db: Database, meetingId: string): MeetingRow {
   return meeting;
 }
 
-function latestTranscript(db: Database, meetingId: string): TranscriptRow | null {
-  return db
+async function latestTranscript(db: Database, meetingId: string): Promise<TranscriptRow | null> {
+  return await db
     .query(
       "SELECT id, content FROM transcripts WHERE meeting_id = ? ORDER BY created_at DESC, id DESC LIMIT 1",
     )
@@ -125,13 +125,13 @@ function formatAttendees(attendeesJson: string | null): string | undefined {
   }
 }
 
-function quoteAlreadyRecorded(db: Database, clientId: string, verbatim: string): boolean {
-  return !!db
+async function quoteAlreadyRecorded(db: Database, clientId: string, verbatim: string): Promise<boolean> {
+  return !!await db
     .query("SELECT 1 FROM insight_mentions WHERE client_id = ? AND quote = ? LIMIT 1")
     .get(clientId, verbatim);
 }
 
-function insertMention(
+async function insertMention(
   db: Database,
   opts: {
     insightId: string;
@@ -143,9 +143,9 @@ function insertMention(
     charEnd: number | null;
     now: string;
   },
-): string {
+): Promise<string> {
   const id = ulid();
-  db.query(
+  await db.query(
     `INSERT INTO insight_mentions (id, insight_id, meeting_id, client_id, quote, speaker, char_start, char_end, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
@@ -162,15 +162,15 @@ function insertMention(
   return id;
 }
 
-function upsertRequester(db: Database, insightId: string, clientId: string, now: string): void {
-  db.query(
+async function upsertRequester(db: Database, insightId: string, clientId: string, now: string): Promise<void> {
+  await db.query(
     `INSERT INTO insight_requesters (insight_id, client_id, first_requested_at, last_requested_at)
      VALUES (?, ?, ?, ?)
      ON CONFLICT(insight_id, client_id) DO UPDATE SET last_requested_at = excluded.last_requested_at`,
   ).run(insightId, clientId, now, now);
 }
 
-function insertNewInsight(
+async function insertNewInsight(
   db: Database,
   opts: {
     meetingId: string;
@@ -191,12 +191,12 @@ function insertNewInsight(
     sentiment?: string | null;
     intent?: string | null;
   },
-): string {
+): Promise<string> {
   const insightId = ulid();
   const suggested = opts.aiSuggested && (opts.aiSuggested.track || opts.aiSuggested.owner || opts.aiSuggested.assignee)
     ? JSON.stringify(opts.aiSuggested)
     : null;
-  db.query(
+  await db.query(
     `INSERT INTO insights (id, meeting_id, client_id, extraction_run_id, item_type, title,
                            body_original, body_current, state, ai_confidence, ai_suggested_json,
                            side, sentiment, intent, created_at, updated_at)
@@ -219,7 +219,7 @@ function insertNewInsight(
     opts.now,
   );
   if (opts.quote !== null) {
-    insertMention(db, {
+    await insertMention(db, {
       insightId,
       meetingId: opts.meetingId,
       clientId: opts.clientId,
@@ -230,9 +230,9 @@ function insertNewInsight(
       now: opts.now,
     });
   }
-  upsertRequester(db, insightId, opts.clientId, opts.now);
+  await upsertRequester(db, insightId, opts.clientId, opts.now);
   // fromState null -> 'extracted' so the insight_milestones view gets extracted_at.
-  appendEvent(db, {
+  await appendEvent(db, {
     actorUserId: opts.actorUserId,
     entityType: "insight",
     entityId: insightId,
@@ -243,7 +243,7 @@ function insertNewInsight(
       : { source: "manual", handle: insightHandle(insightId) },
   });
   if (opts.itemType === "action_item_ours") {
-    db.query(
+    await db.query(
       `INSERT INTO action_items (id, meeting_id, insight_id, description, status, created_at)
        VALUES (?, ?, ?, ?, 'open', ?)`,
     ).run(ulid(), opts.meetingId, insightId, opts.body, opts.now);
@@ -257,16 +257,25 @@ function insertNewInsight(
  * already_running guard. Fail any run older than the threshold. Run at startup
  * and periodically.
  */
-export function failStaleExtractionRuns(db: Database, maxAgeMinutes = 30): number {
+/**
+ * A run can never outlive its function (300s on Vercel), so anything still
+ * 'running' after STALE_RUN_MINUTES (default 10) was cut off.
+ */
+export function staleRunMinutes(): number {
+  const n = Number(process.env.STALE_RUN_MINUTES ?? 10);
+  return n > 0 ? n : 10;
+}
+
+export async function failStaleExtractionRuns(db: Database, maxAgeMinutes = 30): Promise<number> {
   const cutoff = new Date(Date.now() - maxAgeMinutes * 60_000).toISOString();
-  const stale = db
+  const stale = await db
     .query("SELECT id, meeting_id FROM extraction_runs WHERE status = 'running' AND started_at < ?")
     .all(cutoff) as Array<{ id: string; meeting_id: string }>;
   for (const run of stale) {
-    db.query(
+    await db.query(
       "UPDATE extraction_runs SET status = 'failed', error = ?, finished_at = ? WHERE id = ? AND status = 'running'",
     ).run(`abandoned: still running after ${maxAgeMinutes} minutes (probable crash/restart)`, nowIso(), run.id);
-    appendEvent(db, {
+    await appendEvent(db, {
       actorUserId: null,
       entityType: "extraction_run",
       entityId: run.id,
@@ -277,6 +286,11 @@ export function failStaleExtractionRuns(db: Database, maxAgeMinutes = 30): numbe
   return stale.length;
 }
 
+/** Postgres unique_violation (23505), from postgres.js or PGlite. */
+export function isUniqueViolation(err: unknown): boolean {
+  return !!err && typeof err === "object" && (err as { code?: unknown }).code === "23505";
+}
+
 export async function runExtraction(
   db: Database,
   llm: LLM,
@@ -284,21 +298,24 @@ export async function runExtraction(
   actorUserId: string,
   opts: { force?: boolean } = {},
 ): Promise<ExtractionResult> {
-  const meeting = loadMeeting(db, meetingId);
+  const meeting = await loadMeeting(db, meetingId);
   if (!meeting.consent_confirmed) {
     throw new ExtractionError("consent_missing", "Consent not confirmed; processing is blocked");
   }
-  const transcript = latestTranscript(db, meetingId);
+  const transcript = await latestTranscript(db, meetingId);
   if (!transcript) throw new ExtractionError("no_transcript", "Meeting has no transcript");
 
+  // A run cut off by the function time limit would block the meeting until the
+  // daily sweep; clear such runs first.
+  await failStaleExtractionRuns(db, staleRunMinutes());
   // Guard against concurrent and accidental re-runs (a timed-out client retry
   // must not spawn a second run that the dedup pass cannot see).
-  const running = db
+  const running = await db
     .query("SELECT id FROM extraction_runs WHERE meeting_id = ? AND status = 'running' LIMIT 1")
     .get(meetingId);
   if (running) throw new ExtractionError("already_running", "An extraction is already running for this meeting");
   if (!opts.force) {
-    const done = db
+    const done = await db
       .query("SELECT id FROM extraction_runs WHERE meeting_id = ? AND status = 'succeeded' LIMIT 1")
       .get(meetingId);
     if (done) {
@@ -310,21 +327,29 @@ export async function runExtraction(
   }
 
   const runId = ulid();
-  db.query(
-    `INSERT INTO extraction_runs (id, meeting_id, transcript_id, llm_model, prompt_version, status, started_at)
-     VALUES (?, ?, ?, ?, ?, 'running', ?)`,
-  ).run(runId, meetingId, transcript.id, DEFAULT_MODEL, PROMPT_VERSION, nowIso());
+  try {
+    await db.query(
+      `INSERT INTO extraction_runs (id, meeting_id, transcript_id, llm_model, prompt_version, status, started_at)
+       VALUES (?, ?, ?, ?, ?, 'running', ?)`,
+    ).run(runId, meetingId, transcript.id, DEFAULT_MODEL, PROMPT_VERSION, nowIso());
+  } catch (err) {
+    // A concurrent request won the race past the check above (unique index on running runs).
+    if (isUniqueViolation(err)) {
+      throw new ExtractionError("already_running", "An extraction is already running for this meeting");
+    }
+    throw err;
+  }
 
   try {
     return await execute(db, llm, meeting, transcript, runId, actorUserId);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    db.query("UPDATE extraction_runs SET status = 'failed', error = ?, finished_at = ? WHERE id = ?").run(
+    await db.query("UPDATE extraction_runs SET status = 'failed', error = ?, finished_at = ? WHERE id = ?").run(
       message,
       nowIso(),
       runId,
     );
-    appendEvent(db, {
+    await appendEvent(db, {
       actorUserId,
       entityType: "extraction_run",
       entityId: runId,
@@ -333,6 +358,26 @@ export async function runExtraction(
     });
     throw err;
   }
+}
+
+/** Chunks processed at once in passes 1-2. Tests pin 1 (MockLLM replays in call order). */
+function extractConcurrency(): number {
+  const n = Number(process.env.EXTRACT_CONCURRENCY ?? 4);
+  return Number.isInteger(n) && n > 0 ? n : 4;
+}
+
+/** fn(0..count-1) with at most `limit` in flight; results in index order. */
+async function mapLimit<T>(count: number, limit: number, fn: (i: number) => Promise<T>): Promise<T[]> {
+  const results = new Array<T>(count);
+  let next = 0;
+  const worker = async () => {
+    while (next < count) {
+      const i = next++;
+      results[i] = await fn(i);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, count) }, worker));
+  return results;
 }
 
 async function execute(
@@ -362,14 +407,19 @@ async function execute(
   let droppedInjection = 0;
   const survivors: Candidate[] = [];
 
-  for (let i = 0; i < chunks.length; i++) {
+  // Pass 1 + 2 per chunk (extract, then verify that chunk's cited items). Chunks
+  // run EXTRACT_CONCURRENCY at a time so long meetings fit a serverless
+  // function's time limit; results merge in chunk order, so output is the same
+  // as a sequential run.
+  const perChunk = async (i: number) => {
     const chunk = chunks[i]!;
+    const out = { survivors: [] as Candidate[], citations: 0, verifier: 0, injection: 0, usage: [] as Array<{ tokensIn: number; tokensOut: number; costUsd: number }> };
     const ext = await llm.completeJSON({
       system: EXTRACTION_SYSTEM_PROMPT,
       prompt: extractionUserPrompt(chunk.text, i, chunks.length, attendees),
       schema: ExtractionResponseSchema,
     });
-    addUsage(ext);
+    out.usage.push(ext);
 
     // Citation gate: no citation, no insight. The quote must be an exact
     // substring of the FULL cleaned transcript after whitespace normalization.
@@ -378,17 +428,17 @@ async function execute(
       // Injection guard: a quote that instructs the tool is never an insight,
       // whatever the model made of it. See guards.ts.
       if (isInstructionToTool(item.quote)) {
-        droppedInjection++;
+        out.injection++;
         continue;
       }
       const match = findQuote(item.quote);
       if (!match) {
-        droppedCitations++;
+        out.citations++;
         continue;
       }
       cited.push({ item, match });
     }
-    if (cited.length === 0) continue;
+    if (cited.length === 0) return out;
 
     // Verifier judge: one call per chunk, batching its surviving items.
     const ver = await llm.completeJSON({
@@ -406,14 +456,23 @@ async function execute(
       ),
       schema: VerifierResponseSchema,
     });
-    addUsage(ver);
+    out.usage.push(ver);
     // Missing verdict defaults to keep: the citation gate already passed and
     // the verifier is strictly a drop filter.
     const dropped = new Set(ver.data.verdicts.filter((v) => !v.keep).map((v) => v.index));
     cited.forEach((c, index) => {
-      if (dropped.has(index)) droppedVerifier++;
-      else survivors.push(c);
+      if (dropped.has(index)) out.verifier++;
+      else out.survivors.push(c);
     });
+    return out;
+  };
+  const perChunkResults = await mapLimit(chunks.length, extractConcurrency(), perChunk);
+  for (const r of perChunkResults) {
+    r.usage.forEach(addUsage);
+    droppedCitations += r.citations;
+    droppedVerifier += r.verifier;
+    droppedInjection += r.injection;
+    survivors.push(...r.survivors);
   }
 
   // Re-run idempotency + within-run dedup on the exact verbatim quote.
@@ -424,7 +483,7 @@ async function execute(
   for (const c of survivors) {
     if (seenQuotes.has(c.match.verbatim)) continue;
     seenQuotes.add(c.match.verbatim);
-    if (quoteAlreadyRecorded(db, meeting.client_id, c.match.verbatim)) continue;
+    if (await quoteAlreadyRecorded(db, meeting.client_id, c.match.verbatim)) continue;
     deduped.push(c);
   }
 
@@ -474,7 +533,7 @@ async function execute(
 
   // Dedup pass against the client's open insights. Skipped when there is
   // nothing to match on either side (no LLM call, all candidates are new).
-  const openInsights = db
+  const openInsights = await db
     .query(
       `SELECT id, item_type, title, body_current FROM insights
        WHERE client_id = ? AND state NOT IN ('closed','rejected','merged')
@@ -516,14 +575,14 @@ async function execute(
   let created = 0;
   let mentionsAdded = 0;
   const touchedInsightIds: string[] = [];
-  const persist = db.transaction(() => {
+  const persist = () => db.transaction(async () => {
     const now = nowIso();
-    fresh.forEach((c, index) => {
+    for (const [index, c] of fresh.entries()) {
       const existingId = matchByIndex.get(index);
       if (existingId) {
         touchedInsightIds.push(existingId);
         // Recurring ask: attach a mention, never duplicate the insight.
-        const mentionId = insertMention(db, {
+        const mentionId = await insertMention(db, {
           insightId: existingId,
           meetingId: meeting.id,
           clientId: meeting.client_id,
@@ -533,12 +592,12 @@ async function execute(
           charEnd: c.match.charEnd,
           now,
         });
-        upsertRequester(db, existingId, meeting.client_id, now);
-        db.query("UPDATE insights SET priority = priority + 1, updated_at = ? WHERE id = ?").run(
+        await upsertRequester(db, existingId, meeting.client_id, now);
+        await db.query("UPDATE insights SET priority = priority + 1, updated_at = ? WHERE id = ?").run(
           now,
           existingId,
         );
-        appendEvent(db, {
+        await appendEvent(db, {
           actorUserId,
           entityType: "insight",
           entityId: existingId,
@@ -547,7 +606,7 @@ async function execute(
         });
         mentionsAdded++;
       } else {
-        const newId = insertNewInsight(db, {
+        const newId = await insertNewInsight(db, {
           meetingId: meeting.id,
           clientId: meeting.client_id,
           extractionRunId: runId,
@@ -575,7 +634,7 @@ async function execute(
         // Cluster siblings: same ask restated elsewhere in the call -> extra
         // mentions on this insight, not separate cards.
         for (const sib of extraMentions.get(index) ?? []) {
-          insertMention(db, {
+          await insertMention(db, {
             insightId: newId,
             meetingId: meeting.id,
             clientId: meeting.client_id,
@@ -588,7 +647,7 @@ async function execute(
           mentionsAdded++;
         }
       }
-    });
+    }
 
     const coverage = [
       plural(chunks.length, "chunk"),
@@ -596,13 +655,13 @@ async function execute(
       plural(droppedVerifier, "verifier drop"),
       ...(droppedInjection > 0 ? [plural(droppedInjection, "injection guard drop")] : []),
     ].join(", ");
-    db.query(
+    await db.query(
       `UPDATE extraction_runs
        SET status = 'succeeded', tokens_in = ?, tokens_out = ?, cost_usd = ?, coverage_note = ?, finished_at = ?
        WHERE id = ?`,
     ).run(tokensIn, tokensOut, costUsd, coverage, now, runId);
-    db.query("UPDATE meetings SET status = 'extracted' WHERE id = ?").run(meeting.id);
-    appendEvent(db, {
+    await db.query("UPDATE meetings SET status = 'extracted' WHERE id = ?").run(meeting.id);
+    await appendEvent(db, {
       actorUserId,
       entityType: "extraction_run",
       entityId: runId,
@@ -617,8 +676,8 @@ async function execute(
       },
     });
   });
-  persist();
-  for (const id of new Set(touchedInsightIds)) syncInsightFts(db, id);
+  await persist();
+  for (const id of new Set(touchedInsightIds)) await syncInsightFts(db, id);
 
   return { runId, created, mentionsAdded, droppedCitations, droppedVerifier, droppedInjection };
 }
@@ -640,16 +699,16 @@ export interface ManualInsightInput {
  * A provided quote must verify against the meeting's transcript; without
  * a quote the insight is accepted with no mention row (no offsets exist).
  */
-export function manualAddInsight(
+export async function manualAddInsight(
   db: Database,
   input: ManualInsightInput,
   actorUserId: string,
-): { insightId: string; handle: string } {
-  const meeting = loadMeeting(db, input.meetingId);
+): Promise<{ insightId: string; handle: string }> {
+  const meeting = await loadMeeting(db, input.meetingId);
 
   let match: QuoteMatch | null = null;
   if (input.quote !== undefined) {
-    const transcript = latestTranscript(db, input.meetingId);
+    const transcript = await latestTranscript(db, input.meetingId);
     if (!transcript) {
       throw new ExtractionError("no_transcript", "Quote given but the meeting has no transcript");
     }
@@ -660,8 +719,8 @@ export function manualAddInsight(
   }
 
   let insightId = "";
-  const persist = db.transaction(() => {
-    insightId = insertNewInsight(db, {
+  const persist = () => db.transaction(async () => {
+    insightId = await insertNewInsight(db, {
       meetingId: meeting.id,
       clientId: meeting.client_id,
       extractionRunId: null,
@@ -677,8 +736,8 @@ export function manualAddInsight(
       now: nowIso(),
     });
   });
-  persist();
-  syncInsightFts(db, insightId);
+  await persist();
+  await syncInsightFts(db, insightId);
 
   return { insightId, handle: insightHandle(insightId) };
 }

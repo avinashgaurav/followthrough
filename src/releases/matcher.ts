@@ -1,4 +1,4 @@
-import type { Database } from "bun:sqlite";
+import type { Database } from "../db.ts";
 import { z } from "zod";
 import { nowIso } from "../db.ts";
 import { productLabel } from "../config.ts";
@@ -106,12 +106,12 @@ export interface MatchRunResult {
  * pair: re-running never duplicates a proposal.
  */
 export async function matchRelease(db: Database, llm: LLM, releaseId: string): Promise<MatchRunResult> {
-  const release = db
+  const release = await db
     .query("SELECT id, tag_name FROM releases WHERE id = ?")
     .get(releaseId) as { id: string; tag_name: string } | null;
   if (!release) throw new Error(`Release not found: ${releaseId}`);
 
-  const entryRows = db
+  const entryRows = await db
     .query(
       `SELECT id, section_type, title, body_md, flags_json
        FROM release_entries
@@ -133,7 +133,7 @@ export async function matchRelease(db: Database, llm: LLM, releaseId: string): P
     flags: r.flags_json ? (JSON.parse(r.flags_json) as string[]) : [],
   }));
 
-  const insights = db
+  const insights = await db
     .query(
       `SELECT id, title, body_current, state, track
        FROM insights
@@ -185,16 +185,16 @@ export async function matchRelease(db: Database, llm: LLM, releaseId: string): P
       const verified = m.evidence_quotes.filter((q) => q.trim().length > 0 && haystack.includes(q));
       if (verified.length === 0) continue;
 
-      if (dupCheck.get(entry.id, insight.id)) continue; // already proposed/decided
+      if (await dupCheck.get(entry.id, insight.id)) continue; // already proposed/decided
 
       const confidence = confidenceFor(m.verdict, entry);
       const ticket =
         insight.state === "ticketed"
-          ? (raisedTicket.get(insight.id) as { id: string } | null)
+          ? (await raisedTicket.get(insight.id) as { id: string } | null)
           : null;
       const matchId = ulid();
-      const tx = db.transaction(() => {
-        db.query(
+      const tx = () => db.transaction(async () => {
+        await db.query(
           `INSERT INTO release_matches
              (id, release_entry_id, insight_id, ticket_id, confidence, method, verdict,
               evidence_quotes_json, rationale, status, created_at)
@@ -210,7 +210,7 @@ export async function matchRelease(db: Database, llm: LLM, releaseId: string): P
           m.rationale,
           nowIso(),
         );
-        appendEvent(db, {
+        await appendEvent(db, {
           actorUserId: null, // system
           entityType: "match",
           entityId: matchId,
@@ -228,7 +228,7 @@ export async function matchRelease(db: Database, llm: LLM, releaseId: string): P
           },
         });
       });
-      tx();
+      await tx();
       result.proposed++;
     }
   }

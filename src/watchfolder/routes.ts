@@ -1,8 +1,8 @@
 import { route, json } from "../router.ts";
-import { getDb } from "../db.ts";
-import { watchFolderStatus } from "./service.ts";
 
-// Watch-folder visibility (SPEC.md section 2.1): what is waiting in the inbox
-// and how much was auto-ingested today.
-
-route("GET", "/api/watchfolder/status", "user", () => json(watchFolderStatus(getDb())));
+// The watch folder (auto-ingest from a local inbox directory) was removed with
+// the move to Vercel: serverless functions have no persistent local folder.
+// The status route stays so the Settings page keeps reporting it as off.
+route("GET", "/api/watchfolder/status", "user", () =>
+  json({ enabled: false, reason: "Not available on the hosted deployment. Upload transcripts on Capture." }),
+);

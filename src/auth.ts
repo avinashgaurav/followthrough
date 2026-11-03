@@ -1,4 +1,4 @@
-import type { Database } from "bun:sqlite";
+import type { Database } from "./db.ts";
 import { timingSafeEqual } from "node:crypto";
 import { allowedEmailDomains } from "./config.ts";
 import { nowIso } from "./db.ts";
@@ -25,7 +25,7 @@ const WINDOW_MINUTES = 15;
  * timing-sensitive comparison always runs (no early return), then folds in the
  * length check — so neither equality nor input length is revealed by timing.
  */
-function secretsEqual(a: string, b: string): boolean {
+export function secretsEqual(a: string, b: string): boolean {
   const ab = Buffer.from(a);
   const bb = Buffer.from(b);
   const len = Math.max(ab.length, bb.length, 1);
@@ -63,9 +63,9 @@ export function generateLoginCode(): string {
   return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
 }
 
-function recentFailures(db: Database, email: string, ip: string | null): number {
+async function recentFailures(db: Database, email: string, ip: string | null): Promise<number> {
   const since = new Date(Date.now() - WINDOW_MINUTES * 60_000).toISOString();
-  const row = db
+  const row = await db
     .query(
       `SELECT COUNT(*) AS n FROM login_attempts
        WHERE occurred_at > ? AND success = 0 AND (email = ? OR (ip IS NOT NULL AND ip = ?))`,
@@ -79,10 +79,10 @@ export type LoginResult =
   | { ok: false; reason: "locked_out" | "invalid" };
 
 /** Create a session row and return its id. */
-function openSession(db: Database, userId: string, ip: string | null, userAgent: string | null): string {
+async function openSession(db: Database, userId: string, ip: string | null, userAgent: string | null): Promise<string> {
   const sessionId = ulid() + ulid(); // 52 chars of entropy
   const expires = new Date(Date.now() + env.SESSION_TTL_HOURS * 3_600_000).toISOString();
-  db.query(
+  await db.query(
     "INSERT INTO sessions (id, user_id, created_at, expires_at, ip, user_agent) VALUES (?, ?, ?, ?, ?, ?)",
   ).run(sessionId, userId, nowIso(), expires, ip, userAgent);
   return sessionId;
@@ -94,8 +94,8 @@ function openSession(db: Database, userId: string, ip: string | null, userAgent:
  * or an admin — admins must use their personal login code, so the shared password
  * can never be used to sign in as an admin.
  */
-function resolveSharedUser(db: Database, email: string): { id: string; role: "admin" | "member" } | null {
-  const existing = db
+async function resolveSharedUser(db: Database, email: string): Promise<{ id: string; role: "admin" | "member" } | null> {
+  const existing = await db
     .query("SELECT id, role, disabled_at FROM users WHERE email = ?")
     .get(email) as { id: string; role: "admin" | "member"; disabled_at: string | null } | null;
   if (existing) {
@@ -105,10 +105,10 @@ function resolveSharedUser(db: Database, email: string): { id: string; role: "ad
   }
   const id = ulid();
   const name = email.split("@")[0] || email; // local part as a starting display name
-  db.query(
+  await db.query(
     "INSERT INTO users (id, email, name, role, code_hash, created_at) VALUES (?, ?, ?, 'member', NULL, ?)",
   ).run(id, email, name, nowIso());
-  appendEvent(db, {
+  await appendEvent(db, {
     actorUserId: id,
     entityType: "user",
     entityId: id,
@@ -128,7 +128,7 @@ export async function login(
 ): Promise<LoginResult> {
   const normalized = email.trim().toLowerCase();
   if (!isAllowedEmail(normalized)) return { ok: false, reason: "invalid" };
-  if (recentFailures(db, normalized, ip) >= MAX_FAILURES) {
+  if (await recentFailures(db, normalized, ip) >= MAX_FAILURES) {
     return { ok: false, reason: "locked_out" };
   }
 
@@ -138,17 +138,17 @@ export async function login(
   // user or unlogged attempt.
   const shared = (opts.accessPassword ?? env.ACCESS_PASSWORD)?.trim();
   if (shared && secretsEqual(code.trim(), shared)) {
-    return db.transaction((): LoginResult => {
-      const su = resolveSharedUser(db, normalized);
-      db.query(
+    return await db.transaction(async (): Promise<LoginResult> => {
+      const su = await resolveSharedUser(db, normalized);
+      await db.query(
         "INSERT INTO login_attempts (email, ip, occurred_at, success) VALUES (?, ?, ?, ?)",
       ).run(normalized, ip, nowIso(), su ? 1 : 0);
       if (!su) return { ok: false, reason: "invalid" }; // disabled or admin → must use code
-      return { ok: true, sessionId: openSession(db, su.id, ip, userAgent), userId: su.id, role: su.role };
-    })();
+      return { ok: true, sessionId: await openSession(db, su.id, ip, userAgent), userId: su.id, role: su.role };
+    });
   }
 
-  const user = db
+  const user = await db
     .query(
       "SELECT id, role, code_hash FROM users WHERE email = ? AND disabled_at IS NULL",
     )
@@ -161,13 +161,13 @@ export async function login(
   const valid = user?.code_hash
     ? await verifyCode(code, user.code_hash)
     : ((await verifyCode(code, DUMMY_HASH)), false);
-  db.query(
+  await db.query(
     "INSERT INTO login_attempts (email, ip, occurred_at, success) VALUES (?, ?, ?, ?)",
   ).run(normalized, ip, nowIso(), valid ? 1 : 0);
 
   if (!user || !valid) return { ok: false, reason: "invalid" };
 
-  return { ok: true, sessionId: openSession(db, user.id, ip, userAgent), userId: user.id, role: user.role };
+  return { ok: true, sessionId: await openSession(db, user.id, ip, userAgent), userId: user.id, role: user.role };
 }
 
 export interface AuthedUser {
@@ -189,20 +189,20 @@ export function isGuestUser(u: AuthedUser | null | undefined): boolean {
   return !!u && u.id === GUEST_USER_ID;
 }
 
-export function guestUser(db: Database): AuthedUser {
-  const existing = db
+export async function guestUser(db: Database): Promise<AuthedUser> {
+  const existing = await db
     .query("SELECT id, email, name, role FROM users WHERE id = ?")
     .get(GUEST_USER_ID) as AuthedUser | null;
   if (existing) return existing;
-  db.query(
-    "INSERT OR IGNORE INTO users (id, email, name, role, created_at) VALUES (?, ?, 'Guest', 'admin', ?)",
+  await db.query(
+    "INSERT INTO users (id, email, name, role, created_at) VALUES (?, ?, 'Guest', 'admin', ?) ON CONFLICT DO NOTHING",
   ).run(GUEST_USER_ID, GUEST_EMAIL, nowIso());
   return { id: GUEST_USER_ID, email: GUEST_EMAIL, name: "Guest", role: "admin" };
 }
 
-export function userForSession(db: Database, sessionId: string | null): AuthedUser | null {
+export async function userForSession(db: Database, sessionId: string | null): Promise<AuthedUser | null> {
   if (!sessionId) return null;
-  const row = db
+  const row = await db
     .query(
       `SELECT u.id, u.email, u.name, u.role FROM sessions s
        JOIN users u ON u.id = s.user_id
@@ -212,21 +212,21 @@ export function userForSession(db: Database, sessionId: string | null): AuthedUs
   return row;
 }
 
-export function logout(db: Database, sessionId: string): void {
-  db.query("DELETE FROM sessions WHERE id = ?").run(sessionId);
+export async function logout(db: Database, sessionId: string): Promise<void> {
+  await db.query("DELETE FROM sessions WHERE id = ?").run(sessionId);
 }
 
 /** Revoke a user's login code (offboarding). Kills their sessions too. */
-export function revokeCode(db: Database, userId: string): void {
+export async function revokeCode(db: Database, userId: string): Promise<void> {
   // Full offboard: clear the login code, mark the account disabled (so it drops
   // out of owner pickers and can no longer sign in via code OR shared password),
   // and kill any live sessions. Re-issuing a code (rotate) re-enables them.
-  db.query("UPDATE users SET code_hash = NULL, code_rotated_at = ?, disabled_at = ? WHERE id = ?").run(
+  await db.query("UPDATE users SET code_hash = NULL, code_rotated_at = ?, disabled_at = ? WHERE id = ?").run(
     nowIso(),
     nowIso(),
     userId,
   );
-  db.query("DELETE FROM sessions WHERE user_id = ?").run(userId);
+  await db.query("DELETE FROM sessions WHERE user_id = ?").run(userId);
 }
 
 export function sessionCookie(sessionId: string, secure: boolean): string {

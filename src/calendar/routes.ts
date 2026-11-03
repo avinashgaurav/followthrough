@@ -10,8 +10,8 @@ import {
   setFeedUrl,
 } from "./service.ts";
 
-route("GET", "/api/calendar/status", "user", () =>
-  json({ configured: getFeedUrl(getDb()) !== null }),
+route("GET", "/api/calendar/status", "user", async () =>
+  json({ configured: await getFeedUrl(getDb()) !== null }),
 );
 
 route("GET", "/api/calendar/events", "user", async () => {
@@ -42,7 +42,7 @@ route("POST", "/api/admin/calendar", "admin", async (req, user) => {
   if (!parsed.success) return json({ error: "invalid body", issues: parsed.error.issues }, 400);
 
   try {
-    setFeedUrl(getDb(), parsed.data.ics_url, user!.id);
+    await setFeedUrl(getDb(), parsed.data.ics_url, user!.id);
   } catch (err) {
     if (err instanceof CalendarConfigError) return json({ error: err.message }, 400);
     throw err;
@@ -50,7 +50,7 @@ route("POST", "/api/admin/calendar", "admin", async (req, user) => {
   return json({ configured: true });
 });
 
-route("DELETE", "/api/admin/calendar", "admin", (_req, user) => {
-  clearFeedUrl(getDb(), user!.id);
+route("DELETE", "/api/admin/calendar", "admin", async (_req, user) => {
+  await clearFeedUrl(getDb(), user!.id);
   return json({ configured: false });
 });

@@ -1,4 +1,4 @@
-import type { Database } from "bun:sqlite";
+import type { Database } from "../db.ts";
 import { nowIso } from "../db.ts";
 import { ulid } from "../ids.ts";
 
@@ -221,16 +221,16 @@ export function parseRelease(bodyMd: string, tagName: string): ParsedEntry[] {
 // ------------------------------------------------------------------- persist
 
 /** Insert parsed entries for a release. Returns the new entry ids in order. */
-export function persistEntries(db: Database, releaseId: string, entries: ParsedEntry[]): string[] {
+export async function persistEntries(db: Database, releaseId: string, entries: ParsedEntry[]): Promise<string[]> {
   const ids: string[] = [];
   const insert = db.query(
     `INSERT INTO release_entries (id, release_id, section_type, title, body_md, product_area, pr_refs_json, flags_json, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
-  const tx = db.transaction(() => {
+  const tx = () => db.transaction(async () => {
     for (const e of entries) {
       const id = ulid();
-      insert.run(
+      await insert.run(
         id,
         releaseId,
         e.section_type,
@@ -244,6 +244,6 @@ export function persistEntries(db: Database, releaseId: string, entries: ParsedE
       ids.push(id);
     }
   });
-  tx();
+  await tx();
   return ids;
 }

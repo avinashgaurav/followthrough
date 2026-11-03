@@ -1,36 +1,19 @@
 import { join } from "node:path";
 import { existsSync } from "node:fs";
 import { env, allowedEmailDomains, demoMode, llmDailyBudgetUsd } from "./config.ts";
-import { getDb, nowIso } from "./db.ts";
-import { route, json, dispatch } from "./router.ts";
-
-// Route modules register themselves at import time.
-import "./auth-routes.ts";
-import "./ingest/routes.ts";
-import "./extract/routes.ts";
-import "./insights/routes.ts";
-import "./tickets/routes.ts";
-import "./evidence/routes.ts";
-import "./emails/routes.ts";
-import "./metrics/routes.ts";
-import "./exports/routes.ts";
-import "./digest/routes.ts";
-import "./stt/routes.ts";
-import "./calendar/routes.ts";
-import "./releases/routes.ts";
-import "./watchfolder/routes.ts";
-import "./retention/routes.ts";
-import "./share/routes.ts";
+import { getDb, migrate } from "./db.ts";
+import { handleApi } from "./app.ts";
 import { startDigestScheduler } from "./digest/digest.ts";
 import { failStaleExtractionRuns } from "./extract/pipeline.ts";
 import { markStaleDrafts } from "./tickets/routes.ts";
 import { startReleasePoller } from "./releases/routes.ts";
-import { startWatchFolder } from "./watchfolder/service.ts";
 import { startDailyNudge } from "./notify.ts";
 
-getDb();
-
-route("GET", "/api/health", "public", () => json({ ok: true, service: "followthrough", time: nowIso() }));
+/**
+ * Local / self-hosted server (bun run dev). On Vercel the same routes run in
+ * api/server.ts, the web app is static output, and scheduled work runs from
+ * the daily cron (src/cron.ts) instead of the timers below.
+ */
 
 const WEB_DIST = join(import.meta.dir, "..", "web", "dist");
 
@@ -53,34 +36,31 @@ async function serveStatic(pathname: string): Promise<Response> {
 }
 
 if (import.meta.main) {
+  await migrate(getDb());
   // The public demo is read-only synthetic data: no polling, ingest or outbound nudges.
   if (!demoMode()) {
     startDigestScheduler();
     startReleasePoller();
-    startWatchFolder();
     startDailyNudge(getDb);
   }
-  const sweepStale = () => {
+  const sweepStale = async () => {
     try {
-      markStaleDrafts(getDb());
-      const swept = failStaleExtractionRuns(getDb());
+      await markStaleDrafts(getDb());
+      const swept = await failStaleExtractionRuns(getDb());
       if (swept > 0) console.warn(`swept ${swept} abandoned extraction run(s)`);
     } catch (err) {
       console.warn("stale sweep failed:", err);
     }
   };
-  sweepStale();
-  setInterval(sweepStale, 60 * 60 * 1000);
+  await sweepStale();
+  setInterval(() => void sweepStale(), 60 * 60 * 1000);
   Bun.serve({
     port: env.PORT,
     idleTimeout: 255, // LLM extraction requests run for minutes, not seconds
     maxRequestBodySize: 512 * 1024 * 1024, // recordings can be large
     async fetch(req) {
       const url = new URL(req.url);
-      if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/share/")) {
-        const res = dispatch(req);
-        return res ?? json({ error: "not found" }, 404);
-      }
+      if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/share/")) return handleApi(req);
       return serveStatic(url.pathname);
     },
   });

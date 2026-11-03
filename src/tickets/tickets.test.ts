@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import type { Database } from "bun:sqlite";
+import type { Database } from "../db.ts";
 import { openTestDb, nowIso } from "../db.ts";
 import { ulid, insightHandle } from "../ids.ts";
 import { MockLLM, setLLM } from "../llm/provider.ts";
@@ -26,8 +26,8 @@ interface Seeded {
   insightId: string;
 }
 
-function seed(overrides: { state?: string; track?: string | null } = {}): Seeded {
-  const db = openTestDb();
+async function seed(overrides: { state?: string; track?: string | null } = {}): Promise<Seeded> {
+  const db = await openTestDb();
   const t = nowIso();
   const adminId = ulid();
   const assigneeId = ulid();
@@ -39,21 +39,21 @@ function seed(overrides: { state?: string; track?: string | null } = {}): Seeded
   const m2 = ulid();
 
   const addUser = db.query("INSERT INTO users (id, email, name, role, created_at) VALUES (?, ?, ?, ?, ?)");
-  addUser.run(adminId, `admin-${adminId}@tallyhall.com`, "Admin", "admin", t);
-  addUser.run(assigneeId, `dev-${assigneeId}@tallyhall.com`, "Dev", "member", t);
-  addUser.run(otherId, `other-${otherId}@tallyhall.com`, "Other", "member", t);
+  await addUser.run(adminId, `admin-${adminId}@tallyhall.com`, "Admin", "admin", t);
+  await addUser.run(assigneeId, `dev-${assigneeId}@tallyhall.com`, "Dev", "member", t);
+  await addUser.run(otherId, `other-${otherId}@tallyhall.com`, "Other", "member", t);
 
   const addClient = db.query("INSERT INTO clients (id, name, created_at) VALUES (?, ?, ?)");
-  addClient.run(c1, "Acme Corp", t);
-  addClient.run(c2, "Globex", t);
+  await addClient.run(c1, "Acme Corp", t);
+  await addClient.run(c2, "Globex", t);
 
   const addMeeting = db.query(
     "INSERT INTO meetings (id, client_id, seq, meeting_date, created_at) VALUES (?, ?, 1, ?, ?)",
   );
-  addMeeting.run(m1, c1, "2026-05-01", t);
-  addMeeting.run(m2, c2, "2026-05-15", t);
+  await addMeeting.run(m1, c1, "2026-05-01", t);
+  await addMeeting.run(m2, c2, "2026-05-15", t);
 
-  db.query(
+  await db.query(
     `INSERT INTO insights (id, meeting_id, client_id, item_type, track, title, body_original, body_current,
                            state, assignee_user_id, created_at, updated_at)
      VALUES (?, ?, ?, 'feature_request', ?, 'SSO support', 'llm draft', 'Clients need SAML SSO before security reviews.',
@@ -72,33 +72,33 @@ function seed(overrides: { state?: string; track?: string | null } = {}): Seeded
   const addMention = db.query(
     "INSERT INTO insight_mentions (id, insight_id, meeting_id, client_id, quote, speaker, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
   );
-  addMention.run(ulid(), insightId, m1, c1, "We really need SSO before the security review", "Dana Vargas", t);
-  addMention.run(ulid(), insightId, m2, c2, "single sign on is blocking our rollout", "Lee Park", t);
+  await addMention.run(ulid(), insightId, m1, c1, "We really need SSO before the security review", "Dana Vargas", t);
+  await addMention.run(ulid(), insightId, m2, c2, "single sign on is blocking our rollout", "Lee Park", t);
 
   const addRequester = db.query(
     "INSERT INTO insight_requesters (insight_id, client_id, first_requested_at, last_requested_at) VALUES (?, ?, ?, ?)",
   );
-  addRequester.run(insightId, c1, "2026-05-01T00:00:00Z", "2026-05-01T00:00:00Z");
-  addRequester.run(insightId, c2, "2026-05-15T00:00:00Z", "2026-05-15T00:00:00Z");
+  await addRequester.run(insightId, c1, "2026-05-01T00:00:00Z", "2026-05-01T00:00:00Z");
+  await addRequester.run(insightId, c2, "2026-05-15T00:00:00Z", "2026-05-15T00:00:00Z");
 
   return { db, adminId, assigneeId, otherId, insightId };
 }
 
-function insertDraft(db: Database, insightId: string, createdBy: string, draftedAt = nowIso()): string {
+async function insertDraft(db: Database, insightId: string, createdBy: string, draftedAt = nowIso()): Promise<string> {
   const id = ulid();
-  db.query(
+  await db.query(
     `INSERT INTO tickets (id, insight_id, draft_title, draft_body_md, state, created_by, drafted_at)
      VALUES (?, ?, 'Add SSO', ?, 'draft', ?, ?)`,
   ).run(id, insightId, `Problem\n\n${ticketFooter(insightId, ["Acme Corp"])}\n`, createdBy, draftedAt);
   return id;
 }
 
-function insightState(db: Database, insightId: string): string {
-  return (db.query("SELECT state FROM insights WHERE id = ?").get(insightId) as { state: string }).state;
+async function insightState(db: Database, insightId: string): Promise<string> {
+  return (await db.query("SELECT state FROM insights WHERE id = ?").get(insightId) as { state: string }).state;
 }
 
-function ticketEvents(db: Database, ticketId: string, eventType: string): Array<Record<string, unknown>> {
-  return db
+async function ticketEvents(db: Database, ticketId: string, eventType: string): Promise<Array<Record<string, unknown>>> {
+  return await db
     .query("SELECT * FROM events WHERE entity_type = 'ticket' AND entity_id = ? AND event_type = ?")
     .all(ticketId, eventType) as Array<Record<string, unknown>>;
 }
@@ -127,7 +127,7 @@ afterEach(() => setLLM(null));
 
 describe("ticket drafting", () => {
   test("draft embeds hidden marker, footer, requester count, and client names", async () => {
-    const { db, assigneeId, insightId } = seed();
+    const { db, assigneeId, insightId } = await seed();
     const mock = new MockLLM().enqueue({ title: "Add SAML SSO", body_md: "Problem: clients need SSO.\n\n- AC: SSO works" });
     setLLM(mock);
 
@@ -139,13 +139,13 @@ describe("ticket drafting", () => {
     expect(ticket.draft_body_md).toContain("---");
     expect(ticket.draft_body_md).toContain("Requested by 2 client(s): Acme Corp, Globex");
     expect(ticket.draft_body_md).toContain(`Followthrough ref: ${insightId}`);
-    expect(ticketEvents(db, ticket.id, "ticket.drafted")).toHaveLength(1);
-    expect(getTicket(db, ticket.id).id).toBe(ticket.id);
-    expect(listTicketsForInsight(db, insightId).map((t) => t.id)).toContain(ticket.id);
+    expect(await ticketEvents(db, ticket.id, "ticket.drafted")).toHaveLength(1);
+    expect((await getTicket(db, ticket.id)).id).toBe(ticket.id);
+    expect((await listTicketsForInsight(db, insightId)).map((t) => t.id)).toContain(ticket.id);
   });
 
   test("draft prompt carries verbatim quotes with client names and meeting dates", async () => {
-    const { db, assigneeId, insightId } = seed();
+    const { db, assigneeId, insightId } = await seed();
     const mock = new MockLLM().enqueue({ title: "T", body_md: "B" });
     setLLM(mock);
 
@@ -161,14 +161,14 @@ describe("ticket drafting", () => {
   });
 
   test("guards: missing insight 404, non-finalized state 409, wrong track 409", async () => {
-    const { db, assigneeId, insightId } = seed({ state: "triaged" });
+    const { db, assigneeId, insightId } = await seed({ state: "triaged" });
     setLLM(new MockLLM().enqueue({ title: "T", body_md: "B" }));
     const actor = { id: assigneeId, role: "member" as const };
 
     await expectHttp(draftTicket(db, { insightId: "NOPE", actor }), 404);
     await expectHttp(draftTicket(db, { insightId, actor }), 409);
 
-    const marketing = seed({ track: "marketing" });
+    const marketing = await seed({ track: "marketing" });
     await expectHttp(
       draftTicket(marketing.db, { insightId: marketing.insightId, actor: { id: marketing.assigneeId, role: "member" } }),
       409,
@@ -176,7 +176,7 @@ describe("ticket drafting", () => {
   });
 
   test("re-draft is allowed when insight is already ticketed", async () => {
-    const { db, assigneeId, insightId } = seed({ state: "ticketed" });
+    const { db, assigneeId, insightId } = await seed({ state: "ticketed" });
     setLLM(new MockLLM().enqueue({ title: "T2", body_md: "B2" }));
 
     const ticket = await draftTicket(db, { insightId, actor: { id: assigneeId, role: "member" } });
@@ -185,12 +185,12 @@ describe("ticket drafting", () => {
 });
 
 describe("mark-raised (manual paste-back)", () => {
-  test("parses repo and number, stores fields, transitions insight to ticketed", () => {
-    const { db, assigneeId, insightId } = seed();
-    const ticketId = insertDraft(db, insightId, assigneeId);
+  test("parses repo and number, stores fields, transitions insight to ticketed", async () => {
+    const { db, assigneeId, insightId } = await seed();
+    const ticketId = await insertDraft(db, insightId, assigneeId);
 
     // paste-back may name ANY repo, including tallyhall: the human created the issue
-    const ticket = markRaised(db, {
+    const ticket = await markRaised(db, {
       ticketId,
       externalUrl: "https://github.com/tallyhall/app/issues/123",
       actor: { id: assigneeId, role: "member" },
@@ -202,9 +202,9 @@ describe("mark-raised (manual paste-back)", () => {
     expect(ticket.create_mode).toBe("manual_paste");
     expect(ticket.state).toBe("raised");
     expect(ticket.raised_at).toBeTruthy();
-    expect(insightState(db, insightId)).toBe("ticketed");
+    expect(await insightState(db, insightId)).toBe("ticketed");
 
-    const events = ticketEvents(db, ticketId, "ticket.raised");
+    const events = await ticketEvents(db, ticketId, "ticket.raised");
     expect(events).toHaveLength(1);
     const payload = JSON.parse(String(events[0]!.payload_json)) as Record<string, unknown>;
     expect(payload.repo).toBe("tallyhall/app");
@@ -213,8 +213,8 @@ describe("mark-raised (manual paste-back)", () => {
   });
 
   test("rejects non-issue URLs with 400 and leaves state untouched", async () => {
-    const { db, assigneeId, insightId } = seed();
-    const ticketId = insertDraft(db, insightId, assigneeId);
+    const { db, assigneeId, insightId } = await seed();
+    const ticketId = await insertDraft(db, insightId, assigneeId);
     const actor = { id: assigneeId, role: "member" as const };
 
     const bad = [
@@ -228,16 +228,16 @@ describe("mark-raised (manual paste-back)", () => {
     for (const externalUrl of bad) {
       await expectHttp(() => markRaised(db, { ticketId, externalUrl, actor }), 400);
     }
-    expect(getTicket(db, ticketId).state).toBe("draft");
-    expect(insightState(db, insightId)).toBe("finalized");
+    expect((await getTicket(db, ticketId)).state).toBe("draft");
+    expect(await insightState(db, insightId)).toBe("finalized");
   });
 
   test("skips insight transition when already ticketed; re-raising same ticket is 409", async () => {
-    const { db, assigneeId, insightId } = seed();
+    const { db, assigneeId, insightId } = await seed();
     const actor = { id: assigneeId, role: "member" as const };
-    const first = insertDraft(db, insightId, assigneeId);
-    markRaised(db, { ticketId: first, externalUrl: "https://github.com/acme/app/issues/1", actor });
-    expect(insightState(db, insightId)).toBe("ticketed");
+    const first = await insertDraft(db, insightId, assigneeId);
+    await markRaised(db, { ticketId: first, externalUrl: "https://github.com/acme/app/issues/1", actor });
+    expect(await insightState(db, insightId)).toBe("ticketed");
 
     await expectHttp(
       () => markRaised(db, { ticketId: first, externalUrl: "https://github.com/acme/app/issues/2", actor }),
@@ -245,17 +245,17 @@ describe("mark-raised (manual paste-back)", () => {
     );
 
     // a second draft against the now-ticketed insight raises without a transition error
-    const second = insertDraft(db, insightId, assigneeId);
-    const t2 = markRaised(db, { ticketId: second, externalUrl: "https://github.com/acme/app/issues/3", actor });
+    const second = await insertDraft(db, insightId, assigneeId);
+    const t2 = await markRaised(db, { ticketId: second, externalUrl: "https://github.com/acme/app/issues/3", actor });
     expect(t2.state).toBe("raised");
-    expect(insightState(db, insightId)).toBe("ticketed");
+    expect(await insightState(db, insightId)).toBe("ticketed");
   });
 });
 
 describe("create-direct (org safety)", () => {
   test("tallyhall repo returns 403 even with a token set; GitHub is never called", async () => {
-    const { db, assigneeId, insightId } = seed();
-    const ticketId = insertDraft(db, insightId, assigneeId);
+    const { db, assigneeId, insightId } = await seed();
+    const ticketId = await insertDraft(db, insightId, assigneeId);
     const gh = stubFetch(201, { html_url: "https://github.com/tallyhall/app/issues/9", number: 9 });
 
     const err = await expectHttp(
@@ -271,14 +271,14 @@ describe("create-direct (org safety)", () => {
 
     expect(err.message).toContain("tallyhall");
     expect(gh.calls).toHaveLength(0); // the write never reached the network
-    expect(getTicket(db, ticketId).state).toBe("draft");
-    expect(insightState(db, insightId)).toBe("finalized");
-    expect(ticketEvents(db, ticketId, "ticket.raised")).toHaveLength(0);
+    expect((await getTicket(db, ticketId)).state).toBe("draft");
+    expect(await insightState(db, insightId)).toBe("finalized");
+    expect(await ticketEvents(db, ticketId, "ticket.raised")).toHaveLength(0);
   });
 
   test("non-allowlisted repo is 403 too", async () => {
-    const { db, assigneeId, insightId } = seed();
-    const ticketId = insertDraft(db, insightId, assigneeId);
+    const { db, assigneeId, insightId } = await seed();
+    const ticketId = await insertDraft(db, insightId, assigneeId);
     const gh = stubFetch(201, {});
 
     await expectHttp(
@@ -295,8 +295,8 @@ describe("create-direct (org safety)", () => {
   });
 
   test("missing write token is 400 and GitHub is never called", async () => {
-    const { db, assigneeId, insightId } = seed();
-    const ticketId = insertDraft(db, insightId, assigneeId);
+    const { db, assigneeId, insightId } = await seed();
+    const ticketId = await insertDraft(db, insightId, assigneeId);
     const gh = stubFetch(201, {});
 
     const err = await expectHttp(
@@ -314,8 +314,8 @@ describe("create-direct (org safety)", () => {
   });
 
   test("allowlisted repo with stubbed fetch succeeds and stores all fields", async () => {
-    const { db, assigneeId, insightId } = seed();
-    const ticketId = insertDraft(db, insightId, assigneeId);
+    const { db, assigneeId, insightId } = await seed();
+    const ticketId = await insertDraft(db, insightId, assigneeId);
     const issueUrl = `https://github.com/${ALLOWED_REPO}/issues/42`;
     const gh = stubFetch(201, { html_url: issueUrl, number: 42 });
 
@@ -341,13 +341,13 @@ describe("create-direct (org safety)", () => {
     expect(ticket.create_mode).toBe("direct_api");
     expect(ticket.state).toBe("raised");
     expect(ticket.raised_at).toBeTruthy();
-    expect(insightState(db, insightId)).toBe("ticketed");
-    expect(ticketEvents(db, ticketId, "ticket.raised")).toHaveLength(1);
+    expect(await insightState(db, insightId)).toBe("ticketed");
+    expect(await ticketEvents(db, ticketId, "ticket.raised")).toHaveLength(1);
   });
 
   test("non-assignee member is blocked BEFORE the GitHub call (no orphaned issue)", async () => {
-    const { db, otherId, assigneeId, insightId } = seed();
-    const ticketId = insertDraft(db, insightId, assigneeId);
+    const { db, otherId, assigneeId, insightId } = await seed();
+    const ticketId = await insertDraft(db, insightId, assigneeId);
     const gh = stubFetch(201, { html_url: `https://github.com/${ALLOWED_REPO}/issues/1`, number: 1 });
 
     await expectHttp(
@@ -361,12 +361,12 @@ describe("create-direct (org safety)", () => {
       403,
     );
     expect(gh.calls).toHaveLength(0);
-    expect(getTicket(db, ticketId).state).toBe("draft");
+    expect((await getTicket(db, ticketId)).state).toBe("draft");
   });
 
   test("GitHub non-201 surfaces as GitHubApiError and the ticket stays draft", async () => {
-    const { db, assigneeId, insightId } = seed();
-    const ticketId = insertDraft(db, insightId, assigneeId);
+    const { db, assigneeId, insightId } = await seed();
+    const ticketId = await insertDraft(db, insightId, assigneeId);
     const gh = stubFetch(422, { message: "Validation Failed" });
 
     await expect(
@@ -378,8 +378,8 @@ describe("create-direct (org safety)", () => {
         fetchImpl: gh.fn,
       }),
     ).rejects.toBeInstanceOf(GitHubApiError);
-    expect(getTicket(db, ticketId).state).toBe("draft");
-    expect(insightState(db, insightId)).toBe("finalized");
+    expect((await getTicket(db, ticketId)).state).toBe("draft");
+    expect(await insightState(db, insightId)).toBe("finalized");
   });
 
   test("createIssue itself refuses tallyhall even when called directly (defense in depth)", async () => {
@@ -390,28 +390,28 @@ describe("create-direct (org safety)", () => {
 });
 
 describe("markStaleDrafts", () => {
-  test("flips only drafts older than the threshold", () => {
-    const { db, assigneeId, insightId } = seed();
+  test("flips only drafts older than the threshold", async () => {
+    const { db, assigneeId, insightId } = await seed();
     const tenDaysAgo = new Date(Date.now() - 10 * 86_400_000).toISOString();
-    const oldDraft = insertDraft(db, insightId, assigneeId, tenDaysAgo);
-    const freshDraft = insertDraft(db, insightId, assigneeId);
-    const raised = insertDraft(db, insightId, assigneeId, tenDaysAgo);
-    markRaised(db, {
+    const oldDraft = await insertDraft(db, insightId, assigneeId, tenDaysAgo);
+    const freshDraft = await insertDraft(db, insightId, assigneeId);
+    const raised = await insertDraft(db, insightId, assigneeId, tenDaysAgo);
+    await markRaised(db, {
       ticketId: raised,
       externalUrl: "https://github.com/acme/app/issues/5",
       actor: { id: assigneeId, role: "member" },
     });
 
-    const flipped = markStaleDrafts(db, 7);
+    const flipped = await markStaleDrafts(db, 7);
 
     expect(flipped).toEqual([oldDraft]);
-    expect(getTicket(db, oldDraft).state).toBe("stale");
-    expect(getTicket(db, freshDraft).state).toBe("draft");
-    expect(getTicket(db, raised).state).toBe("raised");
-    expect(ticketEvents(db, oldDraft, "ticket.stale")).toHaveLength(1);
-    expect(ticketEvents(db, freshDraft, "ticket.stale")).toHaveLength(0);
+    expect((await getTicket(db, oldDraft)).state).toBe("stale");
+    expect((await getTicket(db, freshDraft)).state).toBe("draft");
+    expect((await getTicket(db, raised)).state).toBe("raised");
+    expect(await ticketEvents(db, oldDraft, "ticket.stale")).toHaveLength(1);
+    expect(await ticketEvents(db, freshDraft, "ticket.stale")).toHaveLength(0);
 
     // idempotent: a second run finds nothing
-    expect(markStaleDrafts(db, 7)).toEqual([]);
+    expect(await markStaleDrafts(db, 7)).toEqual([]);
   });
 });

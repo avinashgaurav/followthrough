@@ -1,4 +1,4 @@
-import type { Database } from "bun:sqlite";
+import type { Database } from "../db.ts";
 import { insightHandle } from "../ids.ts";
 import {
   daysBetween,
@@ -34,8 +34,8 @@ interface MilestoneRow {
   uploaded_at: string | null;
 }
 
-function milestoneRows(db: Database): MilestoneRow[] {
-  return db
+async function milestoneRows(db: Database): Promise<MilestoneRow[]> {
+  return await db
     .query(
       `SELECT i.id, i.track,
               COALESCE(m.extracted_at, i.created_at) AS extracted_at,
@@ -62,7 +62,7 @@ export interface StageTats {
   end_to_end: DurationStats; // origin meeting.uploaded -> client_notified
 }
 
-export function stageTats(db: Database): StageTats[] {
+export async function stageTats(db: Database): Promise<StageTats[]> {
   type Buckets = { e2f: number[]; f2t: number[]; t2s: number[]; f2s: number[]; s2n: number[]; e2e: number[] };
   const byTrack = new Map<string, Buckets>();
   const bucket = (track: string): Buckets => {
@@ -74,7 +74,7 @@ export function stageTats(db: Database): StageTats[] {
     return b;
   };
 
-  for (const r of milestoneRows(db)) {
+  for (const r of await milestoneRows(db)) {
     const b = bucket(r.track ?? UNTRACKED);
     if (r.extracted_at && r.finalized_at) b.e2f.push(daysBetween(r.extracted_at, r.finalized_at));
     if (r.finalized_at && r.ticketed_at) b.f2t.push(daysBetween(r.finalized_at, r.ticketed_at));
@@ -111,9 +111,9 @@ export interface FunnelCohort {
   pct: Record<FunnelStage, number>;
 }
 
-export function funnel(db: Database): FunnelCohort[] {
+export async function funnel(db: Database): Promise<FunnelCohort[]> {
   const byWeek = new Map<string, { cohort: number; counts: Record<FunnelStage, number> }>();
-  for (const r of milestoneRows(db)) {
+  for (const r of await milestoneRows(db)) {
     if (!r.extracted_at) continue;
     const week = isoWeek(r.extracted_at);
     let agg = byWeek.get(week);
@@ -152,8 +152,8 @@ interface OpenInsightRow {
   last_change: string | null;
 }
 
-function openInsightRows(db: Database): OpenInsightRow[] {
-  return db
+async function openInsightRows(db: Database): Promise<OpenInsightRow[]> {
+  return await db
     .query(
       `SELECT i.id, i.title, i.state, i.track, i.created_at, i.assignee_user_id,
               u.name AS assignee_name,
@@ -185,10 +185,10 @@ export interface WipGroup {
   age_buckets: Record<AgeBucket, number>;
 }
 
-export function wipAndAging(db: Database, now: Date = new Date()): WipGroup[] {
+export async function wipAndAging(db: Database, now: Date = new Date()): Promise<WipGroup[]> {
   const nowIso = now.toISOString();
   const groups = new Map<string, WipGroup>();
-  for (const r of openInsightRows(db)) {
+  for (const r of await openInsightRows(db)) {
     const track = r.track ?? UNTRACKED;
     const key = `${r.state}|${track}`;
     let g = groups.get(key);
@@ -223,14 +223,14 @@ export interface StuckItem {
 }
 
 /** Insights whose time in their current state exceeds the per-state threshold (days). */
-export function stuckItems(
+export async function stuckItems(
   db: Database,
   thresholds: Record<string, number> = DEFAULT_STUCK_THRESHOLDS,
   now: Date = new Date(),
-): StuckItem[] {
+): Promise<StuckItem[]> {
   const nowIso = now.toISOString();
   const out: StuckItem[] = [];
-  for (const r of openInsightRows(db)) {
+  for (const r of await openInsightRows(db)) {
     const threshold = thresholds[r.state];
     if (threshold === undefined) continue;
     const days = daysBetween(r.last_change ?? r.created_at, nowIso);
@@ -261,7 +261,7 @@ export interface PersonWeek {
   email_copies: number;
 }
 
-export function perPerson(db: Database): PersonWeek[] {
+export async function perPerson(db: Database): Promise<PersonWeek[]> {
   type Counter = keyof Pick<PersonWeek, "finalized" | "ticketed" | "evidence_confirms" | "email_copies">;
   const agg = new Map<string, PersonWeek>();
   const names = new Map<string, string>();
@@ -270,7 +270,7 @@ export function perPerson(db: Database): PersonWeek[] {
   // the generic founder account) are noise here, the same way they are filtered
   // out of every owner picker. Raw history still lives in the events table.
   const disabled = new Set<string>();
-  for (const u of db.query("SELECT id, name, disabled_at FROM users").all() as Array<{
+  for (const u of await db.query("SELECT id, name, disabled_at FROM users").all() as Array<{
     id: string;
     name: string;
     disabled_at: string | null;
@@ -299,7 +299,7 @@ export function perPerson(db: Database): PersonWeek[] {
   };
 
   // finalized: attributed to insights.finalized_by, falling back to the transition actor
-  const finalizedRows = db
+  const finalizedRows = await db
     .query(
       `SELECT COALESCE(i.finalized_by, e.actor_user_id) AS user_id, e.occurred_at
        FROM events e JOIN insights i ON i.id = e.entity_id
@@ -308,7 +308,7 @@ export function perPerson(db: Database): PersonWeek[] {
     .all() as Array<{ user_id: string | null; occurred_at: string }>;
   for (const r of finalizedRows) bump(r.user_id, r.occurred_at, "finalized");
 
-  const ticketedRows = db
+  const ticketedRows = await db
     .query(
       `SELECT actor_user_id AS user_id, occurred_at FROM events
        WHERE entity_type = 'insight' AND event_type = 'insight.state_changed' AND to_state = 'ticketed'`,
@@ -316,12 +316,12 @@ export function perPerson(db: Database): PersonWeek[] {
     .all() as Array<{ user_id: string | null; occurred_at: string }>;
   for (const r of ticketedRows) bump(r.user_id, r.occurred_at, "ticketed");
 
-  const confirms = db
+  const confirms = await db
     .query("SELECT actor_user_id AS user_id, occurred_at FROM events WHERE event_type = 'evidence.confirmed'")
     .all() as Array<{ user_id: string | null; occurred_at: string }>;
   for (const r of confirms) bump(r.user_id, r.occurred_at, "evidence_confirms");
 
-  const copies = db
+  const copies = await db
     .query("SELECT actor_user_id AS user_id, occurred_at FROM events WHERE event_type = 'email.copied'")
     .all() as Array<{ user_id: string | null; occurred_at: string }>;
   for (const r of copies) bump(r.user_id, r.occurred_at, "email_copies");
@@ -342,8 +342,8 @@ export interface ClientClosedLoop {
   median_days_finalized_to_notified: number | null;
 }
 
-export function perClientClosedLoop(db: Database): ClientClosedLoop[] {
-  const rows = db
+export async function perClientClosedLoop(db: Database): Promise<ClientClosedLoop[]> {
+  const rows = await db
     .query(
       `SELECT i.client_id, c.name AS client_name, m.finalized_at, m.notified_at
        FROM insights i
@@ -386,9 +386,9 @@ export interface ThemeDemand {
 }
 
 /** Tag frequency over insights that reached finalized or beyond. */
-export function themeDemand(db: Database): ThemeDemand[] {
+export async function themeDemand(db: Database): Promise<ThemeDemand[]> {
   const placeholders = FINALIZED_PLUS.map(() => "?").join(",");
-  const rows = db
+  const rows = await db
     .query(
       `SELECT t.name AS tag, i.id AS insight_id, i.track, i.client_id
        FROM insight_tags it
@@ -399,7 +399,7 @@ export function themeDemand(db: Database): ThemeDemand[] {
     .all(...FINALIZED_PLUS) as Array<{ tag: string; insight_id: string; track: string | null; client_id: string }>;
 
   const requesters = new Map<string, string[]>();
-  const reqRows = db.query("SELECT insight_id, client_id FROM insight_requesters").all() as Array<{
+  const reqRows = await db.query("SELECT insight_id, client_id FROM insight_requesters").all() as Array<{
     insight_id: string;
     client_id: string;
   }>;
@@ -440,8 +440,8 @@ export interface AiQuality {
   routing_correction_note: string;
 }
 
-export function aiQuality(db: Database): AiQuality {
-  const totals = db
+export async function aiQuality(db: Database): Promise<AiQuality> {
+  const totals = await db
     .query(
       `SELECT COUNT(*) AS total,
               SUM(CASE WHEN state = 'rejected' THEN 1 ELSE 0 END) AS rejected
@@ -449,7 +449,7 @@ export function aiQuality(db: Database): AiQuality {
     )
     .get() as { total: number; rejected: number | null };
 
-  const finalized = db
+  const finalized = await db
     .query(
       `SELECT i.body_original, i.body_current
        FROM insights i
@@ -478,8 +478,8 @@ export interface CaptureVolume {
   activity_per_week: Array<{ week: string; emails_copied: number; tickets_raised: number; evidence_confirms: number }>;
 }
 
-export function captureVolume(db: Database): CaptureVolume {
-  const meetingRows = db
+export async function captureVolume(db: Database): Promise<CaptureVolume> {
+  const meetingRows = await db
     .query(
       `SELECT m.source,
               COALESCE(
@@ -504,7 +504,7 @@ export function captureVolume(db: Database): CaptureVolume {
     string,
     { week: string; emails_copied: number; tickets_raised: number; evidence_confirms: number }
   >();
-  const activityRows = db
+  const activityRows = await db
     .query(
       `SELECT event_type, occurred_at FROM events
        WHERE event_type IN ('email.copied','ticket.raised','evidence.confirmed')`,
@@ -537,14 +537,14 @@ export function captureVolume(db: Database): CaptureVolume {
  * shipped since their latest meeting, follow-ups owed. Returns null when the
  * client does not exist. No em-dashes (brand rule).
  */
-export function clientBrief(db: Database, clientId: string, now: Date = new Date()): string | null {
-  const client = db.query("SELECT id, name FROM clients WHERE id = ?").get(clientId) as {
+export async function clientBrief(db: Database, clientId: string, now: Date = new Date()): Promise<string | null> {
+  const client = await db.query("SELECT id, name FROM clients WHERE id = ?").get(clientId) as {
     id: string;
     name: string;
   } | null;
   if (!client) return null;
 
-  const rows = db
+  const rows = await db
     .query(
       `SELECT i.id, i.title, i.state, i.track, i.created_at,
               (SELECT MAX(e.occurred_at) FROM events e
@@ -571,7 +571,7 @@ export function clientBrief(db: Database, clientId: string, now: Date = new Date
     evidence_url: string | null;
   }>;
 
-  const latest = db
+  const latest = await db
     .query("SELECT MAX(meeting_date) AS d FROM meetings WHERE client_id = ?")
     .get(clientId) as { d: string | null };
 

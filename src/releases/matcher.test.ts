@@ -43,15 +43,15 @@ describe("matchRelease", () => {
   });
 
   test("verifies quotes, drops fabricated ones, applies gating caps, proposes only", async () => {
-    const s = seed();
-    const { releaseId, entryIds } = makeRelease(s.db, {
+    const s = await seed();
+    const { releaseId, entryIds } = await makeRelease(s.db, {
       tag: "v1.21.0",
       githubId: 210,
       entries: [darkModeEntry, gatedSsoEntry, technicalEntry],
     });
 
     // Distinct created_at values force a deterministic LLM call order.
-    const darkInsight = makeInsight(s, {
+    const darkInsight = await makeInsight(s, {
       title: "Dark mode",
       body: "Acme wants dark mode on the dashboards.",
       state: "finalized",
@@ -59,7 +59,7 @@ describe("matchRelease", () => {
       assignee: s.alice.id,
       createdAt: minutesAgoIso(10),
     });
-    const ssoInsight = makeInsight(s, {
+    const ssoInsight = await makeInsight(s, {
       title: "SAML SSO",
       body: "Enterprise clients need SAML SSO.",
       state: "ticketed",
@@ -110,7 +110,7 @@ describe("matchRelease", () => {
     expect(result.proposed).toBe(2);
     expect(llm.calls).toHaveLength(2); // one judge call per insight
 
-    const rows = s.db
+    const rows = await s.db
       .query(
         "SELECT insight_id, release_entry_id, verdict, confidence, method, status, evidence_quotes_json FROM release_matches ORDER BY rowid",
       )
@@ -142,13 +142,13 @@ describe("matchRelease", () => {
 
     // no completion evidence and no shipped insights without a human confirm
     expect(
-      (s.db.query("SELECT COUNT(*) AS n FROM completion_evidence").get() as { n: number }).n,
+      (await s.db.query("SELECT COUNT(*) AS n FROM completion_evidence").get() as { n: number }).n,
     ).toBe(0);
     expect(
-      (s.db.query("SELECT COUNT(*) AS n FROM insights WHERE state = 'shipped'").get() as { n: number }).n,
+      (await s.db.query("SELECT COUNT(*) AS n FROM insights WHERE state = 'shipped'").get() as { n: number }).n,
     ).toBe(0);
 
-    const events = s.db
+    const events = await s.db
       .query("SELECT entity_id, actor_user_id, payload_json FROM events WHERE event_type = 'match.proposed' ORDER BY id")
       .all() as Array<{ entity_id: string; actor_user_id: string | null; payload_json: string }>;
     expect(events).toHaveLength(2);
@@ -157,16 +157,16 @@ describe("matchRelease", () => {
   });
 
   test("only considers finalized/ticketed insights on engineering or product_polish tracks", async () => {
-    const s = seed();
-    const { releaseId } = makeRelease(s.db, {
+    const s = await seed();
+    const { releaseId } = await makeRelease(s.db, {
       tag: "v1.21.1",
       githubId: 211,
       entries: [darkModeEntry],
     });
-    makeInsight(s, { state: "extracted", track: "engineering" });
-    makeInsight(s, { state: "finalized", track: "marketing" });
-    makeInsight(s, { state: "shipped", track: "engineering" });
-    makeInsight(s, { state: "rejected", track: "product_polish" });
+    await makeInsight(s, { state: "extracted", track: "engineering" });
+    await makeInsight(s, { state: "finalized", track: "marketing" });
+    await makeInsight(s, { state: "shipped", track: "engineering" });
+    await makeInsight(s, { state: "rejected", track: "product_polish" });
 
     const llm = new MockLLM(); // empty queue: any call would throw
     const result = await matchRelease(s.db, llm, releaseId);
@@ -176,13 +176,13 @@ describe("matchRelease", () => {
   });
 
   test("re-running matching never duplicates a proposal", async () => {
-    const s = seed();
-    const { releaseId } = makeRelease(s.db, {
+    const s = await seed();
+    const { releaseId } = await makeRelease(s.db, {
       tag: "v1.21.2",
       githubId: 212,
       entries: [darkModeEntry],
     });
-    makeInsight(s, { state: "finalized", track: "engineering", assignee: s.alice.id });
+    await makeInsight(s, { state: "finalized", track: "engineering", assignee: s.alice.id });
 
     const response = {
       matches: [
@@ -201,23 +201,23 @@ describe("matchRelease", () => {
     expect(first.proposed).toBe(1);
     expect(second.proposed).toBe(0);
     expect(
-      (s.db.query("SELECT COUNT(*) AS n FROM release_matches").get() as { n: number }).n,
+      (await s.db.query("SELECT COUNT(*) AS n FROM release_matches").get() as { n: number }).n,
     ).toBe(1);
   });
 
   test("a judge failure on one insight does not abort the batch", async () => {
-    const s = seed();
-    const { releaseId } = makeRelease(s.db, {
+    const s = await seed();
+    const { releaseId } = await makeRelease(s.db, {
       tag: "v1.21.3",
       githubId: 213,
       entries: [darkModeEntry],
     });
-    makeInsight(s, {
+    await makeInsight(s, {
       state: "finalized",
       track: "engineering",
       createdAt: minutesAgoIso(10),
     });
-    makeInsight(s, {
+    await makeInsight(s, {
       title: "Dark mode",
       state: "finalized",
       track: "product_polish",
@@ -240,7 +240,7 @@ describe("matchRelease", () => {
 
     const result = await matchRelease(s.db, llm, releaseId);
     expect(result.proposed).toBe(1);
-    const row = s.db
+    const row = await s.db
       .query("SELECT confidence, verdict FROM release_matches")
       .get() as { confidence: number; verdict: string };
     expect(row.verdict).toBe("partial");
@@ -248,7 +248,7 @@ describe("matchRelease", () => {
   });
 
   test("throws for an unknown release id", async () => {
-    const s = seed();
+    const s = await seed();
     await expect(matchRelease(s.db, new MockLLM(), "nope")).rejects.toThrow(/Release not found/);
   });
 });

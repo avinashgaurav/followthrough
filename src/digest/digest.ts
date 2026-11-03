@@ -1,4 +1,4 @@
-import type { Database } from "bun:sqlite";
+import type { Database } from "../db.ts";
 import { env } from "../config.ts";
 import { getDb } from "../db.ts";
 import { appendEvent } from "../events.ts";
@@ -23,14 +23,14 @@ export const DIGEST_SECTIONS = [
   "## Shipped but client not yet emailed",
 ] as const;
 
-export function buildDigest(db: Database, now: Date = new Date()): string {
+export async function buildDigest(db: Database, now: Date = new Date()): Promise<string> {
   const nowIso = now.toISOString();
   const since = new Date(now.getTime() - WEEK_MS).toISOString();
   const lines: string[] = [`# Weekly digest (${nowIso.slice(0, 10)})`, ""];
 
   // --- New insights this week (by track)
   lines.push(DIGEST_SECTIONS[0]);
-  const fresh = db
+  const fresh = await db
     .query(
       `SELECT i.id, i.title, i.track, c.name AS client
        FROM insights i JOIN clients c ON c.id = i.client_id
@@ -52,7 +52,7 @@ export function buildDigest(db: Database, now: Date = new Date()): string {
 
   // --- Awaiting finalization (with ages)
   lines.push(DIGEST_SECTIONS[1]);
-  const awaiting = db
+  const awaiting = await db
     .query(
       `SELECT i.id, i.title, i.state, i.created_at,
               (SELECT MAX(e.occurred_at) FROM events e
@@ -71,7 +71,7 @@ export function buildDigest(db: Database, now: Date = new Date()): string {
 
   // --- Stuck items (shared thresholds with the dashboard)
   lines.push(DIGEST_SECTIONS[2]);
-  const stuck = stuckItems(db, undefined, now);
+  const stuck = await stuckItems(db, undefined, now);
   if (stuck.length === 0) lines.push("None.");
   for (const s of stuck) {
     const who = s.assignee ? `, assignee: ${s.assignee}` : "";
@@ -81,7 +81,7 @@ export function buildDigest(db: Database, now: Date = new Date()): string {
 
   // --- Completions this week, with evidence links
   lines.push(DIGEST_SECTIONS[3]);
-  const completions = db
+  const completions = await db
     .query(
       `SELECT i.id, i.title, m.shipped_at,
               (SELECT ce.url FROM completion_evidence ce
@@ -101,7 +101,7 @@ export function buildDigest(db: Database, now: Date = new Date()): string {
 
   // --- Top asks by requester count (top 5)
   lines.push(DIGEST_SECTIONS[4]);
-  const topAsks = db
+  const topAsks = await db
     .query(
       `SELECT i.id, i.title, COUNT(r.client_id) AS requesters
        FROM insights i JOIN insight_requesters r ON r.insight_id = i.id
@@ -120,7 +120,7 @@ export function buildDigest(db: Database, now: Date = new Date()): string {
 
   // --- Shipped but client not yet emailed
   lines.push(DIGEST_SECTIONS[5]);
-  const unEmailed = db
+  const unEmailed = await db
     .query(
       `SELECT i.id, i.title, m.shipped_at
        FROM insights i LEFT JOIN insight_milestones m ON m.insight_id = i.id
@@ -152,7 +152,7 @@ export async function sendDigest(
   webhookUrl: string | undefined = env.DIGEST_WEBHOOK_URL,
   now: Date = new Date(),
 ): Promise<{ delivered: boolean; markdown: string }> {
-  const markdown = buildDigest(db, now);
+  const markdown = await buildDigest(db, now);
   let delivered = false;
   if (webhookUrl) {
     const res = await fetchImpl(webhookUrl, {
@@ -162,7 +162,7 @@ export async function sendDigest(
     });
     delivered = res.ok;
   }
-  appendEvent(db, {
+  await appendEvent(db, {
     actorUserId: null, // system
     entityType: "digest",
     entityId: ulid(),
@@ -205,7 +205,7 @@ export async function maybeSendDigest(
 ): Promise<boolean> {
   const ist = istClock(now);
   if (ist.weekday !== "Mon" || ist.hour !== 9) return false;
-  const last = db
+  const last = await db
     .query("SELECT occurred_at FROM events WHERE event_type = 'digest.sent' ORDER BY id DESC LIMIT 1")
     .get() as { occurred_at: string } | null;
   if (last && istClock(new Date(last.occurred_at)).date === ist.date) return false;
