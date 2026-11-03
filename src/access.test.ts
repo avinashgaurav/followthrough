@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { openTestDb, setDb, type Database } from "./db.ts";
 import { loginForcedByEnv } from "./settings.ts";
 import { handleApi } from "./app.ts";
+import { env } from "./config.ts";
 
 const KEYS = ["VERCEL", "NODE_ENV", "OPEN_ACCESS", "REQUIRE_LOGIN", "DEMO_MODE"] as const;
 const saved = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
@@ -41,8 +42,13 @@ describe("login is required by default on a public deployment", () => {
     process.env.OPEN_ACCESS = "true";
     expect(loginForcedByEnv()).toBe(false);
     delete process.env.OPEN_ACCESS;
-    process.env.DEMO_MODE = "true";
-    expect(loginForcedByEnv()).toBe(false);
+    const savedDemo = env.DEMO_MODE;
+    env.DEMO_MODE = "true"; // the same reading the demo guard uses (config.ts)
+    try {
+      expect(loginForcedByEnv()).toBe(false);
+    } finally {
+      env.DEMO_MODE = savedDemo;
+    }
   });
 
   test("REQUIRE_LOGIN wins over OPEN_ACCESS", () => {

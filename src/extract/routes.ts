@@ -132,6 +132,7 @@ route("POST", "/api/insights/manual", "user", async (req, user) => {
     return json({ insight_id: r.insightId, handle: r.handle }, 201);
   } catch (err) {
     if (err instanceof ExtractionError) return errorResponse(err);
-    return json({ error: err instanceof Error ? err.message : "manual add failed" }, 500);
+    console.error("manual insight add failed:", err);
+    return json({ error: "Could not add the insight. Try again.", code: "manual_add_failed" }, 500);
   }
 });

@@ -1,5 +1,6 @@
 import type { Database } from "./db.ts";
 import { nowIso } from "./db.ts";
+import { demoMode } from "./config.ts";
 
 /**
  * App-wide settings (key/value). Open-source friendly: the product ships OPEN
@@ -43,7 +44,8 @@ const flag = (v: string | undefined) => ["1", "true", "yes", "on"].includes((v ?
  */
 export function loginForcedByEnv(): boolean {
   if (flag(process.env.REQUIRE_LOGIN) || flag(process.env.HOSTED_MODE)) return true;
-  if (flag(process.env.DEMO_MODE) || flag(process.env.OPEN_ACCESS)) return false;
+  // demoMode() is the one reading of DEMO_MODE (config.ts), shared with the demo guard and budget.
+  if (demoMode() || flag(process.env.OPEN_ACCESS)) return false;
   return !!process.env.VERCEL || process.env.NODE_ENV === "production";
 }
 

@@ -11,12 +11,14 @@ import { failStaleExtractionRuns, staleRunMinutes } from "./extract/pipeline.ts"
 import { markStaleDrafts } from "./tickets/routes.ts";
 import { secretsEqual } from "./auth.ts";
 import { pruneRateHits } from "./insights/routes.ts";
+import { getStore, sweepOrphanUploads } from "./storage.ts";
 
 /**
  * Scheduled work on Vercel (vercel.json "crons"). The Hobby plan runs a cron at
  * most once a day, so one daily job does what the long-running server did with
  * timers: the Monday 09:00 IST digest (scheduled at 03:30 UTC), the release
- * poll, the "waiting on the team" nudge, and the stale sweeps. Each step is
+ * poll, the "waiting on the team" nudge, the stale sweeps, and the cleanup of
+ * uploads that were never attached to a meeting. Each step is
  * independent; a failure is reported and the rest still run.
  *
  * Vercel calls the route with "Authorization: Bearer $CRON_SECRET". Without
@@ -37,6 +39,7 @@ export async function runDailyJobs(now: Date = new Date()): Promise<Record<strin
   await step("stale_extraction_runs", () => failStaleExtractionRuns(db, staleRunMinutes()));
   await step("stale_ticket_drafts", () => markStaleDrafts(db));
   await step("rate_hits_pruned", () => pruneRateHits(db, now.getTime()));
+  await step("orphan_uploads_deleted", () => sweepOrphanUploads(db, getStore(), now.getTime()));
   if (!demoMode()) {
     await step("digest_sent", () => maybeSendDigest(db, now));
     if (env.DIGEST_WEBHOOK_URL) {

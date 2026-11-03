@@ -10,6 +10,8 @@ extension/node_modules/
 .gstack/
 .design-shots/
 # Not used by the build or at runtime (seed-demo reads demo/ from a local checkout).
-design-reference/
-evals/
-demo/
+# Anchored to the repo root: an unanchored `demo/` also matched web/src/demo/,
+# which the static demo build imports, and broke the followthrough-demo project.
+/design-reference/
+/evals/
+/demo/

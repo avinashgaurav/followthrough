@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
 import { env } from "./config.ts";
 import { ulid } from "./ids.ts";
@@ -28,6 +28,8 @@ export interface BlobStore {
   exists(key: string): Promise<boolean>;
   /** The stored object's real size in bytes, or null if it does not exist. */
   objectSize(key: string): Promise<number | null>;
+  /** Entries directly under a folder ("" = top level): files and sub-folders. */
+  list(prefix: string): Promise<Array<{ name: string; folder: boolean }>>;
   remove(keys: string[]): Promise<void>;
   /** A URL the browser can download from, or null when the caller must stream bytes. */
   signedDownloadUrl(key: string, filename: string, ttlSeconds?: number): Promise<string | null>;
@@ -62,6 +64,7 @@ export function assertSafeKey(key: string): void {
 }
 
 export function localStore(dir: string = env.BLOB_DIR): BlobStore {
+  const dir_ = dir;
   const path = (key: string) => {
     assertSafeKey(key);
     const p = join(dir, key);
@@ -88,6 +91,13 @@ export function localStore(dir: string = env.BLOB_DIR): BlobStore {
     async objectSize(key) {
       const p = path(key);
       return existsSync(p) ? statSync(p).size : null;
+    },
+    async list(prefix) {
+      const dir = prefix ? path(prefix) : dir_;
+      if (!existsSync(dir)) return [];
+      return readdirSync(dir, { withFileTypes: true })
+        .filter((e) => !e.name.endsWith(".tmp"))
+        .map((e) => ({ name: e.name, folder: e.isDirectory() }));
     },
     async remove(keys) {
       for (const k of keys) rmSync(path(k), { force: true });
@@ -172,6 +182,24 @@ export function supabaseStore(
       return (await objectSize(key)) !== null;
     },
     objectSize,
+    async list(prefix) {
+      if (prefix) assertSafeKey(prefix);
+      const out: Array<{ name: string; folder: boolean }> = [];
+      for (let offset = 0; offset < 10_000; offset += 1000) {
+        const res = await doFetch(`${base}/object/list/${bucket}`, {
+          method: "POST",
+          headers: { ...auth, "Content-Type": "application/json" },
+          body: JSON.stringify({ prefix, limit: 1000, offset, sortBy: { column: "name", order: "asc" } }),
+        });
+        if (res.status === 404 || res.status === 400) return out; // no bucket yet
+        if (!res.ok) await fail("list", res);
+        const page = (await res.json()) as Array<{ name: string; id: string | null }>;
+        // Folders come back with a null id.
+        out.push(...page.map((e) => ({ name: e.name, folder: e.id === null })));
+        if (page.length < 1000) break;
+      }
+      return out;
+    },
     async remove(keys) {
       if (keys.length === 0) return;
       keys.forEach(assertSafeKey);
@@ -220,4 +248,49 @@ export function storeFor(opts: { blobDir?: string } = {}): BlobStore {
 /** Tests and scripts. */
 export function setStore(next: BlobStore | null): void {
   store = next;
+}
+
+const ENC = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+const ULID = /^[0-9A-HJKMNP-TV-Z]{26}$/;
+
+/** Creation time (ms) encoded in a ULID's first 10 characters, or null. */
+export function ulidTime(id: string): number | null {
+  if (!ULID.test(id)) return null;
+  let t = 0;
+  for (const c of id.slice(0, 10)) t = t * 32 + ENC.indexOf(c);
+  return t;
+}
+
+/**
+ * Delete uploads that were never registered: a browser got a signed URL and
+ * uploaded, but no media_assets row points at the object. Only "<ulid>/" upload
+ * folders older than maxAgeMs are looked at (the ULID carries its creation
+ * time), so an upload in progress is never touched. exports/ is left alone.
+ * Runs from the daily cron. Returns how many objects were deleted.
+ */
+export async function sweepOrphanUploads(
+  db: import("./db.ts").Database,
+  store: BlobStore = getStore(),
+  now: number = Date.now(),
+  maxAgeMs = 24 * 3600 * 1000,
+  maxFolders = 500,
+): Promise<number> {
+  const folders = (await store.list(""))
+    .filter((e) => e.folder && (ulidTime(e.name) ?? Infinity) < now - maxAgeMs)
+    .slice(0, maxFolders);
+  let deleted = 0;
+  for (const f of folders) {
+    const keys = (await store.list(f.name)).filter((e) => !e.folder).map((e) => `${f.name}/${e.name}`);
+    if (keys.length === 0) continue;
+    const used = (await db
+      .query(`SELECT storage_ref FROM media_assets WHERE storage_ref IN (${keys.map(() => "?").join(", ")})`)
+      .all(...keys)) as Array<{ storage_ref: string }>;
+    const keep = new Set(used.map((r) => r.storage_ref));
+    const orphans = keys.filter((k) => !keep.has(k));
+    if (orphans.length) {
+      await store.remove(orphans);
+      deleted += orphans.length;
+    }
+  }
+  return deleted;
 }

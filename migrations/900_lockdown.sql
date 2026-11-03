@@ -1,4 +1,4 @@
--- Runs last (900_): add every new app table to the list below.
+-- Runs last (900_): add every new app table to the list below (src/lockdown.test.ts checks).
 --
 -- Supabase exposes the public schema through its REST API (PostgREST) to the
 -- anon and authenticated roles. Followthrough never uses that API: the server

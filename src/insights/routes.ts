@@ -107,7 +107,9 @@ route("POST", "/api/insights/bulk", "user", async (req, user) => {
       }
       results.push({ id, ok: true });
     } catch (e) {
-      results.push({ id, ok: false, error: e instanceof Error ? e.message : "failed" });
+      // triage/reject report expected failures as results; a throw here is unexpected.
+      console.error(`bulk ${action} failed for ${id}:`, e);
+      results.push({ id, ok: false, error: "Could not update this insight." });
     }
   }
   const okCount = results.filter((r) => r.ok).length;

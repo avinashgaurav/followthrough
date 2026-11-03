@@ -271,7 +271,8 @@ export async function createDirect(
   try {
     assertRepoWritable(opts.repo);
   } catch (err) {
-    throw new HttpError(403, err instanceof Error ? err.message : String(err));
+    console.warn("direct issue creation refused:", err);
+    throw new HttpError(403, `${opts.repo} is not allowed for direct issue creation (WRITABLE_REPOS / BLOCKED_ORGS). Copy the draft instead.`);
   }
   const ticket = await loadTicket(db, opts.ticketId);
   if (ticket.state === "raised") {
