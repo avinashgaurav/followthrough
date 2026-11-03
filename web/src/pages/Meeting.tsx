@@ -50,6 +50,24 @@ function shapeDetail(raw: Record<string, unknown>): MeetingDetailData {
   };
 }
 
+// Matches the server's transcript cap and the file types Capture accepts.
+const MAX_TRANSCRIPT_BYTES = 10 * 1024 * 1024;
+const TRANSCRIPT_EXTENSIONS = [".txt", ".md", ".vtt", ".srt"];
+
+/** Drop the WEBVTT header, cue numbers and timing lines from a caption file, keeping the words. */
+function stripCaptionCues(text: string): string {
+  return text
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .filter((line) => {
+      const t = line.trim();
+      return !/^WEBVTT\b/.test(t) && !/^\d+$/.test(t) && !t.includes("-->");
+    })
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function meetingSeq(m: MeetingRow): number | null {
   const v = m.seq ?? m.seq_no;
   return typeof v === "number" ? v : null;
@@ -303,13 +321,15 @@ export function Meeting() {
   }, [detail, extracting, id, clientId, toast, loadDetail, loadBrief]);
 
   const saveTranscript = useCallback(async () => {
-    const text = pasteText.trim();
+    const submitted = pasteText;
+    const text = submitted.trim();
     if (!text || savingTranscript) return;
     setSavingTranscript(true);
     try {
       await api.setTranscript(id, text);
       toast.push("Transcript added. You can extract insights now.", "success");
-      setPasteText("");
+      // Keep anything typed while the save was in flight.
+      setPasteText((cur) => (cur === submitted ? "" : cur));
       await loadDetail();
     } catch (err) {
       toast.push(
@@ -324,8 +344,18 @@ export function Meeting() {
   const loadTranscriptFile = useCallback(
     async (file: File | undefined) => {
       if (!file) return;
+      const ext = file.name.toLowerCase().match(/\.[a-z0-9]+$/)?.[0] ?? "";
+      if (!TRANSCRIPT_EXTENSIONS.includes(ext)) {
+        toast.push("That file type is not supported. Use a .txt, .md, .vtt or .srt file.", "warning");
+        return;
+      }
+      if (file.size > MAX_TRANSCRIPT_BYTES) {
+        toast.push("That file is over 10 MB, the most a transcript can be. Trim it and try again.", "warning");
+        return;
+      }
       try {
-        setPasteText(await file.text());
+        const text = await file.text();
+        setPasteText(ext === ".vtt" || ext === ".srt" ? stripCaptionCues(text) : text);
       } catch {
         toast.push("Could not read that file. Paste the text instead.", "critical");
       }
@@ -342,15 +372,23 @@ export function Meeting() {
       toast.push("Audio turned into text. You can extract insights now.", "success");
       await loadDetail();
     } catch (err) {
-      // 503 means speech to text is not set up on the server; keep that message on screen.
-      const msg = err instanceof ApiError ? err.message : "Could not transcribe the audio. Try again.";
-      if (err instanceof ApiError && err.status === 503) setTranscribeError(msg);
-      else toast.push(msg, "critical");
+      // Keep the reason on screen: a missing Deepgram key (503), a failed run (500), and so on.
+      setTranscribeError(
+        err instanceof ApiError ? err.message : "Could not transcribe the audio. Try again.",
+      );
       await loadDetail();
     } finally {
       setTranscribing(false);
     }
   }, [transcribing, id, toast, loadDetail]);
+
+  // A reload mid-transcription shows "transcribing"; check back until it finishes.
+  const meetingStatus = detail?.meeting.status;
+  useEffect(() => {
+    if (meetingStatus !== "transcribing" || transcribing) return;
+    const timer = setInterval(() => void loadDetail(), 5000);
+    return () => clearInterval(timer);
+  }, [meetingStatus, transcribing, loadDetail]);
 
   // ---------------------------------------------------------------- not found / error / loading
 
@@ -501,7 +539,11 @@ export function Meeting() {
                         </Btn>
                       </div>
                       {transcribeError && (
-                        <Alert severity="warning" title="Speech to text is not set up.">
+                        <Alert
+                          severity="warning"
+                          title="The audio was not turned into text."
+                          onDismiss={() => setTranscribeError(null)}
+                        >
                           {transcribeError}
                         </Alert>
                       )}
@@ -514,15 +556,24 @@ export function Meeting() {
                     placeholder="Paste the full transcript here."
                     rows={7}
                     aria-label="Transcript text"
+                    aria-describedby="meet-tx-help"
                     onChange={(e) => setPasteText(e.target.value)}
-                    disabled={savingTranscript}
+                    readOnly={savingTranscript}
                   />
+                  <p id="meet-tx-help" className="helper" style={{ margin: 0 }}>
+                    Or load a text file (.txt, .md, .vtt, .srt, up to 10 MB). It fills the box above so you
+                    can check it first; caption timings and cue numbers are dropped.
+                  </p>
+                  <label className="lbl" htmlFor="meet-tx-file" style={{ display: "block" }}>
+                    Load a transcript file
+                  </label>
                   <div className="row">
                     <input
+                      id="meet-tx-file"
                       type="file"
                       className="ctrl"
                       accept=".txt,.md,.vtt,.srt,text/plain"
-                      aria-label="Load a transcript file"
+                      aria-describedby="meet-tx-help"
                       onChange={(e) => {
                         void loadTranscriptFile(e.target.files?.[0]);
                         e.target.value = "";
@@ -539,9 +590,6 @@ export function Meeting() {
                       {savingTranscript ? "Adding" : "Add transcript"}
                     </Btn>
                   </div>
-                  <p className="helper" style={{ margin: 0 }}>
-                    A text file (.txt, .md, .vtt, .srt) fills the box above so you can check it first.
-                  </p>
                 </div>
               </>
             )}
