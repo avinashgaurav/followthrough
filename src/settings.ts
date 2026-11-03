@@ -29,14 +29,22 @@ export async function setSetting(
 
 const REQUIRE_LOGIN_KEY = "require_login";
 
-/** Default false: the app is open until an admin turns login on. */
+const flag = (v: string | undefined) => ["1", "true", "yes", "on"].includes((v ?? "").trim().toLowerCase());
+
 /**
- * REQUIRE_LOGIN=true forces login on regardless of the in-app toggle. A public
- * deployment sets it so there is never a window where every visitor is the
- * guest admin before someone turns login on in Settings.
+ * Login is forced on (whatever the in-app toggle says) when:
+ * - REQUIRE_LOGIN=true, or
+ * - the app runs as a public deployment (VERCEL is set, or NODE_ENV=production),
+ *   unless it is the read-only DEMO_MODE showcase or OPEN_ACCESS=true says
+ *   otherwise on purpose.
+ * Otherwise (a laptop, self-hosted dev) the app stays open until an admin turns
+ * login on in Settings. With login forced there is no guest admin at all, so a
+ * public URL is never open before someone signs in. First admin: `bun run seed`.
  */
 export function loginForcedByEnv(): boolean {
-  return process.env.REQUIRE_LOGIN?.trim().toLowerCase() === "true";
+  if (flag(process.env.REQUIRE_LOGIN)) return true;
+  if (flag(process.env.DEMO_MODE) || flag(process.env.OPEN_ACCESS)) return false;
+  return !!process.env.VERCEL || process.env.NODE_ENV === "production";
 }
 
 export async function authRequired(db: Database): Promise<boolean> {

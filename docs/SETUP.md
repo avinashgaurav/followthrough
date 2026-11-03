@@ -20,7 +20,14 @@ Followthrough runs as one Vercel project: the web app is static output, `api/ser
    | `GITHUB_WRITE_TOKEN` + `WRITABLE_REPOS` | creating GitHub issues directly from a ticket draft |
 
 4. **Deploy.** The production build runs `bun run db:migrate` (every migration is idempotent) and then builds the web app.
-5. **Lock it down.** The app is open by default. Open it, go to **Settings → Access**, add yourself (you get a one-time login code), then turn **Require login** on.
+5. **Create the first admin.** On Vercel (and whenever `NODE_ENV=production`) login is always required and there is no guest access, so the first admin comes from the command line. From a local checkout linked to the project:
+
+   ```bash
+   vercel env pull .env.local --environment=production   # database settings, git-ignored
+   bun run seed you@yourcompany.com "Your Name"          # or set ADMIN_EMAIL / ADMIN_NAME
+   ```
+
+   It prints a one-time login code; sign in with your email and that code. Add teammates from **Settings → Access**. Running it again for an existing email changes nothing (rotate a lost code from Settings). `OPEN_ACCESS=true` turns the open, no-login mode back on for a deployment; `DEMO_MODE` deployments stay open and read-only.
 
 What changes on Vercel compared with a long-running server:
 
@@ -50,7 +57,7 @@ bun run build:web
 bun run start            # http://localhost:4500, applies migrations on startup
 ```
 
-Without `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, files are stored on disk under `BLOB_DIR` (default `./data/blobs`). `DB_SCHEMA=<name>` runs the app inside a separate Postgres schema, handy for a smoke test that must not touch the real tables. Login works as described in step 5 above; you can also seed a first admin with `bun run seed`.
+Without `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, files are stored on disk under `BLOB_DIR` (default `./data/blobs`). `DB_SCHEMA=<name>` runs the app inside a separate Postgres schema, handy for a smoke test that must not touch the real tables. Locally the app is open (every visitor is a guest admin) until an admin turns **Require login** on in **Settings → Access**; `REQUIRE_LOGIN=true` forces it on. `bun run seed` creates a first admin as in step 5.
 
 <details>
 <summary><b>All environment variables</b></summary>
@@ -89,6 +96,8 @@ Without `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, files are stored on disk
 | `LLM_DAILY_BUDGET_USD` | hard daily cap on AI spend, shared across instances; once reached, AI calls return 503 until the next UTC day. Demo mode defaults to `5` |
 | `TRUSTED_PROXY_HOPS` | proxies in front of the server that append to `X-Forwarded-For` (default `1`; `0` ignores XFF). Drives login lockout and demo rate limits |
 | `TRUST_CF_CONNECTING_IP` | `true` only when the server is reachable solely through Cloudflare |
+| `REQUIRE_LOGIN` | `true` forces login on everywhere (it is already forced on Vercel and with `NODE_ENV=production`) |
+| `OPEN_ACCESS` | `true` lets a Vercel/production deployment run open, with no login (not for real data) |
 | `ACCESS_PASSWORD` | optional shared team password: any allowed-domain email + this signs in as a member. **Set `ALLOWED_EMAIL_DOMAINS` too**, or the password alone admits any email |
 
 Backups: `DATABASE_URL=<direct URL> bun run backup` writes a `pg_dump`; restore notes in [`scripts/RESTORE.md`](../scripts/RESTORE.md).

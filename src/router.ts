@@ -48,16 +48,23 @@ export async function dispatch(req: Request): Promise<Response | null> {
     const m = url.pathname.match(r.pattern);
     if (!m) continue;
     const params: Record<string, string> = {};
-    r.paramNames.forEach((name, i) => (params[name] = decodeURIComponent(m[i + 1]!)));
-    const db = getDb();
-    let user = await userForSession(db, readSessionCookie(req));
-    // Open by default: with login not required, fall back to a guest admin so the
-    // whole app works with no sign-in. A real session always takes precedence.
-    if (!user && !await authRequired(db)) user = await guestUser(db);
+    try {
+      r.paramNames.forEach((name, i) => (params[name] = decodeURIComponent(m[i + 1]!)));
+    } catch {
+      return json({ error: "bad request: malformed URL encoding" }, 400);
+    }
     if (demoBlocks(req.method, url.pathname)) {
       return json({ error: DEMO_BLOCKED_MESSAGE, demo: true }, 403);
     }
+    let user: AuthedUser | null = null;
+    // Public routes never look at the user, so they skip the session lookup.
     if (r.auth !== "public") {
+      const db = getDb();
+      user = await userForSession(db, readSessionCookie(req));
+      // Open mode (login not required): fall back to a guest admin so the whole
+      // app works with no sign-in. A real session always takes precedence, and
+      // with login required no guest is ever created.
+      if (!user && !(await authRequired(db))) user = await guestUser(db);
       if (!user) return json({ error: "unauthorized" }, 401);
       if (r.auth === "admin" && user.role !== "admin") return json({ error: "admin only" }, 403);
     }

@@ -57,7 +57,11 @@ route("POST", "/api/auth/login", "public", async (req) => {
 route("POST", "/api/auth/logout", "user", async (req) => {
   const sid = readSessionCookie(req);
   if (sid) await logout(getDb(), sid);
-  return json({ ok: true }, 200, { "set-cookie": "ie_session=; HttpOnly; Path=/; Max-Age=0" });
+  // Match the attributes the cookie was set with, Secure included on https.
+  const secure = req.url.startsWith("https") || req.headers.get("x-forwarded-proto") === "https";
+  return json({ ok: true }, 200, {
+    "set-cookie": `ie_session=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0${secure ? "; Secure" : ""}`,
+  });
 });
 
 route("GET", "/api/me", "user", async (_req, user) =>

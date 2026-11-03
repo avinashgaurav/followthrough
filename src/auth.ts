@@ -25,7 +25,7 @@ const WINDOW_MINUTES = 15;
  * timing-sensitive comparison always runs (no early return), then folds in the
  * length check — so neither equality nor input length is revealed by timing.
  */
-function secretsEqual(a: string, b: string): boolean {
+export function secretsEqual(a: string, b: string): boolean {
   const ab = Buffer.from(a);
   const bb = Buffer.from(b);
   const len = Math.max(ab.length, bb.length, 1);

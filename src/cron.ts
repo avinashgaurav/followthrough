@@ -7,6 +7,7 @@ import { runPollPipeline } from "./releases/routes.ts";
 import { getLLM } from "./llm/provider.ts";
 import { failStaleExtractionRuns, staleRunMinutes } from "./extract/pipeline.ts";
 import { markStaleDrafts } from "./tickets/routes.ts";
+import { secretsEqual } from "./auth.ts";
 
 /**
  * Scheduled work on Vercel (vercel.json "crons"). The Hobby plan runs a cron at
@@ -47,7 +48,7 @@ export async function runDailyJobs(now: Date = new Date()): Promise<Record<strin
 
 export function cronAuthorized(req: Request, secret: string | undefined = process.env.CRON_SECRET): boolean {
   if (!secret) return false;
-  return req.headers.get("authorization") === `Bearer ${secret}`;
+  return secretsEqual(req.headers.get("authorization") ?? "", `Bearer ${secret}`);
 }
 
 route("GET", "/api/cron/daily", "public", async (req) => {
