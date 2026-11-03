@@ -9,7 +9,7 @@
 // seed is all-or-nothing: it builds into a temporary database and only swaps
 // it in once every step has succeeded, so a failed LLM call never leaves a
 // half-populated demo behind.
-import { Database } from "bun:sqlite";
+import type { Database } from "../src/db.ts";
 import { existsSync, mkdirSync, renameSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
@@ -83,7 +83,7 @@ try {
 
   const llm = getLLM();
   const actorId = ulid();
-  db.query(
+  await db.query(
     "INSERT INTO users (id, email, name, role, created_at) VALUES (?, 'maya@tallyhall.example', 'Maya (Tallyhall)', 'admin', ?)",
   ).run(actorId, nowIso());
   const actor = { id: actorId, role: "admin" as const };
@@ -98,7 +98,7 @@ try {
 
   const clientIds: Record<string, string> = {};
   for (const m of MEETINGS) {
-    const { client } = createClient(db, actorId, { name: m.client, domain: m.domain });
+    const { client } = await createClient(db, actorId, { name: m.client, domain: m.domain });
     clientIds[m.client] = client.id as string;
     const { meeting } = await createMeeting(db, actor, {
       client_id: client.id as string,
@@ -114,8 +114,8 @@ try {
   }
 
   /** Moves the client's best-matching insight to finalized; returns its id or null. */
-  function finalizeMatching(clientId: string, pattern: RegExp, track: "engineering" | "product_polish"): string | null {
-    const rows = db
+  async function finalizeMatching(clientId: string, pattern: RegExp, track: "engineering" | "product_polish"): Promise<string | null> {
+    const rows = await db
       .query(
         `SELECT DISTINCT i.id, i.title FROM insights i
          JOIN insight_mentions im ON im.insight_id = i.id
@@ -127,20 +127,20 @@ try {
       console.warn(`  no insight matched ${pattern} for this client; skipping`);
       return null;
     }
-    const t = triageInsight(db, hit.id, actor, { track, assignee_user_id: actorId, tags: ["demo"] });
+    const t = await triageInsight(db, hit.id, actor, { track, assignee_user_id: actorId, tags: ["demo"] });
     if (t.status >= 300) console.warn(`  triage failed: ${JSON.stringify(t.body)}`);
-    const f = finalizeInsight(db, hit.id, actor);
+    const f = await finalizeInsight(db, hit.id, actor);
     if (f.status >= 300) console.warn(`  finalize failed: ${JSON.stringify(f.body)}`);
     console.log(`  finalized: ${hit.title}`);
     return hit.id;
   }
 
-  const acmeExport = finalizeMatching(clientIds["Acme Corp"]!, /netsuite|export|cost cent/i, "engineering");
-  const acmeMobile = finalizeMatching(clientIds["Acme Corp"]!, /receipt|mobile|approv/i, "product_polish");
-  finalizeMatching(clientIds["Globex"]!, /entit|permission/i, "engineering");
+  const acmeExport = await finalizeMatching(clientIds["Acme Corp"]!, /netsuite|export|cost cent/i, "engineering");
+  const acmeMobile = await finalizeMatching(clientIds["Acme Corp"]!, /receipt|mobile|approv/i, "product_polish");
+  await finalizeMatching(clientIds["Globex"]!, /entit|permission/i, "engineering");
 
   // Ship v2.4.0 and let the real matcher propose which asks it closes.
-  const release = addManualRelease(
+  const release = await addManualRelease(
     db,
     { tag_name: "v2.4.0", name: "v2.4.0", body_md: await read("changelog-v2.4.md"), published_at: nowIso() },
     actorId,
@@ -150,13 +150,13 @@ try {
 
   // Close the loop for the Acme export fix: confirm it shipped, draft the email, copy it.
   if (acmeExport) {
-    const match = db
+    const match = await db
       .query("SELECT id FROM release_matches WHERE insight_id = ? AND status = 'proposed' LIMIT 1")
       .get(acmeExport) as { id: string } | null;
     if (match) {
-      confirmMatch(db, { matchId: match.id, actor });
+      await confirmMatch(db, { matchId: match.id, actor });
       const drafts = await generateDrafts(db, { insightId: acmeExport, actor });
-      if (drafts[0]) markCopied(db, { draftId: drafts[0].id, actor });
+      if (drafts[0]) await markCopied(db, { draftId: drafts[0].id, actor });
       console.log("  Acme export fix: shipped and client told");
     } else {
       console.warn("  matcher did not propose the export fix; leaving it finalized");
@@ -167,11 +167,11 @@ try {
 
   // Public "you asked, we shipped" page for Acme.
   const token = ulid() + ulid();
-  db.query("UPDATE clients SET share_token = ? WHERE id = ?").run(token, clientIds["Acme Corp"]!);
+  await db.query("UPDATE clients SET share_token = ? WHERE id = ?").run(token, clientIds["Acme Corp"]!);
 
   // Fold the WAL into the main file, then swap the finished database into place.
-  db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
-  db.close();
+  await db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+  await db.close();
   for (const suffix of ["", "-wal", "-shm"]) rmSync(realDb + suffix, { force: true });
   renameSync(join(tmpDir, "insights.sqlite"), realDb);
   rmSync(tmpDir, { recursive: true, force: true });

@@ -1,4 +1,4 @@
-import type { Database } from "bun:sqlite";
+import type { Database } from "../db.ts";
 import { z } from "zod";
 import { nowIso } from "../db.ts";
 import { productLabel } from "../config.ts";
@@ -124,7 +124,7 @@ export async function generateDrafts(
   db: Database,
   opts: { insightId: string; actor: Actor },
 ): Promise<DraftRow[]> {
-  const insight = db
+  const insight = await db
     .query("SELECT id, state, title, body_current FROM insights WHERE id = ?")
     .get(opts.insightId) as { id: string; state: string; title: string; body_current: string } | null;
   if (!insight) throw new ServiceError(404, "Insight not found");
@@ -135,7 +135,7 @@ export async function generateDrafts(
     );
   }
 
-  const requesters = db
+  const requesters = await db
     .query(
       `SELECT ir.client_id, c.name FROM insight_requesters ir
        JOIN clients c ON c.id = ir.client_id
@@ -144,7 +144,7 @@ export async function generateDrafts(
     )
     .all(opts.insightId) as RequesterRow[];
 
-  const evidence = db
+  const evidence = await db
     .query(
       `SELECT ce.kind, ce.url, r.tag_name AS release_tag, r.name AS release_name, r.published_at AS release_date
        FROM completion_evidence ce
@@ -159,7 +159,7 @@ export async function generateDrafts(
   const drafts: DraftRow[] = [];
 
   for (const requester of requesters) {
-    const contact = db
+    const contact = await db
       .query(
         `SELECT id, name FROM client_contacts
          WHERE client_id = ? AND email IS NOT NULL AND email != ''
@@ -167,7 +167,7 @@ export async function generateDrafts(
       )
       .get(requester.client_id) as { id: string; name: string } | null;
 
-    const mentions = db
+    const mentions = await db
       .query(
         `SELECT im.quote, im.speaker, m.meeting_date FROM insight_mentions im
          JOIN meetings m ON m.id = im.meeting_id
@@ -188,7 +188,7 @@ export async function generateDrafts(
       schema: EmailSchema,
     });
 
-    const prev = db
+    const prev = await db
       .query(
         `SELECT id, version FROM email_drafts
          WHERE insight_id = ? AND client_id = ? AND superseded_by_id IS NULL
@@ -198,8 +198,8 @@ export async function generateDrafts(
 
     const draftId = ulid();
     const version = prev ? prev.version + 1 : 1;
-    const tx = db.transaction(() => {
-      db.query(
+    const tx = () => db.transaction(async () => {
+      await db.query(
         `INSERT INTO email_drafts
            (id, insight_id, client_id, contact_id, subject, body_md, generated_by, version, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -215,9 +215,9 @@ export async function generateDrafts(
         nowIso(),
       );
       if (prev) {
-        db.query("UPDATE email_drafts SET superseded_by_id = ? WHERE id = ?").run(draftId, prev.id);
+        await db.query("UPDATE email_drafts SET superseded_by_id = ? WHERE id = ?").run(draftId, prev.id);
       }
-      appendEvent(db, {
+      await appendEvent(db, {
         actorUserId: opts.actor.id,
         entityType: "email_draft",
         entityId: draftId,
@@ -225,21 +225,21 @@ export async function generateDrafts(
         payload: { insight_id: opts.insightId, client_id: requester.client_id, version },
       });
     });
-    tx();
-    drafts.push(getDraft(db, draftId)!);
+    await tx();
+    drafts.push((await getDraft(db, draftId))!);
   }
 
   return drafts;
 }
 
-export function getDraft(db: Database, id: string): DraftRow | null {
-  return db.query("SELECT * FROM email_drafts WHERE id = ?").get(id) as DraftRow | null;
+export async function getDraft(db: Database, id: string): Promise<DraftRow | null> {
+  return await db.query("SELECT * FROM email_drafts WHERE id = ?").get(id) as DraftRow | null;
 }
 
-export function listDrafts(db: Database, insightId: string): DraftRow[] {
-  const insight = db.query("SELECT id FROM insights WHERE id = ?").get(insightId);
+export async function listDrafts(db: Database, insightId: string): Promise<DraftRow[]> {
+  const insight = await db.query("SELECT id FROM insights WHERE id = ?").get(insightId);
   if (!insight) throw new ServiceError(404, "Insight not found");
-  return db
+  return await db
     .query("SELECT * FROM email_drafts WHERE insight_id = ? ORDER BY client_id, version")
     .all(insightId) as DraftRow[];
 }
@@ -248,11 +248,11 @@ export function listDrafts(db: Database, insightId: string): DraftRow[] {
  * Copy-to-clipboard log: THE TAT timestamp for shipped -> client_notified.
  * The first copy transitions the insight; later copies just append the event.
  */
-export function markCopied(
+export async function markCopied(
   db: Database,
   opts: { draftId: string; actor: Actor },
-): { ok: true; transitioned: boolean } {
-  const draft = db
+): Promise<{ ok: true; transitioned: boolean }> {
+  const draft = await db
     .query(
       `SELECT d.id, d.insight_id, d.client_id, d.version, i.state AS insight_state
        FROM email_drafts d JOIN insights i ON i.id = d.insight_id
@@ -268,8 +268,8 @@ export function markCopied(
   if (!draft) throw new ServiceError(404, "Email draft not found");
 
   const shouldTransition = draft.insight_state === "shipped";
-  const tx = db.transaction(() => {
-    appendEvent(db, {
+  const tx = () => db.transaction(async () => {
+    await appendEvent(db, {
       actorUserId: opts.actor.id,
       entityType: "email_draft",
       entityId: draft.id,
@@ -277,7 +277,7 @@ export function markCopied(
       payload: { client_id: draft.client_id, draft_version: draft.version },
     });
     if (shouldTransition) {
-      transitionInsight(db, {
+      await transitionInsight(db, {
         insightId: draft.insight_id,
         to: "client_notified",
         actor: opts.actor,
@@ -285,22 +285,22 @@ export function markCopied(
       });
     }
   });
-  tx();
+  await tx();
   return { ok: true, transitioned: shouldTransition };
 }
 
 /** Explicit "I sent it" confirmation, optionally with the edited final text. */
-export function confirmSent(
+export async function confirmSent(
   db: Database,
   opts: { draftId: string; finalText?: string; actor: Actor },
-): DraftRow {
-  const draft = getDraft(db, opts.draftId);
+): Promise<DraftRow> {
+  const draft = await getDraft(db, opts.draftId);
   if (!draft) throw new ServiceError(404, "Email draft not found");
-  const tx = db.transaction(() => {
-    db.query(
+  const tx = () => db.transaction(async () => {
+    await db.query(
       "UPDATE email_drafts SET sent_confirmed_at = ?, sent_final_text = ? WHERE id = ?",
     ).run(nowIso(), opts.finalText ?? null, draft.id);
-    appendEvent(db, {
+    await appendEvent(db, {
       actorUserId: opts.actor.id,
       entityType: "email_draft",
       entityId: draft.id,
@@ -312,8 +312,8 @@ export function confirmSent(
       },
     });
   });
-  tx();
-  return getDraft(db, draft.id)!;
+  await tx();
+  return (await getDraft(db, draft.id))!;
 }
 
 /**
@@ -321,11 +321,11 @@ export function confirmSent(
  * skip-notify edge requires a reason (enforced by the transition map, surfaced
  * here as a clear 400).
  */
-export function closeInsight(
+export async function closeInsight(
   db: Database,
   opts: { insightId: string; reason?: string; actor: Actor },
-): void {
-  const insight = db
+): Promise<void> {
+  const insight = await db
     .query("SELECT id, state FROM insights WHERE id = ?")
     .get(opts.insightId) as { id: string; state: string } | null;
   if (!insight) throw new ServiceError(404, "Insight not found");
@@ -335,7 +335,7 @@ export function closeInsight(
       "Closing from shipped skips client notification and requires a reason",
     );
   }
-  transitionInsight(db, {
+  await transitionInsight(db, {
     insightId: opts.insightId,
     to: "closed",
     actor: opts.actor,

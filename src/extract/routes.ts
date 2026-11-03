@@ -32,7 +32,7 @@ route("POST", "/api/meetings/:id/extract", "user", async (req, user, params) => 
     const r = await runExtraction(db, getLLM(), params.id ?? "", user!.id, { force });
     // Nudge the team chat (fire-and-forget; never fails the extraction).
     if (r.created > 0) {
-      const meta = db
+      const meta = await db
         .query(
           `SELECT m.title, c.name AS client_name FROM meetings m
            LEFT JOIN clients c ON c.id = m.client_id WHERE m.id = ?`,
@@ -66,8 +66,8 @@ route("POST", "/api/meetings/:id/extract", "user", async (req, user, params) => 
   }
 });
 
-route("GET", "/api/meetings/:id/analysis", "user", (_req, _user, params) => {
-  const a = latestAnalysis(getDb(), params.id ?? "");
+route("GET", "/api/meetings/:id/analysis", "user", async (_req, _user, params) => {
+  const a = await latestAnalysis(getDb(), params.id ?? "");
   if (!a) return json({ error: "no analysis yet" }, 404);
   return json({ markdown: a.content_md, created_at: a.created_at });
 });
@@ -102,7 +102,7 @@ route("POST", "/api/insights/manual", "user", async (req, user) => {
     return json({ error: "invalid body", issues: parsed.error.issues }, 400);
   }
   try {
-    const r = manualAddInsight(
+    const r = await manualAddInsight(
       getDb(),
       {
         meetingId: parsed.data.meeting_id,

@@ -1,4 +1,4 @@
-import type { Database } from "bun:sqlite";
+import type { Database } from "../db.ts";
 import { z } from "zod";
 import { nowIso } from "../db.ts";
 import { ulid, insightHandle } from "../ids.ts";
@@ -68,8 +68,8 @@ const DRAFT_SYSTEM_PROMPT = [
   "Return JSON with fields: title, body_md.",
 ].join("\n");
 
-function loadInsight(db: Database, insightId: string): InsightRow {
-  const row = db
+async function loadInsight(db: Database, insightId: string): Promise<InsightRow> {
+  const row = await db
     .query(
       `SELECT id, state, track, title, body_current, client_id, assignee_user_id
        FROM insights WHERE id = ?`,
@@ -79,25 +79,25 @@ function loadInsight(db: Database, insightId: string): InsightRow {
   return row;
 }
 
-function loadTicket(db: Database, ticketId: string): TicketRow {
-  const row = db.query("SELECT * FROM tickets WHERE id = ?").get(ticketId) as TicketRow | null;
+async function loadTicket(db: Database, ticketId: string): Promise<TicketRow> {
+  const row = await db.query("SELECT * FROM tickets WHERE id = ?").get(ticketId) as TicketRow | null;
   if (!row) throw new HttpError(404, `Ticket not found: ${ticketId}`);
   return row;
 }
 
-export function getTicket(db: Database, ticketId: string): TicketRow {
-  return loadTicket(db, ticketId);
+export async function getTicket(db: Database, ticketId: string): Promise<TicketRow> {
+  return await loadTicket(db, ticketId);
 }
 
-export function listTicketsForInsight(db: Database, insightId: string): TicketRow[] {
-  loadInsight(db, insightId);
-  return db
+export async function listTicketsForInsight(db: Database, insightId: string): Promise<TicketRow[]> {
+  await loadInsight(db, insightId);
+  return await db
     .query("SELECT * FROM tickets WHERE insight_id = ? ORDER BY drafted_at DESC, id DESC")
     .all(insightId) as TicketRow[];
 }
 
-function requesterNames(db: Database, insight: InsightRow): string[] {
-  const rows = db
+async function requesterNames(db: Database, insight: InsightRow): Promise<string[]> {
+  const rows = await db
     .query(
       `SELECT c.name FROM insight_requesters r
        JOIN clients c ON c.id = r.client_id
@@ -105,7 +105,7 @@ function requesterNames(db: Database, insight: InsightRow): string[] {
     )
     .all(insight.id) as Array<{ name: string }>;
   if (rows.length > 0) return rows.map((r) => r.name);
-  const origin = db.query("SELECT name FROM clients WHERE id = ?").get(insight.client_id) as
+  const origin = await db.query("SELECT name FROM clients WHERE id = ?").get(insight.client_id) as
     | { name: string }
     | null;
   return origin ? [origin.name] : [];
@@ -118,8 +118,8 @@ interface Evidence {
   meeting_date: string;
 }
 
-function mentionEvidence(db: Database, insightId: string): Evidence[] {
-  return db
+async function mentionEvidence(db: Database, insightId: string): Promise<Evidence[]> {
+  return await db
     .query(
       `SELECT m.quote, m.speaker, c.name AS client_name, mt.meeting_date
        FROM insight_mentions m
@@ -144,7 +144,7 @@ export async function draftTicket(
   db: Database,
   opts: { insightId: string; actor: Actor },
 ): Promise<TicketRow> {
-  const insight = loadInsight(db, opts.insightId);
+  const insight = await loadInsight(db, opts.insightId);
   if (insight.state !== "finalized" && insight.state !== "ticketed") {
     throw new HttpError(409, `Insight must be finalized to draft a ticket (state: ${insight.state})`);
   }
@@ -155,8 +155,8 @@ export async function draftTicket(
     );
   }
 
-  const names = requesterNames(db, insight);
-  const evidence = mentionEvidence(db, opts.insightId);
+  const names = await requesterNames(db, insight);
+  const evidence = await mentionEvidence(db, opts.insightId);
   const evidenceBlock =
     evidence.length > 0
       ? evidence
@@ -188,54 +188,54 @@ export async function draftTicket(
   const bodyMd = `${data.body_md.trimEnd()}\n\n${ticketFooter(opts.insightId, names)}\n`;
   const id = ulid();
   const t = nowIso();
-  db.transaction(() => {
-    db.query(
+  await db.transaction(async () => {
+    await db.query(
       `INSERT INTO tickets (id, insight_id, draft_title, draft_body_md, state, created_by, drafted_at)
        VALUES (?, ?, ?, ?, 'draft', ?, ?)`,
     ).run(id, opts.insightId, data.title, bodyMd, opts.actor.id, t);
-    appendEvent(db, {
+    await appendEvent(db, {
       actorUserId: opts.actor.id,
       entityType: "ticket",
       entityId: id,
       eventType: "ticket.drafted",
       payload: { insight_id: opts.insightId, redraft: insight.state === "ticketed" },
     });
-  })();
+  });
   return loadTicket(db, id);
 }
 
 /** Shared persistence for both raise paths: update ticket + event + insight transition, atomically. */
-function persistRaise(
+async function persistRaise(
   db: Database,
   ticket: TicketRow,
   raise: { repo: string; url: string; number: number; mode: "manual_paste" | "direct_api"; actor: Actor },
-): TicketRow {
+): Promise<TicketRow> {
   const t = nowIso();
-  db.transaction(() => {
-    db.query(
+  await db.transaction(async () => {
+    await db.query(
       `UPDATE tickets SET repo = ?, external_url = ?, external_number = ?, create_mode = ?,
        state = 'raised', raised_at = ? WHERE id = ?`,
     ).run(raise.repo, raise.url, raise.number, raise.mode, t, ticket.id);
-    appendEvent(db, {
+    await appendEvent(db, {
       actorUserId: raise.actor.id,
       entityType: "ticket",
       entityId: ticket.id,
       eventType: "ticket.raised",
       payload: { repo: raise.repo, number: raise.number, mode: raise.mode, insight_id: ticket.insight_id },
     });
-    const ins = db.query("SELECT state FROM insights WHERE id = ?").get(ticket.insight_id) as
+    const ins = await db.query("SELECT state FROM insights WHERE id = ?").get(ticket.insight_id) as
       | { state: string }
       | null;
     // finalized -> ticketed; skip when already ticketed (re-draft path)
     if (ins?.state === "finalized") {
-      transitionInsight(db, {
+      await transitionInsight(db, {
         insightId: ticket.insight_id,
         to: "ticketed",
         actor: raise.actor,
         payload: { ticket_id: ticket.id, external_url: raise.url },
       });
     }
-  })();
+  });
   return loadTicket(db, ticket.id);
 }
 
@@ -243,11 +243,11 @@ function persistRaise(
  * Manual copy-paste path. The pasted URL may name ANY repo, including a blocked org:
  * the human created that issue by hand, so assertRepoWritable does not apply.
  */
-export function markRaised(
+export async function markRaised(
   db: Database,
   opts: { ticketId: string; externalUrl: string; actor: Actor },
-): TicketRow {
-  const ticket = loadTicket(db, opts.ticketId);
+): Promise<TicketRow> {
+  const ticket = await loadTicket(db, opts.ticketId);
   if (ticket.state === "raised") {
     throw new HttpError(409, "Ticket is already raised");
   }
@@ -257,7 +257,7 @@ export function markRaised(
   }
   const repo = `${m[1]}/${m[2]}`;
   const number = Number(m[3]);
-  return persistRaise(db, ticket, { repo, url: opts.externalUrl, number, mode: "manual_paste", actor: opts.actor });
+  return await persistRaise(db, ticket, { repo, url: opts.externalUrl, number, mode: "manual_paste", actor: opts.actor });
 }
 
 /**
@@ -273,7 +273,7 @@ export async function createDirect(
   } catch (err) {
     throw new HttpError(403, err instanceof Error ? err.message : String(err));
   }
-  const ticket = loadTicket(db, opts.ticketId);
+  const ticket = await loadTicket(db, opts.ticketId);
   if (ticket.state === "raised") {
     throw new HttpError(409, "Ticket is already raised");
   }
@@ -282,7 +282,7 @@ export async function createDirect(
   }
   // Check transition permission BEFORE the GitHub call: the API write is an
   // external side effect that cannot be rolled back if the transition fails.
-  const ins = db
+  const ins = await db
     .query("SELECT state, assignee_user_id FROM insights WHERE id = ?")
     .get(ticket.insight_id) as { state: string; assignee_user_id: string | null } | null;
   if (ins?.state === "finalized") {
@@ -312,16 +312,16 @@ export async function createDirect(
  * Drafts generated but never confirmed created go stale after N days.
  * Needs a scheduler hook (cron/digest job) to call this periodically.
  */
-export function markStaleDrafts(db: Database, olderThanDays = 7): string[] {
+export async function markStaleDrafts(db: Database, olderThanDays = 7): Promise<string[]> {
   const cutoff = new Date(Date.now() - olderThanDays * 86_400_000).toISOString();
-  const rows = db
+  const rows = await db
     .query("SELECT id, insight_id FROM tickets WHERE state = 'draft' AND drafted_at < ?")
     .all(cutoff) as Array<{ id: string; insight_id: string }>;
   if (rows.length === 0) return [];
-  db.transaction(() => {
+  await db.transaction(async () => {
     for (const row of rows) {
-      db.query("UPDATE tickets SET state = 'stale' WHERE id = ?").run(row.id);
-      appendEvent(db, {
+      await db.query("UPDATE tickets SET state = 'stale' WHERE id = ?").run(row.id);
+      await appendEvent(db, {
         actorUserId: null, // system
         entityType: "ticket",
         entityId: row.id,
@@ -329,6 +329,6 @@ export function markStaleDrafts(db: Database, olderThanDays = 7): string[] {
         payload: { insight_id: row.insight_id, older_than_days: olderThanDays },
       });
     }
-  })();
+  });
   return rows.map((r) => r.id);
 }

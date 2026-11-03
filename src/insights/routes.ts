@@ -60,15 +60,15 @@ function invalid(issues: unknown): Response {
 
 // ---------------------------------------------------------------- list + detail
 
-route("GET", "/api/insights", "user", (req) => {
+route("GET", "/api/insights", "user", async (req) => {
   const raw = queryParams(new URL(req.url), ["state", "track", "client_id", "assignee", "item_type"]);
   const parsed = ListFiltersSchema.safeParse(raw);
   if (!parsed.success) return invalid(parsed.error.issues);
-  return json({ insights: listInsights(getDb(), parsed.data) });
+  return json({ insights: await listInsights(getDb(), parsed.data) });
 });
 
-route("GET", "/api/insights/:id", "user", (_req, _user, params) => {
-  const detail = getInsightDetail(getDb(), params.id ?? "");
+route("GET", "/api/insights/:id", "user", async (_req, _user, params) => {
+  const detail = await getInsightDetail(getDb(), params.id ?? "");
   if (!detail) return json({ error: "insight not found" }, 404);
   return json(detail);
 });
@@ -78,7 +78,7 @@ route("GET", "/api/insights/:id", "user", (_req, _user, params) => {
 route("POST", "/api/insights/:id/triage", "user", async (req, user, params) => {
   const parsed = TriageSchema.safeParse(await readBody(req));
   if (!parsed.success) return invalid(parsed.error.issues);
-  return send(triageInsight(getDb(), params.id ?? "", actorOf(user), parsed.data));
+  return send(await triageInsight(getDb(), params.id ?? "", actorOf(user), parsed.data));
 });
 
 const BulkSchema = z.object({
@@ -101,9 +101,9 @@ route("POST", "/api/insights/bulk", "user", async (req, user) => {
   for (const id of ids) {
     try {
       if (action === "triage") {
-        triageInsight(db, id, actorOf(user), { track: track!, assignee_user_id });
+        await triageInsight(db, id, actorOf(user), { track: track!, assignee_user_id });
       } else {
-        rejectInsight(db, id, actorOf(user), reason?.trim() || "Bulk reject during meeting review");
+        await rejectInsight(db, id, actorOf(user), reason?.trim() || "Bulk reject during meeting review");
       }
       results.push({ id, ok: true });
     } catch (e) {
@@ -117,35 +117,35 @@ route("POST", "/api/insights/bulk", "user", async (req, user) => {
 route("PUT", "/api/insights/:id/body", "user", async (req, user, params) => {
   const parsed = BodyEditSchema.safeParse(await readBody(req));
   if (!parsed.success) return invalid(parsed.error.issues);
-  return send(updateBody(getDb(), params.id ?? "", actorOf(user), parsed.data.body_current, parsed.data.version));
+  return send(await updateBody(getDb(), params.id ?? "", actorOf(user), parsed.data.body_current, parsed.data.version));
 });
 
-route("POST", "/api/insights/:id/finalize", "user", (_req, user, params) => {
-  return send(finalizeInsight(getDb(), params.id ?? "", actorOf(user)));
+route("POST", "/api/insights/:id/finalize", "user", async (_req, user, params) => {
+  return send(await finalizeInsight(getDb(), params.id ?? "", actorOf(user)));
 });
 
 route("POST", "/api/insights/:id/reject", "user", async (req, user, params) => {
   const parsed = RejectSchema.safeParse(await readBody(req));
   if (!parsed.success) return invalid(parsed.error.issues);
-  return send(rejectInsight(getDb(), params.id ?? "", actorOf(user), parsed.data.reason));
+  return send(await rejectInsight(getDb(), params.id ?? "", actorOf(user), parsed.data.reason));
 });
 
 route("POST", "/api/insights/:id/merge", "user", async (req, user, params) => {
   const parsed = MergeSchema.safeParse(await readBody(req));
   if (!parsed.success) return invalid(parsed.error.issues);
-  return send(mergeInsight(getDb(), params.id ?? "", parsed.data.into_insight_id, actorOf(user)));
+  return send(await mergeInsight(getDb(), params.id ?? "", parsed.data.into_insight_id, actorOf(user)));
 });
 
 route("POST", "/api/insights/:id/editing", "user", async (req, user, params) => {
   const parsed = EditingSchema.safeParse(await readBody(req));
   if (!parsed.success) return invalid(parsed.error.issues);
-  return send(setEditing(getDb(), params.id ?? "", actorOf(user), parsed.data.on));
+  return send(await setEditing(getDb(), params.id ?? "", actorOf(user), parsed.data.on));
 });
 
 // ---------------------------------------------------------------- my queue
 
-route("GET", "/api/queue", "user", (_req, user) => {
-  return json(getQueue(getDb(), actorOf(user)));
+route("GET", "/api/queue", "user", async (_req, user) => {
+  return json(await getQueue(getDb(), actorOf(user)));
 });
 
 // ---------------------------------------------------------------- search
@@ -156,17 +156,17 @@ const SearchFiltersSchema = z.object({
   state: z.enum(STATES).optional(),
 });
 
-route("GET", "/api/search", "user", (req, user) => {
+route("GET", "/api/search", "user", async (req, user) => {
   const url = new URL(req.url);
   const q = url.searchParams.get("q")?.trim() ?? "";
   if (!q) return json({ error: "q is required" }, 400);
   const parsed = SearchFiltersSchema.safeParse(queryParams(url, ["client_id", "track", "state"]));
   if (!parsed.success) return invalid(parsed.error.issues);
-  return json(searchAll(getDb(), q, parsed.data, user ? { id: user.id, role: user.role } : undefined));
+  return json(await searchAll(getDb(), q, parsed.data, user ? { id: user.id, role: user.role } : undefined));
 });
 
-route("POST", "/api/search/rebuild", "admin", () => {
-  return json({ ok: true, ...rebuildFts(getDb()) });
+route("POST", "/api/search/rebuild", "admin", async () => {
+  return json({ ok: true, ...await rebuildFts(getDb()) });
 });
 
 const AskSchema = z.object({

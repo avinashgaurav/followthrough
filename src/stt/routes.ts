@@ -1,4 +1,4 @@
-import type { Database } from "bun:sqlite";
+import type { Database } from "../db.ts";
 import { join } from "node:path";
 import { route, json } from "../router.ts";
 import { getDb, nowIso } from "../db.ts";
@@ -27,8 +27,8 @@ interface MeetingRow {
 
 /** Boosted Deepgram keyterms for every active user's name (full + first name),
  *  so transcription spells team members correctly. */
-function userNameKeyterms(db: Database): string[] {
-  const rows = db
+async function userNameKeyterms(db: Database): Promise<string[]> {
+  const rows = await db
     .query("SELECT name FROM users WHERE disabled_at IS NULL AND name IS NOT NULL AND TRIM(name) != ''")
     .all() as Array<{ name: string }>;
   const terms = new Set<string>();
@@ -56,14 +56,14 @@ export async function transcribeMeeting(
   actor: { id: string },
   opts: TranscribeOpts & { useDeepgram?: boolean } = {},
 ): Promise<Response> {
-  const meeting = db
+  const meeting = await db
     .query("SELECT id, status, audio_asset_id FROM meetings WHERE id = ? AND deleted_at IS NULL")
     .get(meetingId) as MeetingRow | null;
   if (!meeting) return json({ error: "Meeting not found." }, 404);
   if (!meeting.audio_asset_id) {
     return json({ error: "Meeting has no audio asset. Upload audio first or paste a transcript." }, 400);
   }
-  const existing = db
+  const existing = await db
     .query("SELECT id FROM transcripts WHERE meeting_id = ? LIMIT 1")
     .get(meetingId) as { id: string } | null;
   if (existing) {
@@ -73,7 +73,7 @@ export async function transcribeMeeting(
     return json({ error: "Transcription already in progress for this meeting." }, 409);
   }
 
-  const asset = db
+  const asset = await db
     .query("SELECT storage_backend, storage_ref FROM media_assets WHERE id = ?")
     .get(meeting.audio_asset_id) as AssetRow | null;
   if (!asset) return json({ error: "Audio asset record is missing for this meeting." }, 500);
@@ -84,7 +84,7 @@ export async function transcribeMeeting(
 
   // Covers both the fresh path (uploaded -> transcribing) and the retry path
   // (transcription_failed -> transcribing).
-  db.query("UPDATE meetings SET status = 'transcribing' WHERE id = ?").run(meetingId);
+  await db.query("UPDATE meetings SET status = 'transcribing' WHERE id = ?").run(meetingId);
 
   try {
     // Prefer cloud STT when a Deepgram key is set (the deployed path); otherwise
@@ -92,28 +92,28 @@ export async function transcribeMeeting(
     const useDeepgram = opts.useDeepgram ?? deepgramConfigured();
     // Auto-boost every active user's name (full + first) so the transcript spells
     // people right (e.g. "Maria" not "Marina") without hand-maintaining them.
-    const keyterms = useDeepgram ? userNameKeyterms(db) : [];
+    const keyterms = useDeepgram ? await userNameKeyterms(db) : [];
     const text = useDeepgram
       ? await transcribeViaDeepgram(audioPath, { keyterms })
       : await transcribeAudio(audioPath, opts);
     // Deepgram diarizes (speaker-labeled), so it's good-quality; local whisper does not.
     const qualityFlag = useDeepgram ? "ok" : QUALITY_FLAG;
     const transcriptId = ulid();
-    db.transaction(() => {
-      db.query(
+    await db.transaction(async () => {
+      await db.query(
         `INSERT INTO transcripts (id, meeting_id, content, raw_content, quality_flag, source, created_at)
          VALUES (?, ?, ?, ?, ?, 'stt', ?)`,
       ).run(transcriptId, meetingId, cleanTranscript(text), text, qualityFlag, nowIso());
-      syncTranscriptFts(db, transcriptId);
-      db.query("UPDATE meetings SET status = 'transcribed' WHERE id = ?").run(meetingId);
-      appendEvent(db, {
+      await syncTranscriptFts(db, transcriptId);
+      await db.query("UPDATE meetings SET status = 'transcribed' WHERE id = ?").run(meetingId);
+      await appendEvent(db, {
         actorUserId: actor.id,
         entityType: "meeting",
         entityId: meetingId,
         eventType: "meeting.transcript_added",
         payload: { via: useDeepgram ? "deepgram" : "whisper", transcript_id: transcriptId, quality_flag: qualityFlag },
       });
-    })();
+    });
     return json({
       ok: true,
       meeting_id: meetingId,
@@ -123,16 +123,16 @@ export async function transcribeMeeting(
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    db.transaction(() => {
-      db.query("UPDATE meetings SET status = 'transcription_failed' WHERE id = ?").run(meetingId);
-      appendEvent(db, {
+    await db.transaction(async () => {
+      await db.query("UPDATE meetings SET status = 'transcription_failed' WHERE id = ?").run(meetingId);
+      await appendEvent(db, {
         actorUserId: actor.id,
         entityType: "meeting",
         entityId: meetingId,
         eventType: "meeting.transcription_failed",
         payload: { error: message },
       });
-    })();
+    });
     return json({ error: message }, 500);
   }
 }

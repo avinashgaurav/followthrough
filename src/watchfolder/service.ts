@@ -1,4 +1,4 @@
-import type { Database } from "bun:sqlite";
+import type { Database } from "../db.ts";
 import { mkdirSync, readdirSync, readFileSync, renameSync, statSync, existsSync } from "node:fs";
 import { extname, join } from "node:path";
 import { getDb, nowIso } from "../db.ts";
@@ -57,27 +57,27 @@ export interface ScanResult {
 const processSeen = new Set<string>();
 
 /** Find or create the no-login system user that watch-folder actions attribute to. */
-export function findOrCreateSystemUser(db: Database): string {
-  const row = db.query("SELECT id FROM users WHERE email = ?").get(SYSTEM_USER_EMAIL) as
+export async function findOrCreateSystemUser(db: Database): Promise<string> {
+  const row = await db.query("SELECT id FROM users WHERE email = ?").get(SYSTEM_USER_EMAIL) as
     | { id: string }
     | null;
   if (row) return row.id;
   const id = ulid();
   // code_hash NULL = login permanently disabled for this account
-  db.query(
+  await db.query(
     "INSERT INTO users (id, email, name, role, code_hash, created_at) VALUES (?, ?, 'Watch Folder', 'member', NULL, ?)",
   ).run(id, SYSTEM_USER_EMAIL, nowIso());
   return id;
 }
 
 /** Find or create the holding client for unsorted inbox meetings. */
-export function findOrCreateInboxClient(db: Database): string {
-  const row = db.query("SELECT id FROM clients WHERE name = ?").get(INBOX_CLIENT_NAME) as
+export async function findOrCreateInboxClient(db: Database): Promise<string> {
+  const row = await db.query("SELECT id FROM clients WHERE name = ?").get(INBOX_CLIENT_NAME) as
     | { id: string }
     | null;
   if (row) return row.id;
   const id = ulid();
-  db.query(
+  await db.query(
     "INSERT INTO clients (id, name, domain, is_internal, created_by, created_at) VALUES (?, ?, NULL, 0, NULL, ?)",
   ).run(id, INBOX_CLIENT_NAME, nowIso());
   return id;
@@ -91,8 +91,8 @@ function classify(filename: string): { kind: "transcript" | "audio"; contentType
 }
 
 /** Already ingested in a previous run? Content-addressed check against media_assets. */
-function shaKnown(db: Database, sha: string): boolean {
-  return db.query("SELECT 1 FROM media_assets WHERE sha256 = ? LIMIT 1").get(sha) !== null;
+async function shaKnown(db: Database, sha: string): Promise<boolean> {
+  return await db.query("SELECT 1 FROM media_assets WHERE sha256 = ? LIMIT 1").get(sha) !== null;
 }
 
 /** Move a processed file into dir/processed/, keeping the name unique. */
@@ -132,14 +132,14 @@ export async function scanWatchFolder(db: Database, opts: ScanOptions = {}): Pro
       const bytes = new Uint8Array(readFileSync(path));
       const sha = sha256Hex(bytes);
 
-      if (seen.has(sha) || shaKnown(db, sha)) {
+      if (seen.has(sha) || await shaKnown(db, sha)) {
         result.duplicates += 1;
         moveToProcessed(dir, filename);
         continue;
       }
 
-      const clientId = findOrCreateInboxClient(db);
-      const actorId = findOrCreateSystemUser(db);
+      const clientId = await findOrCreateInboxClient(db);
+      const actorId = await findOrCreateSystemUser(db);
       const mtime = statSync(path).mtime;
       const meetingDate = mtime.toISOString().slice(0, 10);
       const file: UploadedFile = { filename, contentType: fileKind.contentType, bytes };
@@ -175,9 +175,9 @@ export interface WatchFolderStatus {
   processed_today: number;
 }
 
-export function watchFolderStatus(db: Database, dir: string = defaultWatchDir()): WatchFolderStatus {
+export async function watchFolderStatus(db: Database, dir: string = defaultWatchDir()): Promise<WatchFolderStatus> {
   const today = nowIso().slice(0, 10);
-  const row = db
+  const row = await db
     .query(
       `SELECT COUNT(*) AS n FROM events
        WHERE event_type = 'meeting.uploaded'

@@ -1,4 +1,4 @@
-import type { Database } from "bun:sqlite";
+import type { Database } from "../db.ts";
 import { nowIso } from "../db.ts";
 import { appendEvent } from "../events.ts";
 import { parseIcs, type IcsEvent } from "./ics.ts";
@@ -31,14 +31,14 @@ export interface CalendarUiEvent {
   suggested_client_name: string | null;
 }
 
-export function getFeedUrl(db: Database): string | null {
-  const row = db
+export async function getFeedUrl(db: Database): Promise<string | null> {
+  const row = await db
     .query("SELECT value FROM app_settings WHERE key = ?")
     .get(CALENDAR_SETTINGS_KEY) as { value: string } | null;
   return row?.value ?? null;
 }
 
-export function setFeedUrl(db: Database, url: string, userId: string): void {
+export async function setFeedUrl(db: Database, url: string, userId: string): Promise<void> {
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -49,13 +49,13 @@ export function setFeedUrl(db: Database, url: string, userId: string): void {
     throw new CalendarConfigError("Calendar feed URL must use https.");
   }
   assertPublicHost(parsed.hostname);
-  const tx = db.transaction(() => {
-    db.query(
+  const tx = () => db.transaction(async () => {
+    await db.query(
       `INSERT INTO app_settings (key, value, updated_by, updated_at) VALUES (?, ?, ?, ?)
        ON CONFLICT(key) DO UPDATE SET value = excluded.value,
          updated_by = excluded.updated_by, updated_at = excluded.updated_at`,
     ).run(CALENDAR_SETTINGS_KEY, parsed.toString(), userId, nowIso());
-    appendEvent(db, {
+    await appendEvent(db, {
       actorUserId: userId,
       entityType: "setting",
       entityId: CALENDAR_SETTINGS_KEY,
@@ -63,15 +63,15 @@ export function setFeedUrl(db: Database, url: string, userId: string): void {
       payload: { key: CALENDAR_SETTINGS_KEY },
     });
   });
-  tx();
+  await tx();
   clearCalendarCache();
 }
 
-export function clearFeedUrl(db: Database, userId: string): void {
-  const tx = db.transaction(() => {
-    const res = db.query("DELETE FROM app_settings WHERE key = ?").run(CALENDAR_SETTINGS_KEY);
+export async function clearFeedUrl(db: Database, userId: string): Promise<void> {
+  const tx = () => db.transaction(async () => {
+    const res = await db.query("DELETE FROM app_settings WHERE key = ?").run(CALENDAR_SETTINGS_KEY);
     if (res.changes > 0) {
-      appendEvent(db, {
+      await appendEvent(db, {
         actorUserId: userId,
         entityType: "setting",
         entityId: CALENDAR_SETTINGS_KEY,
@@ -80,7 +80,7 @@ export function clearFeedUrl(db: Database, userId: string): void {
       });
     }
   });
-  tx();
+  await tx();
   clearCalendarCache();
 }
 
@@ -175,7 +175,7 @@ export async function fetchEvents(
   db: Database,
   fetchImpl: typeof fetch = fetch,
 ): Promise<CalendarEventsResult> {
-  const url = getFeedUrl(db);
+  const url = await getFeedUrl(db);
   if (!url) return { configured: false, events: [] };
 
   const all = await fetchParsedFeed(url, fetchImpl);
@@ -183,7 +183,7 @@ export async function fetchEvents(
   const min = now - WINDOW_PAST_MS;
   const max = now + WINDOW_FUTURE_MS;
 
-  const clients = db
+  const clients = await db
     .query("SELECT id, name, domain FROM clients ORDER BY created_at, id")
     .all() as ClientRow[];
 

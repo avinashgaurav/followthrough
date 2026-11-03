@@ -1,4 +1,4 @@
-import type { Database } from "bun:sqlite";
+import type { Database } from "../db.ts";
 import { mkdirSync, renameSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
 import { env } from "../config.ts";
@@ -99,7 +99,7 @@ export async function saveBlob(
   renameSync(tmpPath, finalPath);
 
   const sha = sha256Hex(input.bytes);
-  db.query(
+  await db.query(
     `INSERT INTO media_assets (id, kind, storage_backend, storage_ref, filename, content_type,
                                size_bytes, sha256, uploaded_by, status, created_at)
      VALUES (?, ?, 'local', ?, ?, ?, ?, ?, ?, 'uploaded', ?)`,
@@ -114,7 +114,7 @@ export async function saveBlob(
     input.uploadedBy,
     nowIso(),
   );
-  return db.query("SELECT * FROM media_assets WHERE id = ?").get(id) as MediaAsset;
+  return await db.query("SELECT * FROM media_assets WHERE id = ?").get(id) as MediaAsset;
 }
 
 /** Absolute filesystem path for a local asset. */

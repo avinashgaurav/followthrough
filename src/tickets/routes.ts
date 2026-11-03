@@ -56,17 +56,17 @@ route("POST", "/api/insights/:id/ticket-draft", "user", async (_req, user, param
   }
 });
 
-route("GET", "/api/tickets/:id", "user", (_req, _user, params) => {
+route("GET", "/api/tickets/:id", "user", async (_req, _user, params) => {
   try {
-    return json(getTicket(getDb(), params.id!));
+    return json(await getTicket(getDb(), params.id!));
   } catch (err) {
     return errorResponse(err);
   }
 });
 
-route("GET", "/api/insights/:id/tickets", "user", (_req, _user, params) => {
+route("GET", "/api/insights/:id/tickets", "user", async (_req, _user, params) => {
   try {
-    return json(listTicketsForInsight(getDb(), params.id!));
+    return json(await listTicketsForInsight(getDb(), params.id!));
   } catch (err) {
     return errorResponse(err);
   }
@@ -75,7 +75,7 @@ route("GET", "/api/insights/:id/tickets", "user", (_req, _user, params) => {
 route("POST", "/api/tickets/:id/mark-raised", "user", async (req, user, params) => {
   try {
     const body = await parseBody(req, MarkRaisedBody);
-    const ticket = markRaised(getDb(), {
+    const ticket = await markRaised(getDb(), {
       ticketId: params.id!,
       externalUrl: body.external_url,
       actor: actorOf(user),

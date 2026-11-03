@@ -1,4 +1,4 @@
-import type { Database } from "bun:sqlite";
+import type { Database } from "../db.ts";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { openTestDb, nowIso } from "../db.ts";
@@ -16,8 +16,8 @@ export interface Seeded {
   meetingId: string;
 }
 
-export function seed(): Seeded {
-  const db = openTestDb();
+export async function seed(): Promise<Seeded> {
+  const db = await openTestDb();
   const t = nowIso();
   const addUser = db.query(
     "INSERT INTO users (id, email, name, role, created_at) VALUES (?, ?, ?, ?, ?)",
@@ -25,14 +25,14 @@ export function seed(): Seeded {
   const adminId = ulid();
   const aliceId = ulid();
   const bobId = ulid();
-  addUser.run(adminId, `admin-${adminId.slice(-5)}@tallyhall.com`, "Admin", "admin", t);
-  addUser.run(aliceId, `alice-${aliceId.slice(-5)}@tallyhall.com`, "Alice", "member", t);
-  addUser.run(bobId, `bob-${bobId.slice(-5)}@tallyhall.com`, "Bob", "member", t);
+  await addUser.run(adminId, `admin-${adminId.slice(-5)}@tallyhall.com`, "Admin", "admin", t);
+  await addUser.run(aliceId, `alice-${aliceId.slice(-5)}@tallyhall.com`, "Alice", "member", t);
+  await addUser.run(bobId, `bob-${bobId.slice(-5)}@tallyhall.com`, "Bob", "member", t);
 
   const clientId = ulid();
-  db.query("INSERT INTO clients (id, name, created_at) VALUES (?, 'Acme', ?)").run(clientId, t);
+  await db.query("INSERT INTO clients (id, name, created_at) VALUES (?, 'Acme', ?)").run(clientId, t);
   const meetingId = ulid();
-  db.query(
+  await db.query(
     "INSERT INTO meetings (id, client_id, seq, meeting_date, created_at) VALUES (?, ?, 1, '2026-05-01', ?)",
   ).run(meetingId, clientId, t);
 
@@ -55,11 +55,11 @@ export interface InsightOpts {
   createdAt?: string;
 }
 
-export function makeInsight(s: Seeded, opts: InsightOpts = {}): string {
+export async function makeInsight(s: Seeded, opts: InsightOpts = {}): Promise<string> {
   const id = ulid();
   const t = opts.createdAt ?? nowIso();
   const body = opts.body ?? "Clients keep asking for this.";
-  s.db
+  await s.db
     .query(
       `INSERT INTO insights (id, meeting_id, client_id, item_type, track, title, body_original, body_current,
                              state, assignee_user_id, created_at, updated_at)
@@ -82,12 +82,12 @@ export function makeInsight(s: Seeded, opts: InsightOpts = {}): string {
 }
 
 /** Insert a release row plus its entries; returns ids. */
-export function makeRelease(
+export async function makeRelease(
   db: Database,
   opts: { tag: string; githubId: number; entries: ParsedEntry[]; publishedAt?: string },
-): { releaseId: string; entryIds: string[] } {
+): Promise<{ releaseId: string; entryIds: string[] }> {
   const releaseId = ulid();
-  db.query(
+  await db.query(
     `INSERT INTO releases (id, repo, github_release_id, tag_name, name, body_md, published_at, fetched_at)
      VALUES (?, ?, ?, ?, ?, '', ?, ?)`,
   ).run(
@@ -99,7 +99,7 @@ export function makeRelease(
     opts.publishedAt ?? nowIso(),
     nowIso(),
   );
-  const entryIds = persistEntries(db, releaseId, opts.entries);
+  const entryIds = await persistEntries(db, releaseId, opts.entries);
   return { releaseId, entryIds };
 }
 

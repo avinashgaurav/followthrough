@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Database } from "bun:sqlite";
+import type { Database } from "../db.ts";
 import { openTestDb } from "../db.ts";
 import {
   INBOX_CLIENT_NAME,
@@ -38,8 +38,8 @@ function ensureDir(dir: string, filename: string): string {
   return join(dir, filename);
 }
 
-function inboxMeetings(db: Database): Record<string, unknown>[] {
-  return db
+async function inboxMeetings(db: Database): Promise<Record<string, unknown>[]> {
+  return await db
     .query(
       `SELECT m.* FROM meetings m JOIN clients c ON c.id = m.client_id
        WHERE c.name = ? ORDER BY m.seq`,
@@ -49,7 +49,7 @@ function inboxMeetings(db: Database): Record<string, unknown>[] {
 
 describe("watch folder scan", () => {
   test("txt file becomes a transcribed meeting under the Inbox client", async () => {
-    const db = openTestDb();
+    const db = await openTestDb();
     const { dir, blobDir } = tempDirs();
     writeFileSync(ensureDir(dir, "standup-notes.txt"), "Client: we really need SSO support.\n");
 
@@ -57,7 +57,7 @@ describe("watch folder scan", () => {
     expect(result.created).toBe(1);
     expect(result.errors).toBe(0);
 
-    const meetings = inboxMeetings(db);
+    const meetings = await inboxMeetings(db);
     expect(meetings).toHaveLength(1);
     const m = meetings[0]!;
     expect(m.status).toBe("transcribed");
@@ -67,7 +67,7 @@ describe("watch folder scan", () => {
     expect(typeof m.meeting_date).toBe("string");
     expect(m.meeting_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 
-    const transcript = db
+    const transcript = await db
       .query("SELECT content FROM transcripts WHERE meeting_id = ?")
       .get(m.id as string) as { content: string };
     expect(transcript.content).toContain("SSO support");
@@ -79,7 +79,7 @@ describe("watch folder scan", () => {
   });
 
   test("same file content twice is not duplicated", async () => {
-    const db = openTestDb();
+    const db = await openTestDb();
     const { dir, blobDir } = tempDirs();
     writeFileSync(ensureDir(dir, "call.txt"), "Same call, dropped twice.");
     const first = await scanWatchFolder(db, { dir, blobDir, seen: new Set() });
@@ -92,25 +92,25 @@ describe("watch folder scan", () => {
     expect(second.created).toBe(0);
     expect(second.duplicates).toBe(1);
 
-    expect(inboxMeetings(db)).toHaveLength(1);
+    expect(await inboxMeetings(db)).toHaveLength(1);
     // the duplicate still leaves the inbox
     expect(listPendingFiles(dir)).toHaveLength(0);
   });
 
   test("audio file becomes a meeting with status uploaded and a stored blob", async () => {
-    const db = openTestDb();
+    const db = await openTestDb();
     const { dir, blobDir } = tempDirs();
     writeFileSync(ensureDir(dir, "recording.webm"), new Uint8Array([0x1a, 0x45, 0xdf, 0xa3, 9, 9]));
 
     const result = await scanWatchFolder(db, { dir, blobDir, seen: new Set() });
     expect(result.created).toBe(1);
 
-    const meetings = inboxMeetings(db);
+    const meetings = await inboxMeetings(db);
     expect(meetings).toHaveLength(1);
     const m = meetings[0]!;
     expect(m.status).toBe("uploaded");
     expect(m.audio_asset_id).toBeTruthy();
-    const asset = db
+    const asset = await db
       .query("SELECT * FROM media_assets WHERE id = ?")
       .get(m.audio_asset_id as string) as Record<string, unknown>;
     expect(asset.kind).toBe("audio");
@@ -119,46 +119,46 @@ describe("watch folder scan", () => {
   });
 
   test("non-matching files are ignored and stay put", async () => {
-    const db = openTestDb();
+    const db = await openTestDb();
     const { dir, blobDir } = tempDirs();
     writeFileSync(ensureDir(dir, "notes.pdf"), "%PDF-1.4 not a transcript");
     const result = await scanWatchFolder(db, { dir, blobDir, seen: new Set() });
     expect(result.created).toBe(0);
-    expect(inboxMeetings(db)).toHaveLength(0);
+    expect(await inboxMeetings(db)).toHaveLength(0);
     expect(existsSync(join(dir, "notes.pdf"))).toBe(true);
   });
 
   test("status endpoint data: pending count and processed_today", async () => {
-    const db = openTestDb();
+    const db = await openTestDb();
     const { dir, blobDir } = tempDirs();
     writeFileSync(ensureDir(dir, "a.txt"), "first call transcript");
     writeFileSync(join(dir, "b.txt"), "second call transcript");
     writeFileSync(join(dir, "ignored.bin"), "not eligible");
 
-    let status = watchFolderStatus(db, dir);
+    let status = await watchFolderStatus(db, dir);
     expect(status.dir).toBe(dir);
     expect(status.pending).toBe(2);
     expect(status.processed_today).toBe(0);
 
     await scanWatchFolder(db, { dir, blobDir, seen: new Set() });
-    status = watchFolderStatus(db, dir);
+    status = await watchFolderStatus(db, dir);
     expect(status.pending).toBe(0);
     expect(status.processed_today).toBe(2);
   });
 
-  test("inbox client and system user are created once and reused", () => {
-    const db = openTestDb();
-    const c1 = findOrCreateInboxClient(db);
-    const c2 = findOrCreateInboxClient(db);
+  test("inbox client and system user are created once and reused", async () => {
+    const db = await openTestDb();
+    const c1 = await findOrCreateInboxClient(db);
+    const c2 = await findOrCreateInboxClient(db);
     expect(c1).toBe(c2);
-    const client = db.query("SELECT * FROM clients WHERE id = ?").get(c1) as Record<string, unknown>;
+    const client = await db.query("SELECT * FROM clients WHERE id = ?").get(c1) as Record<string, unknown>;
     expect(client.name).toBe(INBOX_CLIENT_NAME);
     expect(client.is_internal).toBe(0);
 
-    const u1 = findOrCreateSystemUser(db);
-    const u2 = findOrCreateSystemUser(db);
+    const u1 = await findOrCreateSystemUser(db);
+    const u2 = await findOrCreateSystemUser(db);
     expect(u1).toBe(u2);
-    const user = db.query("SELECT * FROM users WHERE id = ?").get(u1) as Record<string, unknown>;
+    const user = await db.query("SELECT * FROM users WHERE id = ?").get(u1) as Record<string, unknown>;
     expect(user.code_hash).toBeNull(); // cannot log in
   });
 });

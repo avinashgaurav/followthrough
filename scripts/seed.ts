@@ -9,7 +9,7 @@ const email = (process.argv[2] ?? process.env.ADMIN_EMAIL ?? "admin@example.com"
 const name = process.argv[3] ?? process.env.ADMIN_NAME ?? "Admin";
 
 const db = getDb();
-const existing = db.query("SELECT id FROM users WHERE email = ?").get(email);
+const existing = await db.query("SELECT id FROM users WHERE email = ?").get(email);
 if (existing) {
   console.log(`User ${email} already exists. Use the rotate-code endpoint to get a new code.`);
   process.exit(0);
@@ -17,10 +17,10 @@ if (existing) {
 
 const id = ulid();
 const code = generateLoginCode();
-db.query(
+await db.query(
   "INSERT INTO users (id, email, name, role, code_hash, created_at) VALUES (?, ?, ?, 'admin', ?, ?)",
 ).run(id, email, name, await hashCode(code), nowIso());
-appendEvent(db, {
+await appendEvent(db, {
   actorUserId: null,
   entityType: "user",
   entityId: id,

@@ -60,16 +60,16 @@ if (import.meta.main) {
     startWatchFolder();
     startDailyNudge(getDb);
   }
-  const sweepStale = () => {
+  const sweepStale = async () => {
     try {
-      markStaleDrafts(getDb());
-      const swept = failStaleExtractionRuns(getDb());
+      await markStaleDrafts(getDb());
+      const swept = await failStaleExtractionRuns(getDb());
       if (swept > 0) console.warn(`swept ${swept} abandoned extraction run(s)`);
     } catch (err) {
       console.warn("stale sweep failed:", err);
     }
   };
-  sweepStale();
+  await sweepStale();
   setInterval(sweepStale, 60 * 60 * 1000);
   Bun.serve({
     port: env.PORT,
@@ -78,7 +78,7 @@ if (import.meta.main) {
     async fetch(req) {
       const url = new URL(req.url);
       if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/share/")) {
-        const res = dispatch(req);
+        const res = await dispatch(req);
         return res ?? json({ error: "not found" }, 404);
       }
       return serveStatic(url.pathname);

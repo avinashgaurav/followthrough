@@ -1,4 +1,4 @@
-import type { Database } from "bun:sqlite";
+import type { Database } from "../db.ts";
 import { nowIso } from "../db.ts";
 import { ulid } from "../ids.ts";
 import { appendEvent, transitionInsight, type Role } from "../events.ts";
@@ -45,8 +45,8 @@ export interface EvidenceRow {
   created_at: string;
 }
 
-export function getEvidence(db: Database, id: string): EvidenceRow | null {
-  return db.query("SELECT * FROM completion_evidence WHERE id = ?").get(id) as EvidenceRow | null;
+export async function getEvidence(db: Database, id: string): Promise<EvidenceRow | null> {
+  return await db.query("SELECT * FROM completion_evidence WHERE id = ?").get(id) as EvidenceRow | null;
 }
 
 export interface ProposeInput {
@@ -61,7 +61,7 @@ export interface ProposeInput {
 }
 
 export async function proposeEvidence(db: Database, input: ProposeInput): Promise<EvidenceRow> {
-  const insight = db
+  const insight = await db
     .query("SELECT id, state FROM insights WHERE id = ?")
     .get(input.insightId) as { id: string; state: string } | null;
   if (!insight) throw new ServiceError(404, "Insight not found");
@@ -78,7 +78,7 @@ export async function proposeEvidence(db: Database, input: ProposeInput): Promis
     throw new ServiceError(400, "ux_verified_in_prod evidence requires asset_id or url");
   }
   if (input.assetId) {
-    const asset = db.query("SELECT id FROM media_assets WHERE id = ?").get(input.assetId);
+    const asset = await db.query("SELECT id FROM media_assets WHERE id = ?").get(input.assetId);
     if (!asset) throw new ServiceError(400, `Unknown asset_id: ${input.assetId}`);
   }
 
@@ -95,8 +95,8 @@ export async function proposeEvidence(db: Database, input: ProposeInput): Promis
 
   const confidence = input.confidence ?? (urlVerifiedAt ? 90 : 50);
   const id = ulid();
-  const tx = db.transaction(() => {
-    db.query(
+  const tx = () => db.transaction(async () => {
+    await db.query(
       `INSERT INTO completion_evidence
          (id, insight_id, kind, url, url_verified_at, asset_id, confidence, status, attested_by, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, 'proposed', ?, ?)`,
@@ -111,7 +111,7 @@ export async function proposeEvidence(db: Database, input: ProposeInput): Promis
       input.actor.id,
       nowIso(),
     );
-    appendEvent(db, {
+    await appendEvent(db, {
       actorUserId: input.actor.id,
       entityType: "evidence",
       entityId: id,
@@ -119,16 +119,16 @@ export async function proposeEvidence(db: Database, input: ProposeInput): Promis
       payload: { kind: input.kind, url: input.url ?? null },
     });
   });
-  tx();
-  return getEvidence(db, id)!;
+  await tx();
+  return (await getEvidence(db, id))!;
 }
 
 /**
  * Confirm any evidence kind (including release_match rows written by the
  * matcher). Assignee-or-admin only, mirroring transitionInsight's rule.
  */
-export function confirmEvidence(db: Database, opts: { evidenceId: string; actor: Actor }): EvidenceRow {
-  const row = db
+export async function confirmEvidence(db: Database, opts: { evidenceId: string; actor: Actor }): Promise<EvidenceRow> {
+  const row = await db
     .query(
       `SELECT e.id, e.status, e.insight_id, e.kind, i.state AS insight_state, i.assignee_user_id
        FROM completion_evidence e JOIN insights i ON i.id = e.insight_id
@@ -146,20 +146,20 @@ export function confirmEvidence(db: Database, opts: { evidenceId: string; actor:
   if (opts.actor.role !== "admin" && row.assignee_user_id !== opts.actor.id) {
     throw new ServiceError(403, "Only the insight assignee or an admin can confirm evidence");
   }
-  if (row.status === "confirmed") return getEvidence(db, row.id)!; // idempotent
+  if (row.status === "confirmed") return (await getEvidence(db, row.id))!; // idempotent
   if (row.status === "rejected") {
     throw new ServiceError(409, "Evidence was rejected; propose a new record instead");
   }
 
   // Insights already at or past shipped just get the row confirmed.
   const pastShipped = ["shipped", "client_notified", "closed"].includes(row.insight_state);
-  const tx = db.transaction(() => {
-    db.query(
+  const tx = () => db.transaction(async () => {
+    await db.query(
       `UPDATE completion_evidence
        SET status = 'confirmed', confidence = 100, confirmed_by = ?, confirmed_at = ?
        WHERE id = ?`,
     ).run(opts.actor.id, nowIso(), row.id);
-    appendEvent(db, {
+    await appendEvent(db, {
       actorUserId: opts.actor.id,
       entityType: "evidence",
       entityId: row.id,
@@ -169,7 +169,7 @@ export function confirmEvidence(db: Database, opts: { evidenceId: string; actor:
     if (!pastShipped) {
       // Valid from 'finalized' (non-ticket tracks) and 'ticketed'; anything
       // else throws TransitionError and rolls back the confirm.
-      transitionInsight(db, {
+      await transitionInsight(db, {
         insightId: row.insight_id,
         to: "shipped",
         actor: opts.actor,
@@ -177,24 +177,24 @@ export function confirmEvidence(db: Database, opts: { evidenceId: string; actor:
       });
     }
   });
-  tx();
-  return getEvidence(db, row.id)!;
+  await tx();
+  return (await getEvidence(db, row.id))!;
 }
 
-export function rejectEvidence(
+export async function rejectEvidence(
   db: Database,
   opts: { evidenceId: string; reason: string; actor: Actor },
-): EvidenceRow {
-  const row = db
+): Promise<EvidenceRow> {
+  const row = await db
     .query("SELECT id, status, insight_id FROM completion_evidence WHERE id = ?")
     .get(opts.evidenceId) as { id: string; status: string; insight_id: string } | null;
   if (!row) throw new ServiceError(404, "Evidence not found");
   if (row.status === "confirmed") {
     throw new ServiceError(409, "Evidence already confirmed; rejection would contradict the event log");
   }
-  const tx = db.transaction(() => {
-    db.query("UPDATE completion_evidence SET status = 'rejected' WHERE id = ?").run(row.id);
-    appendEvent(db, {
+  const tx = () => db.transaction(async () => {
+    await db.query("UPDATE completion_evidence SET status = 'rejected' WHERE id = ?").run(row.id);
+    await appendEvent(db, {
       actorUserId: opts.actor.id,
       entityType: "evidence",
       entityId: row.id,
@@ -202,14 +202,14 @@ export function rejectEvidence(
       payload: { insight_id: row.insight_id, reason: opts.reason },
     });
   });
-  tx();
-  return getEvidence(db, row.id)!;
+  await tx();
+  return (await getEvidence(db, row.id))!;
 }
 
-export function listEvidence(db: Database, insightId: string): EvidenceRow[] {
-  const insight = db.query("SELECT id FROM insights WHERE id = ?").get(insightId);
+export async function listEvidence(db: Database, insightId: string): Promise<EvidenceRow[]> {
+  const insight = await db.query("SELECT id FROM insights WHERE id = ?").get(insightId);
   if (!insight) throw new ServiceError(404, "Insight not found");
-  return db
+  return await db
     .query("SELECT * FROM completion_evidence WHERE insight_id = ? ORDER BY created_at, id")
     .all(insightId) as EvidenceRow[];
 }

@@ -1,4 +1,4 @@
-import type { Database } from "bun:sqlite";
+import type { Database } from "./db.ts";
 import { env } from "./config.ts";
 
 /**
@@ -46,8 +46,8 @@ export function extractionNudgeText(opts: {
 }
 
 /** Daily "what's waiting" summary. Returns null when nothing is waiting. */
-export function dailyNudgeText(db: Database, appUrl?: string): string | null {
-  const counts = db
+export async function dailyNudgeText(db: Database, appUrl?: string): Promise<string | null> {
+  const counts = await db
     .query("SELECT state, COUNT(*) AS n FROM insights WHERE state IN ('extracted','triaged','finalized','shipped') GROUP BY state")
     .all() as Array<{ state: string; n: number }>;
   const by = Object.fromEntries(counts.map((c) => [c.state, c.n]));
@@ -66,9 +66,9 @@ let dailyTimer: ReturnType<typeof setInterval> | null = null;
 /** Once a day, post the waiting summary. No-op without a webhook. */
 export function startDailyNudge(getDbFn: () => Database): void {
   if (!env.DIGEST_WEBHOOK_URL || dailyTimer) return;
-  dailyTimer = setInterval(() => {
+  dailyTimer = setInterval(async () => {
     try {
-      const text = dailyNudgeText(getDbFn());
+      const text = await dailyNudgeText(getDbFn());
       if (text) void sendChat(text);
     } catch (err) {
       console.warn("daily nudge failed:", err);

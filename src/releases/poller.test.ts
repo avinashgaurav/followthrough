@@ -67,12 +67,12 @@ describe("upsertReleases", () => {
     fixtureGitHubRelease("v1.17.4", 174),
   ];
 
-  test("inserts new releases, parses entries, and appends release.fetched events", () => {
-    const db = openTestDb();
-    const newIds = upsertReleases(db, list);
+  test("inserts new releases, parses entries, and appends release.fetched events", async () => {
+    const db = await openTestDb();
+    const newIds = await upsertReleases(db, list);
     expect(newIds).toHaveLength(2);
 
-    const releases = db
+    const releases = await db
       .query("SELECT id, repo, github_release_id, tag_name FROM releases ORDER BY github_release_id")
       .all() as Array<{ id: string; repo: string; github_release_id: number; tag_name: string }>;
     expect(releases).toHaveLength(2);
@@ -80,10 +80,10 @@ describe("upsertReleases", () => {
     expect(releases.map((r) => r.tag_name).sort()).toEqual(["v1.17.4", "v1.18.0"]);
 
     // v1.18.0 parses to 4 entries, v1.17.4 to 1
-    const entryCount = db.query("SELECT COUNT(*) AS n FROM release_entries").get() as { n: number };
+    const entryCount = await db.query("SELECT COUNT(*) AS n FROM release_entries").get() as { n: number };
     expect(entryCount.n).toBe(5);
 
-    const events = db
+    const events = await db
       .query("SELECT entity_id, idempotency_key, actor_user_id FROM events WHERE event_type = 'release.fetched' ORDER BY id")
       .all() as Array<{ entity_id: string; idempotency_key: string; actor_user_id: string | null }>;
     expect(events).toHaveLength(2);
@@ -95,39 +95,39 @@ describe("upsertReleases", () => {
     expect(new Set(events.map((e) => e.entity_id))).toEqual(new Set(newIds));
   });
 
-  test("is idempotent: a second pass with the same payload inserts nothing", () => {
-    const db = openTestDb();
-    const first = upsertReleases(db, list);
+  test("is idempotent: a second pass with the same payload inserts nothing", async () => {
+    const db = await openTestDb();
+    const first = await upsertReleases(db, list);
     expect(first).toHaveLength(2);
 
-    const second = upsertReleases(db, list);
+    const second = await upsertReleases(db, list);
     expect(second).toHaveLength(0);
 
-    expect((db.query("SELECT COUNT(*) AS n FROM releases").get() as { n: number }).n).toBe(2);
-    expect((db.query("SELECT COUNT(*) AS n FROM release_entries").get() as { n: number }).n).toBe(5);
+    expect((await db.query("SELECT COUNT(*) AS n FROM releases").get() as { n: number }).n).toBe(2);
+    expect((await db.query("SELECT COUNT(*) AS n FROM release_entries").get() as { n: number }).n).toBe(5);
     expect(
-      (db.query("SELECT COUNT(*) AS n FROM events WHERE event_type = 'release.fetched'").get() as {
+      (await db.query("SELECT COUNT(*) AS n FROM events WHERE event_type = 'release.fetched'").get() as {
         n: number;
       }).n,
     ).toBe(2);
   });
 
-  test("picks up only the releases not yet mirrored", () => {
-    const db = openTestDb();
-    upsertReleases(db, [list[0]!]);
-    const newIds = upsertReleases(db, list);
+  test("picks up only the releases not yet mirrored", async () => {
+    const db = await openTestDb();
+    await upsertReleases(db, [list[0]!]);
+    const newIds = await upsertReleases(db, list);
     expect(newIds).toHaveLength(1);
-    const tag = db
+    const tag = await db
       .query("SELECT tag_name FROM releases WHERE id = ?")
       .get(newIds[0]!) as { tag_name: string };
     expect(tag.tag_name).toBe("v1.17.4");
   });
 
-  test("skips draft releases", () => {
-    const db = openTestDb();
+  test("skips draft releases", async () => {
+    const db = await openTestDb();
     const draft = { ...fixtureGitHubRelease("v1.17.4", 999), draft: true };
-    expect(upsertReleases(db, [draft])).toHaveLength(0);
-    expect((db.query("SELECT COUNT(*) AS n FROM releases").get() as { n: number }).n).toBe(0);
+    expect(await upsertReleases(db, [draft])).toHaveLength(0);
+    expect((await db.query("SELECT COUNT(*) AS n FROM releases").get() as { n: number }).n).toBe(0);
   });
 });
 
@@ -151,20 +151,19 @@ describe("RELEASE_REPO unset", () => {
 });
 
 describe("addManualRelease dedup", () => {
-  test("same tag is a duplicate even after the repo key changes", () => {
-    const db = openTestDb();
-    db.query(
+  test("same tag is a duplicate even after the repo key changes", async () => {
+    const db = await openTestDb();
+    await db.query(
       "INSERT INTO users (id, email, name, role, created_at) VALUES ('u1', 'u1@tallyhall.com', 'U', 'admin', '2026-01-01T00:00:00Z')",
     ).run();
     const saved = env.RELEASE_REPO;
     try {
       env.RELEASE_REPO = "tallyhall/app";
-      addManualRelease(db, { tag_name: "v2.0.0", body_md: "## Feature\n\n### SSO\n\nShipped." }, "u1");
+      await addManualRelease(db, { tag_name: "v2.0.0", body_md: "## Feature\n\n### SSO\n\nShipped." }, "u1");
       env.RELEASE_REPO = undefined; // now stored under "manual"
-      expect(() =>
-        addManualRelease(db, { tag_name: "V2.0.0", body_md: "## Feature\n\n### SSO\n\nShipped." }, "u1"),
-      ).toThrow(/already exists/);
-      expect((db.query("SELECT COUNT(*) n FROM releases").get() as { n: number }).n).toBe(1);
+      await expect(addManualRelease(db, { tag_name: "V2.0.0", body_md: "## Feature\n\n### SSO\n\nShipped." }, "u1"),
+      ).rejects.toThrow(/already exists/);
+      expect((await db.query("SELECT COUNT(*) n FROM releases").get() as { n: number }).n).toBe(1);
     } finally {
       env.RELEASE_REPO = saved;
     }

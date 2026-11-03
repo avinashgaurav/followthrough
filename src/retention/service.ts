@@ -1,4 +1,4 @@
-import type { Database } from "bun:sqlite";
+import type { Database } from "../db.ts";
 import { existsSync, rmSync, rmdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { z } from "zod";
@@ -33,10 +33,10 @@ export interface PurgeResult {
 }
 
 /** Media assets belonging to a meeting: the audio FK plus any asset ids recorded in its meeting.uploaded event payload. */
-function meetingAssets(db: Database, meeting: MeetingRow): MediaAsset[] {
+async function meetingAssets(db: Database, meeting: MeetingRow): Promise<MediaAsset[]> {
   const ids = new Set<string>();
   if (meeting.audio_asset_id) ids.add(meeting.audio_asset_id);
-  const events = db
+  const events = await db
     .query(
       `SELECT payload_json FROM events
        WHERE entity_type = 'meeting' AND entity_id = ? AND event_type = 'meeting.uploaded'`,
@@ -54,19 +54,19 @@ function meetingAssets(db: Database, meeting: MeetingRow): MediaAsset[] {
   }
   if (ids.size === 0) return [];
   const placeholders = [...ids].map(() => "?").join(",");
-  return db
+  return await db
     .query(`SELECT * FROM media_assets WHERE id IN (${placeholders})`)
     .all(...ids) as MediaAsset[];
 }
 
-export function purgeMeeting(
+export async function purgeMeeting(
   db: Database,
   actor: { id: string },
   meetingId: string,
   reason?: string,
   opts: { blobDir?: string } = {},
-): PurgeResult | null {
-  const meeting = db.query("SELECT * FROM meetings WHERE id = ?").get(meetingId) as MeetingRow | null;
+): Promise<PurgeResult | null> {
+  const meeting = await db.query("SELECT * FROM meetings WHERE id = ?").get(meetingId) as MeetingRow | null;
   if (!meeting) return null;
   if (meeting.deleted_at) {
     return {
@@ -79,55 +79,55 @@ export function purgeMeeting(
     };
   }
 
-  const assets = meetingAssets(db, meeting).filter((a) => a.storage_ref !== PURGED);
+  const assets = (await meetingAssets(db, meeting)).filter((a) => a.storage_ref !== PURGED);
   // resolve disk paths BEFORE storage_ref is overwritten in the transaction
   const blobPaths = assets
     .filter((a) => a.storage_backend === "local")
     .map((a) => getBlobPath(a, opts.blobDir));
 
-  const affectedInsights = db
+  const affectedInsights = await db
     .query("SELECT DISTINCT insight_id FROM insight_mentions WHERE meeting_id = ?")
     .all(meetingId) as { insight_id: string }[];
 
   // counted up front: .changes is unreliable inside transactions that also
   // touch FTS5 virtual tables (shadow-table writes pollute the counter)
   const transcriptsDeleted = (
-    db.query("SELECT COUNT(*) AS n FROM transcripts WHERE meeting_id = ?").get(meetingId) as { n: number }
+    await db.query("SELECT COUNT(*) AS n FROM transcripts WHERE meeting_id = ?").get(meetingId) as { n: number }
   ).n;
   const quotesPurged = (
-    db
+    await db
       .query("SELECT COUNT(*) AS n FROM insight_mentions WHERE meeting_id = ? AND quote != ?")
       .get(meetingId, PURGED) as { n: number }
   ).n;
   const t = nowIso();
 
-  const tx = db.transaction(() => {
+  const tx = () => db.transaction(async () => {
     // soft delete: list/detail queries filter on deleted_at IS NULL
-    db.query("UPDATE meetings SET deleted_at = ? WHERE id = ?").run(t, meetingId);
+    await db.query("UPDATE meetings SET deleted_at = ? WHERE id = ?").run(t, meetingId);
 
     // transcripts: hard delete. extraction_runs reference transcripts (NOT NULL
     // FK) and insights reference extraction_runs, so detach insights from their
     // runs first (NULL extraction_run_id is the schema's "manual" marker), then
     // drop the runs, then the transcript rows themselves.
-    db.query("UPDATE insights SET extraction_run_id = NULL WHERE meeting_id = ?").run(meetingId);
-    db.query("DELETE FROM extraction_runs WHERE meeting_id = ?").run(meetingId);
-    db.query("DELETE FROM transcripts WHERE meeting_id = ?").run(meetingId);
-    db.query("DELETE FROM fts_transcripts WHERE meeting_id = ?").run(meetingId);
+    await db.query("UPDATE insights SET extraction_run_id = NULL WHERE meeting_id = ?").run(meetingId);
+    await db.query("DELETE FROM extraction_runs WHERE meeting_id = ?").run(meetingId);
+    await db.query("DELETE FROM transcripts WHERE meeting_id = ?").run(meetingId);
+    await db.query("DELETE FROM fts_transcripts WHERE meeting_id = ?").run(meetingId);
 
     // quotes: UPDATE, not DELETE, so mention counts and insight provenance survive
-    db.query(
+    await db.query(
       "UPDATE insight_mentions SET quote = ?, char_start = NULL, char_end = NULL WHERE meeting_id = ?",
     ).run(PURGED, meetingId);
 
     // media: mark unusable; the blob file disappears from disk after commit
     for (const a of assets) {
-      db.query("UPDATE media_assets SET status = 'failed', storage_ref = ? WHERE id = ?").run(
+      await db.query("UPDATE media_assets SET status = 'failed', storage_ref = ? WHERE id = ?").run(
         PURGED,
         a.id,
       );
     }
 
-    appendEvent(db, {
+    await appendEvent(db, {
       actorUserId: actor.id,
       entityType: "meeting",
       entityId: meetingId,
@@ -141,9 +141,9 @@ export function purgeMeeting(
     });
 
     // search index must not keep serving the purged quotes
-    for (const i of affectedInsights) syncInsightFts(db, i.insight_id);
+    for (const i of affectedInsights) await syncInsightFts(db, i.insight_id);
   });
-  tx();
+  await tx();
 
   // disk deletion after the durable record of the purge exists; a failure here
   // is logged and the file is orphaned (re-running the purge will not resurrect
@@ -164,7 +164,7 @@ export function purgeMeeting(
     }
   }
 
-  const insightsKept = db
+  const insightsKept = await db
     .query("SELECT COUNT(*) AS n FROM insights WHERE meeting_id = ?")
     .get(meetingId) as { n: number };
 
@@ -199,7 +199,7 @@ export async function handlePurgeMeeting(
     reason = parsed.data.reason;
   }
 
-  const result = purgeMeeting(db, user, meetingId, reason, opts);
+  const result = await purgeMeeting(db, user, meetingId, reason, opts);
   if (!result) return json({ error: "Meeting not found" }, 404);
   return json(result);
 }

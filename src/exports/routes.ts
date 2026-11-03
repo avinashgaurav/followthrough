@@ -22,11 +22,11 @@ route("POST", "/api/exports/csv", "user", async (req, user) => {
 
   const db = getDb();
   if (parsed.data.client_id) {
-    const exists = db.query("SELECT id FROM clients WHERE id = ?").get(parsed.data.client_id);
+    const exists = await db.query("SELECT id FROM clients WHERE id = ?").get(parsed.data.client_id);
     if (!exists) return json({ error: "client not found" }, 404);
   }
 
-  const result = generateCsvExport(db, {
+  const result = await generateCsvExport(db, {
     clientId: parsed.data.client_id ?? null,
     requestedBy: user!.id,
   });
@@ -41,8 +41,8 @@ route("POST", "/api/exports/csv", "user", async (req, user) => {
   );
 });
 
-route("GET", "/api/exports", "user", () => {
-  const rows = getDb()
+route("GET", "/api/exports", "user", async () => {
+  const rows = await getDb()
     .query(
       `SELECT x.id, x.client_id, c.name AS client_name, x.requested_by,
               u.name AS requested_by_name, x.row_count, x.created_at,
@@ -57,8 +57,8 @@ route("GET", "/api/exports", "user", () => {
   return json({ exports: rows });
 });
 
-route("GET", "/api/exports/:id/download", "user", (_req, _user, params) => {
-  const row = getDb()
+route("GET", "/api/exports/:id/download", "user", async (_req, _user, params) => {
+  const row = await getDb()
     .query(
       `SELECT a.storage_ref, a.filename FROM csv_exports x
        JOIN media_assets a ON a.id = x.asset_id

@@ -41,7 +41,7 @@ export function json(data: unknown, status = 200, headers: Record<string, string
   });
 }
 
-export function dispatch(req: Request): Promise<Response> | Response | null {
+export async function dispatch(req: Request): Promise<Response | null> {
   const url = new URL(req.url);
   for (const r of routes) {
     if (r.method !== req.method) continue;
@@ -50,10 +50,10 @@ export function dispatch(req: Request): Promise<Response> | Response | null {
     const params: Record<string, string> = {};
     r.paramNames.forEach((name, i) => (params[name] = decodeURIComponent(m[i + 1]!)));
     const db = getDb();
-    let user = userForSession(db, readSessionCookie(req));
+    let user = await userForSession(db, readSessionCookie(req));
     // Open by default: with login not required, fall back to a guest admin so the
     // whole app works with no sign-in. A real session always takes precedence.
-    if (!user && !authRequired(db)) user = guestUser(db);
+    if (!user && !await authRequired(db)) user = await guestUser(db);
     if (demoBlocks(req.method, url.pathname)) {
       return json({ error: DEMO_BLOCKED_MESSAGE, demo: true }, 403);
     }
