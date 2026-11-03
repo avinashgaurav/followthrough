@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, ApiError, domainRule, emailAllowed, type SttStatus, type User } from "../api";
-import { formatDate } from "../format";
+import { formatDate, releaseCheckWords } from "../format";
 import {
   Alert,
   Btn,
@@ -29,6 +29,7 @@ function readCode(r: { loginCode?: string; login_code?: string } | undefined | n
 }
 
 export function Settings() {
+  const { hosted } = useAuth();
   return (
     <>
       <SectionHead
@@ -36,11 +37,11 @@ export function Settings() {
         job="Set up once, then come back only when something changes: users, calendar feed, releases, search, and system health."
       />
       <div className="page-body stack" style={{ display: "flex", flexDirection: "column", gap: 28, maxWidth: 860 }}>
-        <AccessSection />
+        {hosted ? <WorkspaceSection /> : <AccessSection />}
         <UsersSection />
         <CalendarSection />
         <ReleasesSection />
-        <DigestSection />
+        {!hosted && <DigestSection />}
         <SearchSection />
         <SystemSection />
       </div>
@@ -74,6 +75,65 @@ function Panel({
       </div>
       {children}
     </section>
+  );
+}
+
+// ================================================================ Workspace (hosted)
+
+function WorkspaceSection() {
+  const toast = useToast();
+  const [product, setProduct] = useState("");
+  const [what, setWhat] = useState("");
+  const [quota, setQuota] = useState<{ used: number; total: number } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    api
+      .workspace()
+      .then((w) => {
+        setProduct(w.product_name);
+        setWhat(w.product_description ?? "");
+        setQuota({ used: w.meetings_used, total: w.meetings_quota });
+      })
+      .catch(() => {});
+  }, []);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      await api.updateWorkspace(product.trim(), what.trim() || null);
+      toast.push("Saved. New extractions use it.", "success");
+    } catch (err) {
+      toast.push(err instanceof Error ? err.message : "Could not save.", "critical");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Panel
+      title="Workspace"
+      desc={
+        quota
+          ? `The AI frames every ask around your product. Free meetings used: ${quota.used} of ${quota.total}.`
+          : "The AI frames every ask around your product."
+      }
+    >
+      <form onSubmit={save} className="stack" style={{ maxWidth: 520 }}>
+        <Field label="Company or product" htmlFor="ws-product">
+          <input id="ws-product" className="ctrl" required maxLength={80} value={product} onChange={(e) => setProduct(e.target.value)} />
+        </Field>
+        <Field label="What you sell (optional)" htmlFor="ws-what">
+          <input id="ws-what" className="ctrl" maxLength={160} value={what} onChange={(e) => setWhat(e.target.value)} />
+        </Field>
+        <div className="form-actions">
+          <Btn variant="primary" type="submit" disabled={busy || !product.trim()}>
+            {busy ? "Saving" : "Save"}
+          </Btn>
+        </div>
+      </form>
+    </Panel>
   );
 }
 
@@ -154,6 +214,8 @@ function UsersSection() {
       setRotateUser(null);
       if (code) setRevealed({ code, who: u.name || u.email, rotated: true });
       else toast.push("Code rotated.", "success");
+      // A revoked user comes back as active after a fresh code.
+      if (u.disabled_at) void load();
     } catch (err) {
       toast.push(err instanceof ApiError ? err.message : "Could not rotate the code.", "critical");
     } finally {
@@ -287,11 +349,15 @@ function UsersSection() {
                           <Btn
                             size="sm"
                             variant="ghost"
-                            disabled={revoked || rowBusy === u.id}
+                            disabled={rowBusy === u.id}
                             onClick={() => setRotateUser(u)}
-                            tooltip="Issue a fresh login code. Their old code stops working. Use if a code leaked or was lost."
+                            tooltip={
+                              revoked
+                                ? "Issue a fresh login code and let this person sign in again."
+                                : "Issue a fresh login code. Their old code stops working. Use if a code leaked or was lost."
+                            }
                           >
-                            Rotate code
+                            {revoked ? "Re-enable" : "Rotate code"}
                           </Btn>
                           <Btn
                             size="sm"
@@ -369,14 +435,21 @@ function UsersSection() {
       <ConfirmModal
         open={!!rotateUser}
         danger={false}
-        title="Rotate login code"
+        title={rotateUser?.disabled_at ? "Re-enable with a new code" : "Rotate login code"}
         body={
-          <span>
-            This issues a fresh login code for {rotateUser?.name || rotateUser?.email} and stops the old
-            one working. You will see the new code once.
-          </span>
+          rotateUser?.disabled_at ? (
+            <span>
+              This issues a fresh login code for {rotateUser?.name || rotateUser?.email} and lets them sign
+              in again. You will see the new code once.
+            </span>
+          ) : (
+            <span>
+              This issues a fresh login code for {rotateUser?.name || rotateUser?.email} and stops the old
+              one working. You will see the new code once.
+            </span>
+          )
         }
-        confirmLabel="Rotate code"
+        confirmLabel={rotateUser?.disabled_at ? "Re-enable" : "Rotate code"}
         busy={rowBusy === rotateUser?.id}
         onConfirm={() => void doRotate()}
         onClose={() => setRotateUser(null)}
@@ -540,6 +613,8 @@ function ReleasesSection() {
   const [polling, setPolling] = useState(false);
   const [repo, setRepo] = useState("");
   const [tokenMissing, setTokenMissing] = useState(false);
+  const [cadence, setCadence] = useState<string | undefined>(undefined);
+  const check = releaseCheckWords(cadence);
 
   useEffect(() => {
     let alive = true;
@@ -549,6 +624,7 @@ function ReleasesSection() {
         if (!alive) return;
         if (typeof r?.repo === "string") setRepo(r.repo);
         setTokenMissing(r?.github_token_configured === false);
+        setCadence(r?.release_check);
       })
       .catch(() => {
         // Status is a nice-to-have; the section works without it.
@@ -588,7 +664,7 @@ function ReleasesSection() {
   return (
     <Panel
       title="Releases"
-      desc="We check GitHub for new releases every hour and match them against client insights on the Confirm shipped page."
+      desc={`We check GitHub for new releases ${check.every} and match them against client insights on the Confirm shipped page.`}
     >
       {tokenMissing && (
         <div className="mb-12">
@@ -601,7 +677,7 @@ function ReleasesSection() {
       <div className="card">
         <div className="row-between">
           <span className="muted small">
-            {repo ? `Watching ${repo}. ` : ""}The next check runs on its own within the hour. Use this
+            {repo ? `Watching ${repo}. ` : ""}The next check runs {check.within}. Use Check GitHub now
             if you just shipped and do not want to wait.
           </span>
           <Btn
@@ -609,7 +685,7 @@ function ReleasesSection() {
             size="sm"
             onClick={() => void poll()}
             disabled={polling}
-            tooltip="Check GitHub right now instead of waiting for the hourly check. New releases get matched against open insights."
+            tooltip="Check GitHub right now instead of waiting for the next scheduled check. New releases get matched against open insights."
           >
             {polling ? "Checking" : "Check GitHub now"}
           </Btn>
@@ -822,7 +898,11 @@ function SystemSection() {
 function AccessSection() {
   const toast = useToast();
   const { refresh } = useAuth();
-  const [state, setState] = useState<{ require_login: boolean; can_require: boolean } | null>(null);
+  const [state, setState] = useState<{
+    require_login: boolean;
+    can_require: boolean;
+    forced_by_server?: boolean;
+  } | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
 
@@ -860,12 +940,25 @@ function AccessSection() {
   return (
     <Panel
       title="Access"
-      desc="Followthrough is open by default: anyone who can reach it can use it, no login. Turn login on once you have added at least one teammate with a code below."
+      desc={
+        state?.forced_by_server
+          ? "This server requires everyone to sign in. Add teammates with a login code below."
+          : "Followthrough is open by default: anyone who can reach it can use it, no login. Turn login on once you have added at least one teammate with a code below."
+      }
     >
       {error ? (
         <ErrorAlert error={error} onRetry={load} />
       ) : !state ? (
         <Skeleton rows={2} />
+      ) : state.forced_by_server ? (
+        <div className="stack-sm" style={{ maxWidth: 560 }}>
+          <Alert severity="info" title="Login required by the server">
+            <p style={{ margin: 0 }}>
+              Only people with an account and a login code can get in. This is set on the server
+              (REQUIRE_LOGIN or a public deployment), so it cannot be turned off here.
+            </p>
+          </Alert>
+        </div>
       ) : (
         <div className="stack-sm" style={{ maxWidth: 560 }}>
           <Alert

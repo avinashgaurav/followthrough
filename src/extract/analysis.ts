@@ -1,4 +1,4 @@
-import type { Database } from "bun:sqlite";
+import type { Database } from "../db.ts";
 import { nowIso } from "../db.ts";
 import { ulid } from "../ids.ts";
 import { appendEvent } from "../events.ts";
@@ -23,12 +23,12 @@ export async function runMeetingAnalysis(
   llm: LLM,
   meetingId: string,
 ): Promise<{ analysisId: string; markdown: string }> {
-  const transcript = db
+  const transcript = await db
     .query("SELECT content FROM transcripts WHERE meeting_id = ? ORDER BY created_at DESC LIMIT 1")
     .get(meetingId) as { content: string } | null;
   if (!transcript) throw new Error("Meeting has no transcript");
 
-  const items = db
+  const items = await db
     .query("SELECT item_type, title FROM insights WHERE meeting_id = ? AND state != 'rejected'")
     .all(meetingId) as Array<{ item_type: string; title: string }>;
 
@@ -41,11 +41,11 @@ export async function runMeetingAnalysis(
 
   const markdown = renderAnalysisMarkdown(result.data);
   const analysisId = ulid();
-  db.query(
+  await db.query(
     `INSERT INTO meeting_analyses (id, meeting_id, content_md, content_json, llm_model, prompt_version, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
   ).run(analysisId, meetingId, markdown, JSON.stringify(result.data), result.model ?? DEFAULT_MODEL, PROMPT_VERSION, nowIso());
-  appendEvent(db, {
+  await appendEvent(db, {
     actorUserId: null,
     entityType: "meeting",
     entityId: meetingId,
@@ -59,8 +59,8 @@ export async function runMeetingAnalysis(
   return { analysisId, markdown };
 }
 
-export function latestAnalysis(db: Database, meetingId: string): { content_md: string; created_at: string } | null {
-  return db
+export async function latestAnalysis(db: Database, meetingId: string): Promise<{ content_md: string; created_at: string } | null> {
+  return await db
     .query(
       "SELECT content_md, created_at FROM meeting_analyses WHERE meeting_id = ? ORDER BY created_at DESC LIMIT 1",
     )

@@ -1,4 +1,4 @@
-import type { Database } from "bun:sqlite";
+import type { Database } from "../db.ts";
 import { env, releaseRepo } from "../config.ts";
 import { nowIso } from "../db.ts";
 import { ulid } from "../ids.ts";
@@ -64,13 +64,13 @@ export async function fetchReleases(fetchImpl: FetchLike = fetch): Promise<GitHu
  * entries, evented), with a synthetic github_release_id so re-submits of the
  * same tag do not duplicate.
  */
-export function addManualRelease(
+export async function addManualRelease(
   db: Database,
   input: { tag_name: string; name?: string | null; body_md: string; published_at?: string | null },
   actorUserId: string,
-): { id: string; entry_count: number } {
+): Promise<{ id: string; entry_count: number }> {
   const syntheticId = `manual:${input.tag_name.trim().toLowerCase()}`;
-  const existing = db
+  const existing = await db
     // Match on the synthetic id alone: a manual tag is a duplicate regardless of
     // which repo key it was stored under (keys changed when RELEASE_REPO became optional).
     .query("SELECT id FROM releases WHERE github_release_id = ?")
@@ -80,8 +80,8 @@ export function addManualRelease(
   }
   const id = ulid();
   const entries = parseRelease(input.body_md, input.tag_name);
-  const tx = db.transaction(() => {
-    db.query(
+  const tx = () => db.transaction(async () => {
+    await db.query(
       `INSERT INTO releases (id, repo, github_release_id, tag_name, name, body_md, published_at, fetched_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
@@ -94,8 +94,8 @@ export function addManualRelease(
       input.published_at ?? nowIso(),
       nowIso(),
     );
-    persistEntries(db, id, entries);
-    appendEvent(db, {
+    await persistEntries(db, id, entries);
+    await appendEvent(db, {
       actorUserId,
       entityType: "release",
       entityId: id,
@@ -104,11 +104,11 @@ export function addManualRelease(
       idempotencyKey: `release-${releaseRepo()}-${syntheticId}`,
     });
   });
-  tx();
+  await tx();
   return { id, entry_count: entries.length };
 }
 
-export function upsertReleases(db: Database, list: GitHubRelease[]): string[] {
+export async function upsertReleases(db: Database, list: GitHubRelease[]): Promise<string[]> {
   const newIds: string[] = [];
   const exists = db.query("SELECT id FROM releases WHERE repo = ? AND github_release_id = ?");
   const insert = db.query(
@@ -118,13 +118,13 @@ export function upsertReleases(db: Database, list: GitHubRelease[]): string[] {
 
   for (const rel of list) {
     if (rel.draft) continue; // unpublished drafts are not shipping evidence
-    if (exists.get(releaseRepo(), rel.id)) continue;
+    if (await exists.get(releaseRepo(), rel.id)) continue;
 
     const id = ulid();
     const body = rel.body ?? "";
     const entries = parseRelease(body, rel.tag_name);
-    const tx = db.transaction(() => {
-      insert.run(
+    const tx = () => db.transaction(async () => {
+      await insert.run(
         id,
         releaseRepo(),
         rel.id,
@@ -134,8 +134,8 @@ export function upsertReleases(db: Database, list: GitHubRelease[]): string[] {
         rel.published_at ?? nowIso(),
         nowIso(),
       );
-      persistEntries(db, id, entries);
-      appendEvent(db, {
+      await persistEntries(db, id, entries);
+      await appendEvent(db, {
         actorUserId: null, // system
         entityType: "release",
         entityId: id,
@@ -150,7 +150,7 @@ export function upsertReleases(db: Database, list: GitHubRelease[]): string[] {
         idempotencyKey: `release-${releaseRepo()}-${rel.id}`,
       });
     });
-    tx();
+    await tx();
     newIds.push(id);
   }
   return newIds;

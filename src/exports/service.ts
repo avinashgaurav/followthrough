@@ -1,7 +1,6 @@
-import type { Database } from "bun:sqlite";
-import { mkdirSync, renameSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { env } from "../config.ts";
+import type { Database } from "../db.ts";
+import { createHash } from "node:crypto";
+import { storeFor } from "../storage.ts";
 import { nowIso } from "../db.ts";
 import { appendEvent } from "../events.ts";
 import { insightHandle, ulid } from "../ids.ts";
@@ -63,8 +62,8 @@ interface ExportRow {
  * insight_requesters; the origin client is included as a requester even when
  * the insights module has not written its requester row yet.
  */
-export function buildExportRows(db: Database, clientId: string | null): string[][] {
-  const rows = db
+export async function buildExportRows(db: Database, clientId: string | null): Promise<string[][]> {
+  const rows = await db
     .query(
       `WITH targets AS (
          SELECT r.insight_id, r.client_id, r.first_requested_at, r.last_requested_at
@@ -82,7 +81,7 @@ export function buildExportRows(db: Database, clientId: string | null): string[]
               (SELECT cc.email FROM client_contacts cc
                 WHERE cc.client_id = t.client_id AND cc.email IS NOT NULL
                 ORDER BY cc.created_at, cc.id LIMIT 1) AS contact_email,
-              (SELECT GROUP_CONCAT(tg.name, ', ')
+              (SELECT string_agg(tg.name, ', ')
                  FROM insight_tags itg JOIN tags tg ON tg.id = itg.tag_id
                 WHERE itg.insight_id = i.id) AS tags,
               t.first_requested_at, t.last_requested_at,
@@ -95,10 +94,10 @@ export function buildExportRows(db: Database, clientId: string | null): string[]
        JOIN clients c ON c.id = t.client_id
        LEFT JOIN insight_milestones m ON m.insight_id = i.id
        WHERE i.state NOT IN ('rejected','merged')
-         AND ($client IS NULL OR t.client_id = $client)
+         AND (?1::text IS NULL OR t.client_id = ?1)
        ORDER BY i.created_at, i.id, c.name`,
     )
-    .all({ $client: clientId }) as ExportRow[];
+    .all(clientId ?? null) as ExportRow[];
 
   return rows.map((r) => [
     r.account_name,
@@ -125,12 +124,12 @@ export interface ExportResult {
   csv: string;
 }
 
-export function generateCsvExport(
+export async function generateCsvExport(
   db: Database,
   opts: { clientId?: string | null; requestedBy: string | null; blobDir?: string },
-): ExportResult {
+): Promise<ExportResult> {
   const clientId = opts.clientId ?? null;
-  const dataRows = buildExportRows(db, clientId);
+  const dataRows = await buildExportRows(db, clientId);
   const csv = toCsv(dataRows);
 
   const exportId = ulid();
@@ -138,29 +137,25 @@ export function generateCsvExport(
   const storageRef = `exports/${exportId}.csv`;
   const filename = clientId ? `insights-${clientId}-${exportId}.csv` : `insights-all-${exportId}.csv`;
 
-  // Atomic write: tmp file in the same directory, then rename.
-  const blobDir = opts.blobDir ?? env.BLOB_DIR;
-  const finalPath = join(blobDir, "exports", `${exportId}.csv`);
-  mkdirSync(dirname(finalPath), { recursive: true });
-  const tmpPath = `${finalPath}.tmp-${ulid()}`;
-  writeFileSync(tmpPath, csv, "utf8");
-  renameSync(tmpPath, finalPath);
+  const bytes = new TextEncoder().encode(csv);
+  const store = storeFor(opts);
+  await store.put(storageRef, bytes, "text/csv; charset=utf-8");
 
-  const sha256 = new Bun.CryptoHasher("sha256").update(csv).digest("hex");
-  const sizeBytes = new TextEncoder().encode(csv).length;
+  const sha256 = createHash("sha256").update(bytes).digest("hex");
+  const sizeBytes = bytes.length;
   const t = nowIso();
 
-  const tx = db.transaction(() => {
-    db.query(
+  const tx = () => db.transaction(async () => {
+    await db.query(
       `INSERT INTO media_assets (id, kind, storage_backend, storage_ref, filename, content_type,
                                  size_bytes, sha256, uploaded_by, status, created_at)
-       VALUES (?, 'csv', 'local', ?, ?, 'text/csv', ?, ?, ?, 'uploaded', ?)`,
-    ).run(assetId, storageRef, filename, sizeBytes, sha256, opts.requestedBy, t);
-    db.query(
+       VALUES (?, 'csv', ?, ?, ?, 'text/csv', ?, ?, ?, 'uploaded', ?)`,
+    ).run(assetId, store.backend, storageRef, filename, sizeBytes, sha256, opts.requestedBy, t);
+    await db.query(
       `INSERT INTO csv_exports (id, client_id, requested_by, filter_json, row_count, asset_id, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
     ).run(exportId, clientId, opts.requestedBy, JSON.stringify({ client_id: clientId }), dataRows.length, assetId, t);
-    appendEvent(db, {
+    await appendEvent(db, {
       actorUserId: opts.requestedBy,
       entityType: "csv_export",
       entityId: exportId,
@@ -168,7 +163,7 @@ export function generateCsvExport(
       payload: { client_id: clientId, row_count: dataRows.length },
     });
   });
-  tx();
+  await tx();
 
   return {
     export_id: exportId,

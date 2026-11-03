@@ -61,12 +61,56 @@ function put<T>(path: string, body: unknown): Promise<T> {
   });
 }
 
+function patch<T>(path: string, body: unknown): Promise<T> {
+  return request<T>(path, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
 function del<T>(path: string): Promise<T> {
   return request<T>(path, { method: "DELETE" });
 }
 
 function postForm<T>(path: string, form: FormData): Promise<T> {
   return request<T>(path, { method: "POST", body: form });
+}
+
+async function sha256Hex(blob: Blob): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Put an audio file on a meeting form. When the server can sign uploads
+ * (Supabase Storage on the hosted app), the file goes straight to storage and
+ * the form carries its key; otherwise it is attached to the form as before.
+ * Hosted functions cap request bodies at 4.5 MB, so recordings must not pass
+ * through the API.
+ */
+export async function attachAudio(form: FormData, file: Blob, filename: string): Promise<void> {
+  const start = await post<{ mode: "direct" | "inline"; key?: string; upload_url?: string }>("/api/uploads", {
+    filename,
+    content_type: file.type || undefined,
+    size_bytes: file.size,
+  });
+  if (start.mode !== "direct" || !start.key || !start.upload_url) {
+    form.set("audio_file", file, filename);
+    return;
+  }
+  const sha = await sha256Hex(file);
+  const put = await fetch(start.upload_url, {
+    method: "PUT",
+    headers: { "content-type": file.type || "application/octet-stream" },
+    body: file,
+  });
+  if (!put.ok) throw new ApiError(put.status, "The recording could not be uploaded. Try again.");
+  form.set("audio_upload_key", start.key);
+  form.set("audio_sha256", sha);
+  form.set("audio_filename", filename);
+  if (file.type) form.set("audio_content_type", file.type);
+  form.set("audio_size", String(file.size));
 }
 
 // ---------------------------------------------------------------- domain constants
@@ -105,6 +149,9 @@ export const EVIDENCE_KINDS = [
   "ux_verified_in_prod",
   "manual_attestation",
 ] as const;
+
+/** Kinds a person can add by hand. release_match only comes from confirming a proposed match. */
+export const MANUAL_EVIDENCE_KINDS = EVIDENCE_KINDS.filter((k) => k !== "release_match");
 
 /** Account email rule from the server's ALLOWED_EMAIL_DOMAINS. Empty list → any email. */
 export function emailAllowed(email: string, domains: string[]): boolean {
@@ -459,14 +506,40 @@ export const api = {
       allowed_email_domains?: string[];
       writable_repos?: string[];
       demo?: boolean;
+      hosted?: boolean;
     }>("/api/me"),
   // Public: the email-domain rule, readable before sign-in.
   authConfig: () => get<{ allowed_email_domains: string[] }>("/api/auth/config"),
+  // Hosted sign-up / sign-in (HOSTED_MODE on the server).
+  hostedConfig: () => get<{ hosted: boolean; free_meetings?: number; signups_open?: boolean }>("/api/hosted/config"),
+  sendCode: (email: string) => post<{ ok: true }>("/api/hosted/send-code", { email }),
+  verifyCode: (email: string, code: string) =>
+    post<{
+      ok?: true;
+      needs_workspace?: boolean;
+      signup_token?: string;
+      invite?: { workspace: string; invited_by: string | null };
+    }>("/api/hosted/verify", { email, code }),
+  acceptInvite: (signup_token: string) => post<{ ok: true }>("/api/hosted/accept-invite", { signup_token }),
+  createWorkspace: (signup_token: string, product_name: string, product_description?: string) =>
+    post<{ ok: true }>("/api/hosted/create-workspace", { signup_token, product_name, product_description }),
+  workspace: () =>
+    get<{
+      name: string;
+      product_name: string;
+      product_description: string | null;
+      meetings_used: number;
+      meetings_quota: number;
+    }>("/api/hosted/workspace"),
+  updateWorkspace: (product_name: string, product_description: string | null) =>
+    patch<{ ok: true }>("/api/hosted/workspace", { product_name, product_description }),
   // Public probe used on app load; returns { user: null } (200) when signed out.
   session: () => get<{ user: User | null }>("/api/auth/session"),
 
-  // ---------------- access mode (admin): open by default, login optional
-  getAccess: () => get<{ require_login: boolean; can_require: boolean }>("/api/settings/access"),
+  // ---------------- access mode (admin): open by default, login optional,
+  // unless the server forces login (REQUIRE_LOGIN or a public deployment)
+  getAccess: () =>
+    get<{ require_login: boolean; can_require: boolean; forced_by_server?: boolean }>("/api/settings/access"),
   setAccess: (require_login: boolean) =>
     post<{ require_login: boolean }>("/api/settings/access", { require_login }),
 
@@ -650,12 +723,18 @@ export const api = {
     ),
   /** Raw releases envelope; includes repo + whether a GitHub read token is configured. */
   releasesStatus: () =>
-    get<{ releases?: Release[]; repo?: string; github_token_configured?: boolean }>("/api/releases"),
+    get<{
+      releases?: Release[];
+      repo?: string;
+      github_token_configured?: boolean;
+      release_check?: "daily" | "hourly";
+    }>("/api/releases"),
   pollReleases: () => post<Record<string, unknown>>("/api/releases/poll"),
   listMatches: async (status = "proposed"): Promise<MatchProposal[]> =>
     asArray<MatchProposal>(await get<unknown>(`/api/matches${qs({ status })}`)),
   confirmMatch: (id: string) => post<unknown>(`/api/matches/${encodeURIComponent(id)}/confirm`),
-  rejectMatch: (id: string) => post<unknown>(`/api/matches/${encodeURIComponent(id)}/reject`),
+  rejectMatch: (id: string, reason: string) =>
+    post<unknown>(`/api/matches/${encodeURIComponent(id)}/reject`, { reason }),
 
   // ---------------- exports / admin extras
   exportCsv: (client_id?: string) =>

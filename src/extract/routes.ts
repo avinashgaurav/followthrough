@@ -2,7 +2,7 @@ import { extractionNudgeText, sendChat } from "../notify.ts";
 import { z } from "zod";
 import { route, json } from "../router.ts";
 import { getDb } from "../db.ts";
-import { getLLM } from "../llm/provider.ts";
+import { getLLM, LLMBudgetError, LLMRateLimitError } from "../llm/provider.ts";
 import { ItemTypeSchema } from "./prompts.ts";
 import { ExtractionError, manualAddInsight, runExtraction } from "./pipeline.ts";
 import { latestAnalysis, runMeetingAnalysis } from "./analysis.ts";
@@ -18,21 +18,29 @@ const GUARD_STATUS: Record<string, number> = {
 };
 
 function errorResponse(err: unknown): Response {
+  // Budget and rate-limit errors get the shared 503 answer from the router.
+  if (err instanceof LLMBudgetError || err instanceof LLMRateLimitError) throw err;
   if (err instanceof ExtractionError) {
     return json({ error: err.message, code: err.code }, GUARD_STATUS[err.code] ?? 409);
   }
-  // LLM or unexpected failure; the run row already carries the error detail.
-  return json({ error: err instanceof Error ? err.message : "extraction failed" }, 502);
+  // LLM or unexpected failure: the detail stays in the logs and the run row
+  // (extraction_runs.error), never in the response.
+  console.error("extraction failed:", err);
+  return json({ error: "Extraction failed. Try again in a minute.", code: "extraction_failed" }, 502);
 }
 
+/** After this long, the meeting brief is left for a separate /analyze call, so the request stays inside the function limit. */
+const ANALYSIS_INLINE_BUDGET_MS = 120_000;
+
 route("POST", "/api/meetings/:id/extract", "user", async (req, user, params) => {
+  const started = Date.now();
   try {
     const db = getDb();
     const force = new URL(req.url).searchParams.get("force") === "true";
     const r = await runExtraction(db, getLLM(), params.id ?? "", user!.id, { force });
     // Nudge the team chat (fire-and-forget; never fails the extraction).
     if (r.created > 0) {
-      const meta = db
+      const meta = await db
         .query(
           `SELECT m.title, c.name AS client_name FROM meetings m
            LEFT JOIN clients c ON c.id = m.client_id WHERE m.id = ?`,
@@ -49,10 +57,13 @@ route("POST", "/api/meetings/:id/extract", "user", async (req, user, params) => 
     // Pass 4: the meeting-level brief. Extraction success matters more than the
     // brief, so a brief failure degrades to a warning instead of failing the run.
     let analysis: string | null = null;
-    try {
-      analysis = (await runMeetingAnalysis(db, getLLM(), params.id ?? "")).markdown;
-    } catch (err) {
-      console.warn("meeting analysis failed:", err);
+    const analysisPending = Date.now() - started > ANALYSIS_INLINE_BUDGET_MS;
+    if (!analysisPending) {
+      try {
+        analysis = (await runMeetingAnalysis(db, getLLM(), params.id ?? "")).markdown;
+      } catch (err) {
+        console.warn("meeting analysis failed:", err);
+      }
     }
     return json({
       run_id: r.runId,
@@ -60,14 +71,16 @@ route("POST", "/api/meetings/:id/extract", "user", async (req, user, params) => 
       mentions_added: r.mentionsAdded,
       dropped: r.droppedCitations + r.droppedVerifier,
       analysis_md: analysis,
+      // true: call POST /api/meetings/:id/analyze to generate the brief
+      analysis_pending: analysisPending,
     });
   } catch (err) {
     return errorResponse(err);
   }
 });
 
-route("GET", "/api/meetings/:id/analysis", "user", (_req, _user, params) => {
-  const a = latestAnalysis(getDb(), params.id ?? "");
+route("GET", "/api/meetings/:id/analysis", "user", async (_req, _user, params) => {
+  const a = await latestAnalysis(getDb(), params.id ?? "");
   if (!a) return json({ error: "no analysis yet" }, 404);
   return json({ markdown: a.content_md, created_at: a.created_at });
 });
@@ -77,7 +90,9 @@ route("POST", "/api/meetings/:id/analyze", "user", async (_req, _user, params) =
     const r = await runMeetingAnalysis(getDb(), getLLM(), params.id ?? "");
     return json({ markdown: r.markdown });
   } catch (err) {
-    return json({ error: err instanceof Error ? err.message : "analysis failed" }, 502);
+    if (err instanceof LLMBudgetError || err instanceof LLMRateLimitError) throw err;
+    console.error("meeting analysis failed:", err);
+    return json({ error: "The meeting brief could not be generated. Try again.", code: "analysis_failed" }, 502);
   }
 });
 
@@ -102,7 +117,7 @@ route("POST", "/api/insights/manual", "user", async (req, user) => {
     return json({ error: "invalid body", issues: parsed.error.issues }, 400);
   }
   try {
-    const r = manualAddInsight(
+    const r = await manualAddInsight(
       getDb(),
       {
         meetingId: parsed.data.meeting_id,
@@ -117,6 +132,7 @@ route("POST", "/api/insights/manual", "user", async (req, user) => {
     return json({ insight_id: r.insightId, handle: r.handle }, 201);
   } catch (err) {
     if (err instanceof ExtractionError) return errorResponse(err);
-    return json({ error: err instanceof Error ? err.message : "manual add failed" }, 500);
+    console.error("manual insight add failed:", err);
+    return json({ error: "Could not add the insight. Try again.", code: "manual_add_failed" }, 500);
   }
 });

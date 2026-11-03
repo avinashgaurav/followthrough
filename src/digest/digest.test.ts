@@ -1,40 +1,40 @@
 import { describe, expect, test } from "bun:test";
-import type { Database } from "bun:sqlite";
+import type { Database } from "../db.ts";
 import { nowIso, openTestDb } from "../db.ts";
 import { appendEvent } from "../events.ts";
 import { insightHandle, ulid } from "../ids.ts";
 import { DIGEST_SECTIONS, buildDigest, maybeSendDigest, sendDigest, type FetchLike } from "./digest.ts";
 
-function seedUser(db: Database, name = "Tester"): string {
+async function seedUser(db: Database, name = "Tester"): Promise<string> {
   const id = ulid();
-  db.query(
+  await db.query(
     "INSERT INTO users (id, email, name, role, created_at) VALUES (?, ?, ?, 'member', ?)",
   ).run(id, `${id}@tallyhall.com`, name, nowIso());
   return id;
 }
 
-function seedClient(db: Database, name: string): string {
+async function seedClient(db: Database, name: string): Promise<string> {
   const id = ulid();
-  db.query("INSERT INTO clients (id, name, created_at) VALUES (?, ?, ?)").run(id, name, nowIso());
+  await db.query("INSERT INTO clients (id, name, created_at) VALUES (?, ?, ?)").run(id, name, nowIso());
   return id;
 }
 
-function seedMeeting(db: Database, clientId: string, seq: number): string {
+async function seedMeeting(db: Database, clientId: string, seq: number): Promise<string> {
   const id = ulid();
   const t = nowIso();
-  db.query(
+  await db.query(
     "INSERT INTO meetings (id, client_id, seq, meeting_date, created_at) VALUES (?, ?, ?, ?, ?)",
   ).run(id, clientId, seq, t, t);
   return id;
 }
 
-function seedInsight(
+async function seedInsight(
   db: Database,
   opts: { meetingId: string; clientId: string; title: string; track?: string; state?: string; createdAt?: string },
-): string {
+): Promise<string> {
   const id = ulid();
   const t = opts.createdAt ?? nowIso();
-  db.query(
+  await db.query(
     `INSERT INTO insights (id, meeting_id, client_id, item_type, track, title, body_original, body_current, state, created_at, updated_at)
      VALUES (?, ?, ?, 'feature_request', ?, ?, 'orig', 'orig', ?, ?, ?)`,
   ).run(id, opts.meetingId, opts.clientId, opts.track ?? null, opts.title, opts.state ?? "extracted", t, t);
@@ -45,8 +45,8 @@ function daysAgo(n: number): string {
   return new Date(Date.now() - n * 86_400_000).toISOString();
 }
 
-function transition(db: Database, insightId: string, actor: string, to: string, at: string, from?: string): void {
-  appendEvent(db, {
+async function transition(db: Database, insightId: string, actor: string, to: string, at: string, from?: string): Promise<void> {
+  await appendEvent(db, {
     actorUserId: actor,
     entityType: "insight",
     entityId: insightId,
@@ -55,37 +55,37 @@ function transition(db: Database, insightId: string, actor: string, to: string, 
     toState: to,
     occurredAt: at,
   });
-  db.query("UPDATE insights SET state = ? WHERE id = ?").run(to, insightId);
+  await db.query("UPDATE insights SET state = ? WHERE id = ?").run(to, insightId);
 }
 
-function seedDigestScenario() {
-  const db = openTestDb();
-  const u = seedUser(db, "Asha");
-  const cA = seedClient(db, "Acme");
-  const cB = seedClient(db, "Beta");
-  const m = seedMeeting(db, cA, 1);
+async function seedDigestScenario() {
+  const db = await openTestDb();
+  const u = await seedUser(db, "Asha");
+  const cA = await seedClient(db, "Acme");
+  const cB = await seedClient(db, "Beta");
+  const m = await seedMeeting(db, cA, 1);
 
   // new this week + awaiting finalization
-  const fresh = seedInsight(db, { meetingId: m, clientId: cA, title: "Fresh ask", track: "engineering", createdAt: daysAgo(1) });
-  transition(db, fresh, u, "extracted", daysAgo(1));
+  const fresh = await seedInsight(db, { meetingId: m, clientId: cA, title: "Fresh ask", track: "engineering", createdAt: daysAgo(1) });
+  await transition(db, fresh, u, "extracted", daysAgo(1));
 
   // stuck: extracted 10 days ago (threshold 3)
-  const stuck = seedInsight(db, { meetingId: m, clientId: cA, title: "Stuck ask", createdAt: daysAgo(10) });
-  transition(db, stuck, u, "extracted", daysAgo(10));
+  const stuck = await seedInsight(db, { meetingId: m, clientId: cA, title: "Stuck ask", createdAt: daysAgo(10) });
+  await transition(db, stuck, u, "extracted", daysAgo(10));
 
   // shipped 2 days ago with confirmed evidence; still awaiting the client email
-  const shipped = seedInsight(db, { meetingId: m, clientId: cA, title: "Shipped ask", createdAt: daysAgo(9) });
-  transition(db, shipped, u, "finalized", daysAgo(5));
-  transition(db, shipped, u, "shipped", daysAgo(2), "finalized");
-  db.query(
+  const shipped = await seedInsight(db, { meetingId: m, clientId: cA, title: "Shipped ask", createdAt: daysAgo(9) });
+  await transition(db, shipped, u, "finalized", daysAgo(5));
+  await transition(db, shipped, u, "shipped", daysAgo(2), "finalized");
+  await db.query(
     `INSERT INTO completion_evidence (id, insight_id, kind, url, confidence, status, created_at)
      VALUES (?, ?, 'release_match', 'https://github.com/tallyhall/app/releases/v1.20.0', 100, 'confirmed', ?)`,
   ).run(ulid(), shipped, nowIso());
 
   // top ask: requested by two clients
-  const popular = seedInsight(db, { meetingId: m, clientId: cA, title: "Popular ask", createdAt: daysAgo(3) });
+  const popular = await seedInsight(db, { meetingId: m, clientId: cA, title: "Popular ask", createdAt: daysAgo(3) });
   for (const c of [cA, cB]) {
-    db.query(
+    await db.query(
       "INSERT INTO insight_requesters (insight_id, client_id, first_requested_at, last_requested_at) VALUES (?, ?, ?, ?)",
     ).run(popular, c, daysAgo(3), daysAgo(1));
   }
@@ -94,9 +94,9 @@ function seedDigestScenario() {
 }
 
 describe("buildDigest", () => {
-  test("contains all six section headers and the seeded items; no em-dashes", () => {
-    const { db, fresh, stuck, shipped, popular } = seedDigestScenario();
-    const md = buildDigest(db);
+  test("contains all six section headers and the seeded items; no em-dashes", async () => {
+    const { db, fresh, stuck, shipped, popular } = await seedDigestScenario();
+    const md = await buildDigest(db);
 
     for (const header of DIGEST_SECTIONS) expect(md).toContain(header);
     expect(DIGEST_SECTIONS).toHaveLength(6);
@@ -109,9 +109,9 @@ describe("buildDigest", () => {
     expect(md).not.toContain("—"); // brand rule: no em-dashes
   });
 
-  test("empty database still renders every section", () => {
-    const db = openTestDb();
-    const md = buildDigest(db);
+  test("empty database still renders every section", async () => {
+    const db = await openTestDb();
+    const md = await buildDigest(db);
     for (const header of DIGEST_SECTIONS) expect(md).toContain(header);
     expect(md).toContain("None.");
   });
@@ -119,7 +119,7 @@ describe("buildDigest", () => {
 
 describe("sendDigest", () => {
   test("posts {text: markdown} to the webhook and logs digest.sent", async () => {
-    const { db } = seedDigestScenario();
+    const { db } = await seedDigestScenario();
     const calls: Array<{ url: string; body: string }> = [];
     const fakeFetch: FetchLike = async (url, init) => {
       calls.push({ url: String(url), body: String(init?.body) });
@@ -133,7 +133,7 @@ describe("sendDigest", () => {
     expect(JSON.parse(calls[0]!.body)).toEqual({ text: result.markdown });
     expect(result.delivered).toBe(true);
 
-    const event = db
+    const event = await db
       .query("SELECT * FROM events WHERE event_type = 'digest.sent'")
       .get() as { payload_json: string; actor_user_id: string | null };
     expect(event).toBeTruthy();
@@ -142,7 +142,7 @@ describe("sendDigest", () => {
   });
 
   test("no webhook configured: skips the POST but still logs digest.sent", async () => {
-    const { db } = seedDigestScenario();
+    const { db } = await seedDigestScenario();
     const calls: string[] = [];
     const fakeFetch: FetchLike = async (url) => {
       calls.push(String(url));
@@ -152,7 +152,7 @@ describe("sendDigest", () => {
     const result = await sendDigest(db, fakeFetch, undefined);
     expect(calls).toHaveLength(0);
     expect(result.delivered).toBe(false);
-    const count = db
+    const count = await db
       .query("SELECT COUNT(*) AS n FROM events WHERE event_type = 'digest.sent'")
       .get() as { n: number };
     expect(count.n).toBe(1);
@@ -164,7 +164,7 @@ describe("maybeSendDigest scheduler window", () => {
   const mondayNineIst = new Date("2026-06-15T04:00:00.000Z");
 
   test("fires inside Monday 09:00-09:59 IST and dedupes per IST day", async () => {
-    const { db } = seedDigestScenario();
+    const { db } = await seedDigestScenario();
     const fakeFetch: FetchLike = async () => new Response("ok");
 
     expect(await maybeSendDigest(db, mondayNineIst, fakeFetch, undefined)).toBe(true);
@@ -172,14 +172,14 @@ describe("maybeSendDigest scheduler window", () => {
     const nineFortyFiveIst = new Date("2026-06-15T04:15:00.000Z");
     expect(await maybeSendDigest(db, nineFortyFiveIst, fakeFetch, undefined)).toBe(false);
 
-    const count = db
+    const count = await db
       .query("SELECT COUNT(*) AS n FROM events WHERE event_type = 'digest.sent'")
       .get() as { n: number };
     expect(count.n).toBe(1);
   });
 
   test("does not fire outside the window", async () => {
-    const { db } = seedDigestScenario();
+    const { db } = await seedDigestScenario();
     const fakeFetch: FetchLike = async () => new Response("ok");
 
     const mondayTenThirtyIst = new Date("2026-06-15T05:00:00.000Z"); // 10:30 IST
@@ -188,7 +188,7 @@ describe("maybeSendDigest scheduler window", () => {
     const tuesdayNineIst = new Date("2026-06-16T04:00:00.000Z"); // Tuesday
     expect(await maybeSendDigest(db, tuesdayNineIst, fakeFetch, undefined)).toBe(false);
 
-    const count = db
+    const count = await db
       .query("SELECT COUNT(*) AS n FROM events WHERE event_type = 'digest.sent'")
       .get() as { n: number };
     expect(count.n).toBe(0);

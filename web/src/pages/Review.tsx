@@ -18,21 +18,16 @@ import { ageOf, formatDate, nextStep, relativeAge, trackLabel, insightTitle } fr
 import { StateStepper } from "./InsightDetail";
 
 // Job: decide what each insight is and polish it before it moves.
-// Two layouts over the same queue + selection state (persisted in ie_review_mode):
-//   Focus (default) = one insight at a time in a centered card, with a position
-//           line ("Insight 3 of 12 · bucket") and Previous/Next. The comprehension
-//           fix: no wall of cards, just the next decision.
-//   All   = the original two-pane triage screen:
-//     left  = GET /api/queue rendered as plain-language buckets, j/k to move, Enter to focus
-//     right = a queue-tuned detail panel (loaded via api.getInsight) with the shared
+// One two-pane triage screen:
+//   left  = GET /api/queue rendered as plain-language buckets, j/k to move, Enter to focus
+//   right = a queue-tuned detail panel (loaded via api.getInsight) with the shared
 //           StateStepper, verbatim quotes, editable summary, AI-suggests row, triage
 //           controls, action bar. Kept inline (not InsightDetailView embedded) because
 //           the queue flow needs advance-on-reject, queue reloads after every action,
 //           and the #review-body-editor keyboard-focus target. Labels, vocabulary and
 //           editor semantics are kept identical to InsightDetail so the two surfaces
 //           read as one.
-// j/k + Enter work in both modes (useListSelection drives one shared index), and
-// the selection survives toggling modes because it lives up here, not per-layout.
+// useListSelection drives the j/k index over the flattened buckets.
 
 // The five queue buckets, in pipeline order, in the one pipeline vocabulary
 // (Found / Routed / Locked / Ticket raised / Shipped / Client told).
@@ -58,8 +53,8 @@ const BUCKETS: Array<{
   },
   {
     key: "to_confirm",
-    label: "System thinks it shipped - confirm?",
-    tip: "We found a release that looks like a match. Confirm it really shipped.",
+    label: "Proof added: confirm it shipped",
+    tip: "Someone added proof that this shipped. Confirm it really did.",
   },
   {
     key: "to_email",
@@ -491,6 +486,7 @@ function DetailPanel({
 
   const ins = detail?.insight;
   const state = (ins?.state as string) || "extracted";
+  const proposedEvidence = detail?.evidence?.find((e) => (e.status || "").toLowerCase() === "proposed");
 
   const handle =
     detail?.handle || ins?.handle || insightHandle(insightId);
@@ -707,7 +703,7 @@ function DetailPanel({
   async function onConfirmShipped() {
     setBusy("confirm");
     try {
-      const ev = detail?.evidence?.find((e) => (e.status || "").toLowerCase() === "proposed");
+      const ev = proposedEvidence;
       if (ev?.id) {
         await api.confirmEvidence(ev.id);
         toast.push("Confirmed it shipped. Now tell the client.", "success");
@@ -1042,24 +1038,27 @@ function DetailPanel({
           </span>
         )}
 
+        {/* Proof can be proposed while the insight is still Locked or Ticket raised;
+            confirming it is what moves the insight to Shipped. */}
+        {proposedEvidence && (
+          <Btn
+            variant="primary"
+            onClick={onConfirmShipped}
+            disabled={busy !== null}
+            tooltip="Confirm the proof is real and this insight shipped."
+          >
+            {busy === "confirm" ? "Confirming" : "Confirm it shipped"}
+          </Btn>
+        )}
+
         {isShipped && (
-          <>
-            <Btn
-              variant="primary"
-              onClick={onConfirmShipped}
-              disabled={busy !== null}
-              tooltip="Confirm the matched release really shipped this insight."
-            >
-              {busy === "confirm" ? "Confirming" : "Confirm it shipped"}
-            </Btn>
-            <Btn
-              onClick={onDraftEmail}
-              disabled={busy !== null}
-              tooltip="Draft the note that tells the client it is live."
-            >
-              {busy === "email" ? "Drafting" : "Draft client note"}
-            </Btn>
-          </>
+          <Btn
+            onClick={onDraftEmail}
+            disabled={busy !== null}
+            tooltip="Draft the note that tells the client it is live."
+          >
+            {busy === "email" ? "Drafting" : "Draft client note"}
+          </Btn>
         )}
 
         <div className="spacer" />

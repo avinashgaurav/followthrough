@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { z } from "zod";
 
 const EnvSchema = z.object({
@@ -7,6 +8,8 @@ const EnvSchema = z.object({
   SESSION_TTL_HOURS: z.coerce.number().default(24 * 14),
   ANTHROPIC_API_KEY: z.string().optional(),
   OPENROUTER_API_KEY: z.string().optional(),
+  // Google Gemini (used when it is the only key set, or with LLM_PROVIDER=gemini).
+  GEMINI_API_KEY: z.string().optional(),
   DEEPGRAM_API_KEY: z.string().optional(),
   // Comma-separated domain terms to boost in Deepgram transcription accuracy
   // (e.g. "Karpenter,Kubernetes,Acme"). Empty → no boosting.
@@ -43,6 +46,19 @@ const EnvSchema = z.object({
   TRUSTED_PROXY_HOPS: z.coerce.number().int().min(0).default(1),
   // Trust cf-connecting-ip only when the server is reachable solely via Cloudflare.
   TRUST_CF_CONNECTING_IP: z.string().optional(),
+  // Hosted multi-workspace mode: email sign-up via Supabase Auth, one Postgres
+  // schema per workspace, a free meeting quota paid from this deployment's key.
+  HOSTED_MODE: z.string().optional(),
+  SUPABASE_URL: z.string().optional(),
+  SUPABASE_ANON_KEY: z.string().optional(),
+  // Meetings each new workspace may process on this deployment's AI key.
+  FREE_MEETINGS_PER_WORKSPACE: z.coerce.number().int().min(0).default(5),
+  // Hard cap on sign-ups, so a launch spike cannot outgrow the AI budget.
+  MAX_WORKSPACES: z.coerce.number().int().positive().default(300),
+  MAX_MEMBERS_PER_WORKSPACE: z.coerce.number().int().positive().default(10),
+  // Each workspace's own daily AI cap (USD), inside LLM_DAILY_BUDGET_USD, so one
+  // workspace cannot spend everyone's budget.
+  WORKSPACE_DAILY_BUDGET_USD: z.coerce.number().positive().default(1),
 });
 
 export const env = EnvSchema.parse(process.env);
@@ -62,19 +78,48 @@ export function demoMode(): boolean {
   return flag(env.DEMO_MODE);
 }
 
+export function hostedMode(): boolean {
+  return flag(env.HOSTED_MODE);
+}
+
 export function trustCfConnectingIp(): boolean {
   return flag(env.TRUST_CF_CONNECTING_IP);
 }
 
 /** A public demo always has a spend cap, even when none is configured. */
 export const DEMO_DEFAULT_BUDGET_USD = 5;
+/** Daily AI spend cap whenever a real AI key is set and LLM_DAILY_BUDGET_USD is not. */
+export const DEFAULT_BUDGET_USD = 5;
 
+/**
+ * The daily AI spend cap in USD. LLM_DAILY_BUDGET_USD (a positive number) sets
+ * it; raise it there if $5 a day is too little. With any AI key present there
+ * is always a cap: a public deployment never runs uncapped by accident. Only a
+ * keyless dev setup (MockLLM, which costs nothing) has none.
+ */
 export function llmDailyBudgetUsd(): number | undefined {
-  return env.LLM_DAILY_BUDGET_USD ?? (demoMode() ? DEMO_DEFAULT_BUDGET_USD : undefined);
+  if (env.LLM_DAILY_BUDGET_USD) return env.LLM_DAILY_BUDGET_USD;
+  if (demoMode()) return DEMO_DEFAULT_BUDGET_USD;
+  const anyKey =
+    process.env.GEMINI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.OPENROUTER_API_KEY ||
+    env.GEMINI_API_KEY || env.ANTHROPIC_API_KEY || env.OPENROUTER_API_KEY;
+  return anyKey ? DEFAULT_BUDGET_USD : undefined;
+}
+
+/** Hosted mode: the signed-in workspace's own product, set per request. */
+const productScope = new AsyncLocalStorage<{ name: string; description: string | null }>();
+
+export function withProduct<T>(product: { name: string; description: string | null }, fn: () => Promise<T>): Promise<T> {
+  return productScope.run(product, fn);
 }
 
 /** Who the AI is working for, e.g. "Acme, a payroll platform for SMBs". */
 export function productLabel(): string {
+  const ws = productScope.getStore();
+  if (ws) {
+    const desc = ws.description?.trim();
+    return desc ? `${ws.name.trim()}, ${desc}` : ws.name.trim();
+  }
   // The demo's fictional transcripts are about Tallyhall; keep the AI on-story.
   const name = env.PRODUCT_NAME?.trim() || (demoMode() ? "Tallyhall" : "our company");
   const desc =
@@ -90,6 +135,9 @@ export function releaseRepo(): string {
 
 /** Allowed account email domains (lowercase). Empty → any domain. */
 export function allowedEmailDomains(): string[] {
+  // Hosted workspaces belong to different companies; one deployment-wide
+  // domain lock would wrongly block their teammates.
+  if (hostedMode()) return [];
   return csv(env.ALLOWED_EMAIL_DOMAINS).map((d) => d.replace(/^@/, ""));
 }
 
@@ -99,6 +147,8 @@ export function allowedEmailDomains(): string[] {
  * There is no runtime override; changing either needs a restart.
  */
 export function writableRepos(): string[] {
+  // One deployment's GitHub token must never write on behalf of other workspaces.
+  if (hostedMode()) return [];
   return csv(env.WRITABLE_REPOS);
 }
 

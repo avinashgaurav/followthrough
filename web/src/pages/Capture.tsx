@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   api,
   ApiError,
+  attachAudio,
   MEETING_SOURCES,
   MEETING_TYPES,
   type CalendarEvent,
@@ -218,7 +219,7 @@ export function Capture() {
     (inputMode === "transcript_file" && !!transcriptFile) ||
     (inputMode === "audio_file" && !!audioFile);
 
-  const canSubmit = !!client && !!meetingDate && consent && !submitting;
+  const canSubmit = !!client && !!meetingDate && consent && conversationProvided && !submitting;
 
   const resetResult = useCallback(() => {
     setCreatedMeeting(null);
@@ -253,11 +254,10 @@ export function Capture() {
         form.set("transcript_text", transcriptText);
       } else if (inputMode === "transcript_file" && transcriptFile) {
         form.set("transcript_file", transcriptFile);
-      } else if (inputMode === "audio_file" && audioFile) {
-        form.set("audio_file", audioFile);
       }
       const audioOnly = inputMode === "audio_file" && !!audioFile;
       try {
+        if (inputMode === "audio_file" && audioFile) await attachAudio(form, audioFile, audioFile.name);
         const res = await api.createMeeting(form);
         const meeting: Meeting | null =
           (res?.meeting as Meeting | undefined) ??
@@ -307,12 +307,16 @@ export function Capture() {
       const res = await api.extract(createdMeeting.id);
       const created = typeof res?.created === "number" ? res.created : undefined;
       const dropped = typeof res?.dropped === "number" ? res.dropped : undefined;
-      const analysisMd =
+      let analysisMd =
         typeof res?.analysis_md === "string"
           ? res.analysis_md
           : typeof res?.markdown === "string"
             ? res.markdown
             : undefined;
+      // A long extraction leaves the brief for a second request (function time limit).
+      if (!analysisMd && res?.analysis_pending === true) {
+        analysisMd = await api.analyzeMeeting(createdMeeting.id).catch(() => undefined);
+      }
       setExtractSummary({ created, dropped, analysisMd });
       toast.push(
         created !== undefined
@@ -726,7 +730,7 @@ export function Capture() {
               <textarea
                 className="ctrl"
                 value={transcriptText}
-                placeholder="Paste the full transcript here. You can also add it later."
+                placeholder="Paste the full transcript here."
                 rows={7}
                 onChange={(e) => setTranscriptText(e.target.value)}
               />
@@ -767,8 +771,8 @@ export function Capture() {
 
             {!conversationProvided && (
               <p className="helper mt-6">
-                You can add the conversation now or later (open the meeting's page
-                from Recent meetings below). Either way the meeting gets created.
+                Add the conversation to continue: paste it, upload a transcript file, or
+                upload the audio. A meeting needs one of these to be added.
               </p>
             )}
           </div>
@@ -801,9 +805,11 @@ export function Capture() {
               content={
                 !client
                   ? "Pick a client first."
-                  : !consent
-                    ? "Confirm consent to enable this."
-                    : "Add this meeting. Next you can extract insights from it."
+                  : !conversationProvided
+                    ? "Add the conversation first."
+                    : !consent
+                      ? "Confirm consent to enable this."
+                      : "Add this meeting. Next you can extract insights from it."
               }
               title="Add meeting"
             >

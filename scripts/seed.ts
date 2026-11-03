@@ -1,6 +1,6 @@
 // One-time bootstrap: creates the admin user and prints their login code.
 // Usage: bun run scripts/seed.ts [email] [name]
-import { getDb, nowIso } from "../src/db.ts";
+import { getDb, migrate, nowIso } from "../src/db.ts";
 import { ulid } from "../src/ids.ts";
 import { generateLoginCode, hashCode } from "../src/auth.ts";
 import { appendEvent } from "../src/events.ts";
@@ -9,7 +9,12 @@ const email = (process.argv[2] ?? process.env.ADMIN_EMAIL ?? "admin@example.com"
 const name = process.argv[3] ?? process.env.ADMIN_NAME ?? "Admin";
 
 const db = getDb();
-const existing = db.query("SELECT id FROM users WHERE email = ?").get(email);
+if (["1", "true", "yes", "on"].includes((process.env.HOSTED_MODE ?? "").toLowerCase())) {
+  console.error("Refusing to seed a HOSTED_MODE database: it would create app tables outside any workspace.");
+  process.exit(1);
+}
+await migrate(db);
+const existing = await db.query("SELECT id FROM users WHERE email = ?").get(email);
 if (existing) {
   console.log(`User ${email} already exists. Use the rotate-code endpoint to get a new code.`);
   process.exit(0);
@@ -17,10 +22,10 @@ if (existing) {
 
 const id = ulid();
 const code = generateLoginCode();
-db.query(
+await db.query(
   "INSERT INTO users (id, email, name, role, code_hash, created_at) VALUES (?, ?, ?, 'admin', ?, ?)",
 ).run(id, email, name, await hashCode(code), nowIso());
-appendEvent(db, {
+await appendEvent(db, {
   actorUserId: null,
   entityType: "user",
   entityId: id,

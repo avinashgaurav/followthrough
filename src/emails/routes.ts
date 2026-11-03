@@ -45,17 +45,17 @@ route("POST", "/api/insights/:id/email-drafts", "user", async (_req, user, param
   }
 });
 
-route("GET", "/api/insights/:id/email-drafts", "user", (_req, _user, params) => {
+route("GET", "/api/insights/:id/email-drafts", "user", async (_req, _user, params) => {
   try {
-    return json({ drafts: listDrafts(getDb(), params.id ?? "") });
+    return json({ drafts: await listDrafts(getDb(), params.id ?? "") });
   } catch (err) {
     return fail(err);
   }
 });
 
-route("POST", "/api/emails/:id/copied", "user", (_req, user, params) => {
+route("POST", "/api/emails/:id/copied", "user", async (_req, user, params) => {
   try {
-    const result = markCopied(getDb(), {
+    const result = await markCopied(getDb(), {
       draftId: params.id ?? "",
       actor: { id: user!.id, role: user!.role },
     });
@@ -69,7 +69,7 @@ route("POST", "/api/emails/:id/sent-confirm", "user", async (req, user, params) 
   const parsed = SentConfirmBody.safeParse(await readBody(req));
   if (!parsed.success) return json({ error: "invalid body", issues: parsed.error.issues }, 400);
   try {
-    const draft = confirmSent(getDb(), {
+    const draft = await confirmSent(getDb(), {
       draftId: params.id ?? "",
       finalText: parsed.data.final_text,
       actor: { id: user!.id, role: user!.role },
@@ -84,7 +84,7 @@ route("POST", "/api/insights/:id/close", "user", async (req, user, params) => {
   const parsed = CloseBody.safeParse(await readBody(req));
   if (!parsed.success) return json({ error: "invalid body", issues: parsed.error.issues }, 400);
   try {
-    closeInsight(getDb(), {
+    await closeInsight(getDb(), {
       insightId: params.id ?? "",
       reason: parsed.data.reason,
       actor: { id: user!.id, role: user!.role },

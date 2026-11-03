@@ -136,10 +136,12 @@ export function CommandPalette() {
           close();
         },
       },
-      {
+    ];
+    if (isAdmin) {
+      items.push({
         id: "act-rebuild-search",
         kind: "action",
-        kindLabel: "Action",
+        kindLabel: "Admin",
         label: "Rebuild search",
         sub: "Re-index everything for search",
         run: () => {
@@ -149,9 +151,7 @@ export function CommandPalette() {
             .catch(() => toast.push("Could not rebuild search right now.", "warning"));
           close();
         },
-      },
-    ];
-    if (isAdmin) {
+      });
       items.push({
         id: "act-poll-releases",
         kind: "action",

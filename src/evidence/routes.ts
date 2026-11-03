@@ -53,9 +53,9 @@ route("POST", "/api/insights/:id/evidence", "user", async (req, user, params) =>
   }
 });
 
-route("POST", "/api/evidence/:id/confirm", "user", (_req, user, params) => {
+route("POST", "/api/evidence/:id/confirm", "user", async (_req, user, params) => {
   try {
-    const evidence = confirmEvidence(getDb(), {
+    const evidence = await confirmEvidence(getDb(), {
       evidenceId: params.id ?? "",
       actor: { id: user!.id, role: user!.role },
     });
@@ -69,7 +69,7 @@ route("POST", "/api/evidence/:id/reject", "user", async (req, user, params) => {
   const parsed = RejectBody.safeParse(await readBody(req));
   if (!parsed.success) return json({ error: "reason is required", issues: parsed.error.issues }, 400);
   try {
-    const evidence = rejectEvidence(getDb(), {
+    const evidence = await rejectEvidence(getDb(), {
       evidenceId: params.id ?? "",
       reason: parsed.data.reason,
       actor: { id: user!.id, role: user!.role },
@@ -80,9 +80,9 @@ route("POST", "/api/evidence/:id/reject", "user", async (req, user, params) => {
   }
 });
 
-route("GET", "/api/insights/:id/evidence", "user", (_req, _user, params) => {
+route("GET", "/api/insights/:id/evidence", "user", async (_req, _user, params) => {
   try {
-    return json({ evidence: listEvidence(getDb(), params.id ?? "") });
+    return json({ evidence: await listEvidence(getDb(), params.id ?? "") });
   } catch (err) {
     return fail(err);
   }

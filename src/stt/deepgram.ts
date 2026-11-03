@@ -1,12 +1,16 @@
 import { env } from "../config.ts";
-import { SttError } from "./whisper.ts";
 
 /**
- * Cloud speech-to-text via Deepgram's prerecorded API. Used when DEEPGRAM_API_KEY
- * is set (the deployed path, where local whisper.cpp is not installed); otherwise
- * the STT route falls back to local whisper. Audio leaves the machine to Deepgram
- * when this path is active — a deliberate trade for a hosted deployment.
+ * Speech-to-text via Deepgram's prerecorded API (DEEPGRAM_API_KEY). On the
+ * hosted deployment Deepgram fetches the recording itself from a short-lived
+ * signed storage URL, so large audio never passes through a function; with
+ * local storage the bytes are posted directly.
  */
+
+export class SttError extends Error {}
+
+/** A signed URL Deepgram can fetch, raw bytes, or (tests) a local file path. */
+export type AudioSource = { url: string } | { bytes: Uint8Array } | string;
 
 // diarize + utterances give per-speaker lines so we can label who said what;
 // keyterms boost accuracy on names/jargon. extraTerms (e.g. active user names,
@@ -66,23 +70,33 @@ function buildTranscript(data: {
 }
 
 export async function transcribeViaDeepgram(
-  audioPath: string,
+  source: AudioSource,
   opts: { fetchImpl?: typeof fetch; key?: string; keyterms?: string[] } = {},
 ): Promise<string> {
   const fetchImpl = opts.fetchImpl ?? fetch;
   const key = (opts.key ?? env.DEEPGRAM_API_KEY)?.trim();
   if (!key) throw new SttError("DEEPGRAM_API_KEY is not set.");
 
-  const bytes = await Bun.file(audioPath).arrayBuffer();
-  if (bytes.byteLength === 0) throw new SttError("Audio file is empty.");
+  let body: BodyInit;
+  let contentType: string;
+  if (typeof source === "object" && "url" in source) {
+    body = JSON.stringify({ url: source.url });
+    contentType = "application/json";
+  } else {
+    const bytes = typeof source === "string" ? new Uint8Array(await Bun.file(source).arrayBuffer()) : source.bytes;
+    if (bytes.byteLength === 0) throw new SttError("Audio file is empty.");
+    body = bytes as BodyInit;
+    contentType = "application/octet-stream";
+  }
 
   let res: Response;
   try {
     res = await fetchImpl(deepgramUrl(opts.keyterms ?? []), {
       method: "POST",
-      headers: { Authorization: `Token ${key}`, "Content-Type": "application/octet-stream" },
-      body: bytes,
-      signal: AbortSignal.timeout(300_000), // long files take a while
+      headers: { Authorization: `Token ${key}`, "Content-Type": contentType },
+      body,
+      // Under Vercel's 300s function limit; Deepgram finishes an hour of audio well inside this.
+      signal: AbortSignal.timeout(240_000),
     });
   } catch (err) {
     throw new SttError(`Deepgram request failed: ${err instanceof Error ? err.message : String(err)}`);

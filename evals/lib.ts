@@ -11,7 +11,7 @@ import { basename, isAbsolute, join, relative, resolve } from "node:path";
 import { z } from "zod";
 import type { LLM } from "../src/llm/provider.ts";
 import {
-  EXTRACTION_SYSTEM_PROMPT,
+  extractionSystemPrompt,
   ExtractionResponseSchema,
   ItemTypeSchema,
   VERIFIER_SYSTEM_PROMPT,
@@ -165,7 +165,7 @@ export async function extractOffline(
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i]!;
     const ext = await llm.completeJSON({
-      system: EXTRACTION_SYSTEM_PROMPT,
+      system: extractionSystemPrompt(),
       prompt: extractionUserPrompt(chunk.text, i, chunks.length),
       schema: ExtractionResponseSchema,
     });

@@ -12,10 +12,13 @@
     "evals": "bun run evals/run-evals.ts",
     "seed": "bun run scripts/seed.ts",
     "seed:demo": "bun run scripts/seed-demo.ts",
-    "backup": "bash scripts/backup.sh"
+    "backup": "bash scripts/backup.sh",
+    "db:migrate": "bun run scripts/migrate.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",
+    "@electric-sql/pglite": "^0.5.15",
+    "postgres": "^4.0.0",
     "zod": "^4"
   },
   "devDependencies": {

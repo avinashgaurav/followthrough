@@ -1,9 +1,9 @@
-import type { Database } from "bun:sqlite";
-import { existsSync } from "node:fs";
+import type { Database } from "../db.ts";
 import { z } from "zod";
 import { json } from "../router.ts";
 import { nowIso } from "../db.ts";
 import { ulid } from "../ids.ts";
+import { storeFor } from "../storage.ts";
 import { appendEvent } from "../events.ts";
 import type { AuthedUser } from "../auth.ts";
 import { cleanTranscript } from "../extract/segment.ts";
@@ -12,7 +12,10 @@ import {
   IngestError,
   MAX_TRANSCRIPT_BYTES,
   assertSizeOk,
-  getBlobPath,
+  blobResponse,
+  newBlobKey,
+  registerUploadedBlob,
+  type DirectUpload,
   saveBlob,
   sha256Hex,
   type MediaAsset,
@@ -88,51 +91,51 @@ export interface UploadedFile {
 
 // ---------------------------------------------------------------- clients
 
-export function createClient(
+export async function createClient(
   db: Database,
   actorId: string,
   input: z.infer<typeof ClientCreateSchema>,
-): { client: Record<string, unknown>; contacts: Record<string, unknown>[] } {
+): Promise<{ client: Record<string, unknown>; contacts: Record<string, unknown>[] }> {
   const id = ulid();
   const t = nowIso();
-  const tx = db.transaction(() => {
-    db.query(
+  const tx = () => db.transaction(async () => {
+    await db.query(
       "INSERT INTO clients (id, name, domain, is_internal, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?)",
     ).run(id, input.name, input.domain ?? null, input.is_internal ? 1 : 0, actorId, t);
     for (const c of input.contacts ?? []) {
-      db.query(
+      await db.query(
         "INSERT INTO client_contacts (id, client_id, name, email, title, created_at) VALUES (?, ?, ?, ?, ?, ?)",
       ).run(ulid(), id, c.name, c.email ?? null, c.title ?? null, t);
     }
   });
-  tx();
+  await tx();
   return {
-    client: db.query("SELECT * FROM clients WHERE id = ?").get(id) as Record<string, unknown>,
-    contacts: db
+    client: await db.query("SELECT * FROM clients WHERE id = ?").get(id) as Record<string, unknown>,
+    contacts: await db
       .query("SELECT * FROM client_contacts WHERE client_id = ? ORDER BY created_at")
       .all(id) as Record<string, unknown>[],
   };
 }
 
-export function listClients(db: Database): Record<string, unknown>[] {
-  return db
+export async function listClients(db: Database): Promise<Record<string, unknown>[]> {
+  return await db
     .query(
       `SELECT c.*,
          (SELECT COUNT(*) FROM meetings m WHERE m.client_id = c.id AND m.deleted_at IS NULL) AS meetings_count,
          (SELECT COUNT(*) FROM insights i WHERE i.client_id = c.id AND i.state NOT IN ${TERMINAL_STATES}) AS open_insights_count
        FROM clients c
-       ORDER BY c.name COLLATE NOCASE`,
+       ORDER BY lower(c.name)`,
     )
     .all() as Record<string, unknown>[];
 }
 
-export function getClientDetail(db: Database, clientId: string): Record<string, unknown> | null {
-  const client = db.query("SELECT * FROM clients WHERE id = ?").get(clientId);
+export async function getClientDetail(db: Database, clientId: string): Promise<Record<string, unknown> | null> {
+  const client = await db.query("SELECT * FROM clients WHERE id = ?").get(clientId);
   if (!client) return null;
-  const contacts = db
+  const contacts = await db
     .query("SELECT * FROM client_contacts WHERE client_id = ? ORDER BY created_at")
     .all(clientId);
-  const meetings = db
+  const meetings = await db
     .query(
       `SELECT m.id, m.seq, m.title, m.meeting_date, m.meeting_type, m.source, m.status,
               m.audio_asset_id, m.restricted, m.created_at,
@@ -142,7 +145,7 @@ export function getClientDetail(db: Database, clientId: string): Record<string, 
        ORDER BY m.meeting_date, m.seq`,
     )
     .all(clientId);
-  const openInsights = db
+  const openInsights = await db
     .query(
       `SELECT id, title, state, track FROM insights
        WHERE client_id = ? AND state NOT IN ${TERMINAL_STATES}
@@ -152,18 +155,18 @@ export function getClientDetail(db: Database, clientId: string): Record<string, 
   return { client, contacts, meetings, open_insights: openInsights };
 }
 
-export function addContact(
+export async function addContact(
   db: Database,
   clientId: string,
   input: z.infer<typeof ContactSchema>,
-): Record<string, unknown> {
-  const client = db.query("SELECT id FROM clients WHERE id = ?").get(clientId);
+): Promise<Record<string, unknown>> {
+  const client = await db.query("SELECT id FROM clients WHERE id = ?").get(clientId);
   if (!client) throw new IngestError("Client not found", 404);
   const id = ulid();
-  db.query(
+  await db.query(
     "INSERT INTO client_contacts (id, client_id, name, email, title, created_at) VALUES (?, ?, ?, ?, ?, ?)",
   ).run(id, clientId, input.name, input.email ?? null, input.title ?? null, nowIso());
-  return db.query("SELECT * FROM client_contacts WHERE id = ?").get(id) as Record<string, unknown>;
+  return await db.query("SELECT * FROM client_contacts WHERE id = ?").get(id) as Record<string, unknown>;
 }
 
 // ---------------------------------------------------------------- meetings
@@ -178,6 +181,8 @@ export interface MeetingUploadInput {
   transcriptText?: string;
   transcriptFile?: UploadedFile;
   audioFile?: UploadedFile;
+  /** Audio the browser already uploaded to a signed storage URL (POST /api/uploads). */
+  audioUpload?: DirectUpload;
 }
 
 export interface MeetingUploadResult {
@@ -189,16 +194,16 @@ export interface MeetingUploadResult {
 }
 
 /** Content-addressed dedup (SPEC.md section 9): same bytes for the same client attach, never duplicate. */
-function findDuplicateMeeting(db: Database, clientId: string, shas: string[]): MeetingRow | null {
+async function findDuplicateMeeting(db: Database, clientId: string, shas: string[]): Promise<MeetingRow | null> {
   for (const sha of shas) {
-    const viaAsset = db
+    const viaAsset = await db
       .query(
         `SELECT m.* FROM meetings m JOIN media_assets a ON a.id = m.audio_asset_id
          WHERE m.client_id = ? AND a.sha256 = ? AND m.deleted_at IS NULL`,
       )
       .get(clientId, sha) as MeetingRow | null;
     if (viaAsset) return viaAsset;
-    const viaEvent = db
+    const viaEvent = await db
       .query(
         `SELECT m.* FROM meetings m JOIN events e ON e.entity_id = m.id
          WHERE e.entity_type = 'meeting' AND e.idempotency_key = ?
@@ -216,27 +221,32 @@ export async function createMeeting(
   input: MeetingUploadInput,
   opts: { blobDir?: string } = {},
 ): Promise<MeetingUploadResult> {
-  const client = db.query("SELECT id FROM clients WHERE id = ?").get(input.client_id);
+  const client = await db.query("SELECT id FROM clients WHERE id = ?").get(input.client_id);
   if (!client) throw new IngestError("Client not found", 404);
-  if (!input.transcriptText && !input.transcriptFile && !input.audioFile) {
+  if (!input.transcriptText && !input.transcriptFile && !input.audioFile && !input.audioUpload) {
     throw new IngestError("Provide transcript_text, transcript_file, or audio_file", 400);
   }
 
   // size caps before any hashing or writes
   if (input.audioFile) assertSizeOk("audio", input.audioFile.bytes.byteLength);
+  if (input.audioUpload) assertSizeOk("audio", input.audioUpload.sizeBytes);
   if (input.transcriptFile) assertSizeOk("transcript_file", input.transcriptFile.bytes.byteLength);
   const textBytes = input.transcriptText ? new TextEncoder().encode(input.transcriptText) : null;
   if (textBytes && textBytes.byteLength > MAX_TRANSCRIPT_BYTES) {
     throw new IngestError("Transcript text is capped at 10MB", 413);
   }
 
-  const audioSha = input.audioFile ? sha256Hex(input.audioFile.bytes) : null;
+  const audioSha = input.audioFile
+    ? sha256Hex(input.audioFile.bytes)
+    : input.audioUpload
+      ? input.audioUpload.sha256.toLowerCase()
+      : null;
   const transcriptFileSha = input.transcriptFile ? sha256Hex(input.transcriptFile.bytes) : null;
   const textSha = textBytes ? sha256Hex(textBytes) : null;
   const shas = [audioSha, transcriptFileSha, textSha].filter((s): s is string => s !== null);
   const primarySha = shas[0]!;
 
-  const dup = findDuplicateMeeting(db, input.client_id, shas);
+  const dup = await findDuplicateMeeting(db, input.client_id, shas);
   if (dup) return { meeting: dup, duplicate: true };
 
   // transcript content: text field wins; transcript_file must be valid UTF-8 text.
@@ -250,7 +260,9 @@ export async function createMeeting(
     }
   }
 
-  const audioAsset = input.audioFile
+  const audioAsset = input.audioUpload
+    ? await registerUploadedBlob(db, "audio", { ...input.audioUpload, sha256: audioSha! }, actor.id, opts)
+    : input.audioFile
     ? await saveBlob(
         db,
         {
@@ -281,11 +293,11 @@ export async function createMeeting(
   const t = nowIso();
   const hasTranscript = transcriptContent !== null;
 
-  const tx = db.transaction(() => {
-    const seqRow = db
+  const tx = () => db.transaction(async () => {
+    const seqRow = await db
       .query("SELECT COALESCE(MAX(seq), 0) + 1 AS seq FROM meetings WHERE client_id = ?")
       .get(input.client_id) as { seq: number };
-    db.query(
+    await db.query(
       `INSERT INTO meetings (id, client_id, seq, title, meeting_date, meeting_type, source,
                              attendees_json, audio_asset_id, consent_confirmed, status, uploaded_by, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`,
@@ -308,12 +320,12 @@ export async function createMeeting(
       transcriptId = ulid();
       // content is the canonical CLEANED transcript (what extraction anchors
       // quotes/offsets to); raw_content keeps the upload byte-for-byte.
-      db.query(
+      await db.query(
         "INSERT INTO transcripts (id, meeting_id, content, raw_content, source, created_at) VALUES (?, ?, ?, ?, 'uploaded', ?)",
       ).run(transcriptId, meetingId, cleanTranscript(transcriptContent!), transcriptContent, t);
-      syncTranscriptFts(db, transcriptId);
+      await syncTranscriptFts(db, transcriptId);
     }
-    appendEvent(db, {
+    await appendEvent(db, {
       actorUserId: actor.id,
       entityType: "meeting",
       entityId: meetingId,
@@ -329,9 +341,9 @@ export async function createMeeting(
     });
     return transcriptId;
   });
-  const transcriptId = tx() as string | null;
+  const transcriptId = await tx() as string | null;
 
-  const meeting = db.query("SELECT * FROM meetings WHERE id = ?").get(meetingId) as MeetingRow;
+  const meeting = await db.query("SELECT * FROM meetings WHERE id = ?").get(meetingId) as MeetingRow;
   return {
     meeting,
     duplicate: false,
@@ -341,29 +353,29 @@ export async function createMeeting(
   };
 }
 
-export function listMeetings(db: Database, clientId: string | null): Record<string, unknown>[] {
-  return db
+export async function listMeetings(db: Database, clientId: string | null): Promise<Record<string, unknown>[]> {
+  return await db
     .query(
       `SELECT m.id, m.client_id, c.name AS client_name, m.seq, m.title, m.meeting_date,
               m.meeting_type, m.source, m.status, m.audio_asset_id, m.restricted, m.created_at,
               EXISTS(SELECT 1 FROM transcripts t WHERE t.meeting_id = m.id) AS has_transcript
        FROM meetings m
        LEFT JOIN clients c ON c.id = m.client_id
-       WHERE (?1 IS NULL OR m.client_id = ?1) AND m.deleted_at IS NULL
+       WHERE (?1::text IS NULL OR m.client_id = ?1) AND m.deleted_at IS NULL
        ORDER BY m.meeting_date DESC, m.seq DESC`,
     )
     .all(clientId) as Record<string, unknown>[];
 }
 
-export function getMeetingDetail(db: Database, meetingId: string): Record<string, unknown> | null {
-  const meeting = db
+export async function getMeetingDetail(db: Database, meetingId: string): Promise<Record<string, unknown> | null> {
+  const meeting = await db
     .query("SELECT * FROM meetings WHERE id = ? AND deleted_at IS NULL")
     .get(meetingId) as MeetingRow | null;
   if (!meeting) return null;
-  const transcripts = db
+  const transcripts = await db
     .query("SELECT id, source, quality_flag, created_at FROM transcripts WHERE meeting_id = ? ORDER BY created_at")
     .all(meetingId);
-  const insights = db
+  const insights = await db
     .query("SELECT id, title, state FROM insights WHERE meeting_id = ? ORDER BY created_at")
     .all(meetingId);
   return {
@@ -375,13 +387,13 @@ export function getMeetingDetail(db: Database, meetingId: string): Record<string
 }
 
 /** Manual paste path for audio-only meetings (SPEC.md section 2 fallback). */
-export function addPastedTranscript(
+export async function addPastedTranscript(
   db: Database,
   actor: { id: string },
   meetingId: string,
   text: string,
-): { transcript_id: string; meeting: MeetingRow } {
-  const meeting = db
+): Promise<{ transcript_id: string; meeting: MeetingRow }> {
+  const meeting = await db
     .query("SELECT * FROM meetings WHERE id = ? AND deleted_at IS NULL")
     .get(meetingId) as MeetingRow | null;
   if (!meeting) throw new IngestError("Meeting not found", 404);
@@ -391,15 +403,15 @@ export function addPastedTranscript(
 
   const transcriptId = ulid();
   const t = nowIso();
-  const tx = db.transaction(() => {
-    db.query(
+  const tx = () => db.transaction(async () => {
+    await db.query(
       "INSERT INTO transcripts (id, meeting_id, content, raw_content, source, created_at) VALUES (?, ?, ?, ?, 'pasted', ?)",
     ).run(transcriptId, meetingId, cleanTranscript(text), text, t);
-    syncTranscriptFts(db, transcriptId);
-    db.query(
+    await syncTranscriptFts(db, transcriptId);
+    await db.query(
       "UPDATE meetings SET status = 'transcribed' WHERE id = ? AND status IN ('uploaded','transcribing','transcription_failed')",
     ).run(meetingId);
-    appendEvent(db, {
+    await appendEvent(db, {
       actorUserId: actor.id,
       entityType: "meeting",
       entityId: meetingId,
@@ -407,22 +419,22 @@ export function addPastedTranscript(
       payload: { transcript_id: transcriptId, source: "pasted" },
     });
   });
-  tx();
+  await tx();
   return {
     transcript_id: transcriptId,
-    meeting: db.query("SELECT * FROM meetings WHERE id = ?").get(meetingId) as MeetingRow,
+    meeting: await db.query("SELECT * FROM meetings WHERE id = ?").get(meetingId) as MeetingRow,
   };
 }
 
 // ---------------------------------------------------------------- media download
 
-function owningMeeting(db: Database, assetId: string): MeetingRow | null {
-  const viaAudio = db
+async function owningMeeting(db: Database, assetId: string): Promise<MeetingRow | null> {
+  const viaAudio = await db
     .query("SELECT * FROM meetings WHERE audio_asset_id = ?")
     .get(assetId) as MeetingRow | null;
   if (viaAudio) return viaAudio;
   // transcript files have no FK on meetings; the meeting.uploaded event payload links them
-  return db
+  return await db
     .query(
       `SELECT m.* FROM meetings m JOIN events e ON e.entity_id = m.id
        WHERE e.entity_type = 'meeting' AND e.event_type = 'meeting.uploaded' AND e.payload_json LIKE ?`,
@@ -430,16 +442,16 @@ function owningMeeting(db: Database, assetId: string): MeetingRow | null {
     .get(`%"${assetId}"%`) as MeetingRow | null;
 }
 
-export function downloadMedia(
+export async function downloadMedia(
   db: Database,
   user: AuthedUser,
   assetId: string,
   opts: { blobDir?: string } = {},
-): Response {
-  const asset = db.query("SELECT * FROM media_assets WHERE id = ?").get(assetId) as MediaAsset | null;
+): Promise<Response> {
+  const asset = await db.query("SELECT * FROM media_assets WHERE id = ?").get(assetId) as MediaAsset | null;
   if (!asset) return json({ error: "Media asset not found" }, 404);
 
-  const meeting = owningMeeting(db, assetId);
+  const meeting = await owningMeeting(db, assetId);
   if (meeting && meeting.restricted === 1 && user.role !== "admin") {
     let allowed: unknown = [];
     try {
@@ -452,14 +464,7 @@ export function downloadMedia(
     }
   }
 
-  const path = getBlobPath(asset, opts.blobDir);
-  if (!existsSync(path)) return json({ error: "Blob missing from storage" }, 404);
-  return new Response(Bun.file(path), {
-    headers: {
-      "content-type": asset.content_type ?? "application/octet-stream",
-      "content-disposition": `attachment; filename="${asset.filename.replace(/["\\\r\n]/g, "")}"`,
-    },
-  });
+  return (await blobResponse(asset, opts)) ?? json({ error: "Blob missing from storage" }, 404);
 }
 
 // ---------------------------------------------------------------- HTTP handlers
@@ -477,6 +482,56 @@ async function readJsonBody(req: Request): Promise<unknown | Response> {
   }
 }
 
+/** audio_upload_key + audio_sha256/filename/content_type/size, sent after a direct upload. */
+function directUploadFromForm(form: FormData, prefix: string): DirectUpload | null {
+  const field = (k: string) => {
+    const v = form.get(`${prefix}_${k}`);
+    return typeof v === "string" && v !== "" ? v : null;
+  };
+  const key = field("upload_key");
+  if (!key) return null;
+  return {
+    key,
+    sha256: field("sha256") ?? "",
+    filename: field("filename") ?? key.split("/").pop() ?? "audio",
+    contentType: field("content_type"),
+    sizeBytes: Number(field("size") ?? "0"),
+  };
+}
+
+const UploadRequestSchema = z.object({
+  filename: z.string().min(1).max(255),
+  content_type: z.string().max(200).optional(),
+  size_bytes: z.number().int().positive(),
+});
+
+/**
+ * Start a direct upload: returns a signed URL the browser PUTs the file to, then
+ * the client creates the meeting with audio_upload_key. When the store cannot
+ * sign uploads (local disk), mode is "inline" and the client sends the file in
+ * the multipart form as before.
+ */
+export async function handleStartUpload(req: Request, opts: { blobDir?: string } = {}): Promise<Response> {
+  const body = await readJsonBody(req);
+  if (body instanceof Response) return body;
+  const parsed = UploadRequestSchema.safeParse(body);
+  if (!parsed.success) return json({ error: "Invalid request", issues: parsed.error.issues }, 400);
+  try {
+    assertSizeOk("audio", parsed.data.size_bytes);
+  } catch (e) {
+    return errorResponse(e);
+  }
+  const store = storeFor(opts);
+  if (store.maxBytes !== null && parsed.data.size_bytes > store.maxBytes) {
+    const mb = Math.floor(store.maxBytes / (1024 * 1024));
+    return json({ error: `Recordings can be up to ${mb} MB here. Trim the file, or paste the transcript instead.`, code: "too_large" }, 413);
+  }
+  const key = newBlobKey(parsed.data.filename);
+  const url = await store.signedUploadUrl(key);
+  if (!url) return json({ mode: "inline" });
+  return json({ mode: "direct", key, upload_url: url, method: "PUT" });
+}
+
 function asUploadedFile(v: FormDataEntryValue | null): Promise<UploadedFile | null> {
   if (v === null || typeof v === "string") return Promise.resolve(null);
   return v
@@ -489,15 +544,15 @@ export async function handleCreateClient(db: Database, user: AuthedUser, req: Re
   if (body instanceof Response) return body;
   const parsed = ClientCreateSchema.safeParse(body);
   if (!parsed.success) return json({ error: "Invalid request", issues: parsed.error.issues }, 400);
-  return json(createClient(db, user.id, parsed.data), 201);
+  return json(await createClient(db, user.id, parsed.data), 201);
 }
 
-export function handleListClients(db: Database): Response {
-  return json({ clients: listClients(db) });
+export async function handleListClients(db: Database): Promise<Response> {
+  return json({ clients: await listClients(db) });
 }
 
-export function handleGetClient(db: Database, clientId: string): Response {
-  const detail = getClientDetail(db, clientId);
+export async function handleGetClient(db: Database, clientId: string): Promise<Response> {
+  const detail = await getClientDetail(db, clientId);
   if (!detail) return json({ error: "Client not found" }, 404);
   return json(detail);
 }
@@ -513,7 +568,7 @@ export async function handleAddContact(
   const parsed = ContactSchema.safeParse(body);
   if (!parsed.success) return json({ error: "Invalid request", issues: parsed.error.issues }, 400);
   try {
-    return json(addContact(db, clientId, parsed.data), 201);
+    return json(await addContact(db, clientId, parsed.data), 201);
   } catch (e) {
     return errorResponse(e);
   }
@@ -562,6 +617,7 @@ export async function handleCreateMeeting(
   const transcriptText = typeof rawText === "string" && rawText.trim() !== "" ? rawText : undefined;
   const transcriptFile = await asUploadedFile(form.get("transcript_file"));
   const audioFile = await asUploadedFile(form.get("audio_file"));
+  const audioUpload = directUploadFromForm(form, "audio");
 
   try {
     const result = await createMeeting(
@@ -572,6 +628,7 @@ export async function handleCreateMeeting(
         transcriptText,
         transcriptFile: transcriptFile ?? undefined,
         audioFile: audioFile ?? undefined,
+        audioUpload: audioUpload ?? undefined,
       },
       opts,
     );
@@ -581,13 +638,13 @@ export async function handleCreateMeeting(
   }
 }
 
-export function handleListMeetings(db: Database, req: Request): Response {
+export async function handleListMeetings(db: Database, req: Request): Promise<Response> {
   const clientId = new URL(req.url).searchParams.get("client_id");
-  return json({ meetings: listMeetings(db, clientId) });
+  return json({ meetings: await listMeetings(db, clientId) });
 }
 
-export function handleGetMeeting(db: Database, meetingId: string): Response {
-  const detail = getMeetingDetail(db, meetingId);
+export async function handleGetMeeting(db: Database, meetingId: string): Promise<Response> {
+  const detail = await getMeetingDetail(db, meetingId);
   if (!detail) return json({ error: "Meeting not found" }, 404);
   return json(detail);
 }
@@ -603,20 +660,20 @@ export async function handleAddTranscript(
   const parsed = TranscriptPasteSchema.safeParse(body);
   if (!parsed.success) return json({ error: "Invalid request", issues: parsed.error.issues }, 400);
   try {
-    return json(addPastedTranscript(db, user, meetingId, parsed.data.text), 201);
+    return json(await addPastedTranscript(db, user, meetingId, parsed.data.text), 201);
   } catch (e) {
     return errorResponse(e);
   }
 }
 
-export function handleDownloadMedia(
+export async function handleDownloadMedia(
   db: Database,
   user: AuthedUser,
   assetId: string,
   opts: { blobDir?: string } = {},
-): Response {
+): Promise<Response> {
   try {
-    return downloadMedia(db, user, assetId, opts);
+    return await downloadMedia(db, user, assetId, opts);
   } catch (e) {
     return errorResponse(e);
   }

@@ -1,4 +1,4 @@
-import type { Database } from "bun:sqlite";
+import type { Database } from "../db.ts";
 import { openTestDb, nowIso } from "../db.ts";
 import { ulid } from "../ids.ts";
 import type { Actor } from "./service.ts";
@@ -19,13 +19,13 @@ export function daysAgoIso(days: number): string {
   return new Date(Date.now() - days * 86_400_000).toISOString();
 }
 
-export function seed(): Seeded {
-  const db = openTestDb();
+export async function seed(): Promise<Seeded> {
+  const db = await openTestDb();
   const t = nowIso();
 
-  const mkUser = (name: string, role: "admin" | "member"): string => {
+  const mkUser = async (name: string, role: "admin" | "member"): Promise<string> => {
     const id = ulid();
-    db.query("INSERT INTO users (id, email, name, role, created_at) VALUES (?, ?, ?, ?, ?)").run(
+    await db.query("INSERT INTO users (id, email, name, role, created_at) VALUES (?, ?, ?, ?, ?)").run(
       id,
       `${name}-${id.slice(-4)}@tallyhall.com`,
       name,
@@ -34,20 +34,20 @@ export function seed(): Seeded {
     );
     return id;
   };
-  const mkClient = (name: string): string => {
+  const mkClient = async (name: string): Promise<string> => {
     const id = ulid();
-    db.query("INSERT INTO clients (id, name, created_at) VALUES (?, ?, ?)").run(id, name, t);
+    await db.query("INSERT INTO clients (id, name, created_at) VALUES (?, ?, ?)").run(id, name, t);
     return id;
   };
-  const adminId = mkUser("admin", "admin");
-  const aliceId = mkUser("alice", "member");
-  const bobId = mkUser("bob", "member");
-  const acme = mkClient("Acme");
-  const globex = mkClient("Globex");
+  const adminId = await mkUser("admin", "admin");
+  const aliceId = await mkUser("alice", "member");
+  const bobId = await mkUser("bob", "member");
+  const acme = await mkClient("Acme");
+  const globex = await mkClient("Globex");
 
-  const mkMeeting = (clientId: string, seq: number, date: string): string => {
+  const mkMeeting = async (clientId: string, seq: number, date: string): Promise<string> => {
     const id = ulid();
-    db.query(
+    await db.query(
       "INSERT INTO meetings (id, client_id, seq, meeting_date, uploaded_by, created_at) VALUES (?, ?, ?, ?, ?, ?)",
     ).run(id, clientId, seq, date, adminId, t);
     return id;
@@ -60,9 +60,9 @@ export function seed(): Seeded {
     bob: { id: bobId, role: "member" },
     acme,
     globex,
-    meetingAcme1: mkMeeting(acme, 1, daysAgoIso(30)),
-    meetingAcme2: mkMeeting(acme, 2, daysAgoIso(10)),
-    meetingGlobex1: mkMeeting(globex, 1, daysAgoIso(20)),
+    meetingAcme1: await mkMeeting(acme, 1, daysAgoIso(30)),
+    meetingAcme2: await mkMeeting(acme, 2, daysAgoIso(10)),
+    meetingGlobex1: await mkMeeting(globex, 1, daysAgoIso(20)),
   };
 }
 
@@ -79,11 +79,11 @@ export interface InsightOpts {
   createdAt?: string;
 }
 
-export function makeInsight(db: Database, opts: InsightOpts): string {
+export async function makeInsight(db: Database, opts: InsightOpts): Promise<string> {
   const id = ulid();
   const t = opts.createdAt ?? nowIso();
   const body = opts.body ?? "original body";
-  db.query(
+  await db.query(
     `INSERT INTO insights (id, meeting_id, client_id, item_type, track, title, body_original, body_current,
                            state, assignee_user_id, priority, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -105,30 +105,30 @@ export function makeInsight(db: Database, opts: InsightOpts): string {
   return id;
 }
 
-export function addMention(
+export async function addMention(
   db: Database,
   insightId: string,
   meetingId: string,
   clientId: string,
   quote: string,
   createdAt?: string,
-): string {
+): Promise<string> {
   const id = ulid();
-  db.query(
+  await db.query(
     `INSERT INTO insight_mentions (id, insight_id, meeting_id, client_id, quote, speaker, created_at)
      VALUES (?, ?, ?, ?, ?, 'Client CTO', ?)`,
   ).run(id, insightId, meetingId, clientId, quote, createdAt ?? nowIso());
   return id;
 }
 
-export function addRequester(
+export async function addRequester(
   db: Database,
   insightId: string,
   clientId: string,
   first: string,
   last: string,
-): void {
-  db.query(
+): Promise<void> {
+  await db.query(
     "INSERT INTO insight_requesters (insight_id, client_id, first_requested_at, last_requested_at) VALUES (?, ?, ?, ?)",
   ).run(insightId, clientId, first, last);
 }

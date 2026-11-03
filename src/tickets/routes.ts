@@ -29,8 +29,14 @@ function actorOf(user: AuthedUser | null): Actor {
 function errorResponse(err: unknown): Response {
   if (err instanceof HttpError) return json({ error: err.message }, err.status);
   if (err instanceof TransitionError) return json({ error: err.message }, 403);
-  if (err instanceof GitHubApiError) return json({ error: err.message }, 502);
-  if (err instanceof LLMOutputError) return json({ error: err.message }, 502);
+  if (err instanceof GitHubApiError) {
+    console.error("GitHub request failed:", err);
+    return json({ error: "GitHub refused the request. Check the token and repo, then try again.", code: "github_failed" }, 502);
+  }
+  if (err instanceof LLMOutputError) {
+    console.error("ticket draft failed:", err);
+    return json({ error: "The AI draft came back unusable. Try again.", code: "ai_output_invalid" }, 502);
+  }
   console.error("tickets route error:", err);
   return json({ error: "internal error" }, 500);
 }
@@ -56,17 +62,17 @@ route("POST", "/api/insights/:id/ticket-draft", "user", async (_req, user, param
   }
 });
 
-route("GET", "/api/tickets/:id", "user", (_req, _user, params) => {
+route("GET", "/api/tickets/:id", "user", async (_req, _user, params) => {
   try {
-    return json(getTicket(getDb(), params.id!));
+    return json(await getTicket(getDb(), params.id!));
   } catch (err) {
     return errorResponse(err);
   }
 });
 
-route("GET", "/api/insights/:id/tickets", "user", (_req, _user, params) => {
+route("GET", "/api/insights/:id/tickets", "user", async (_req, _user, params) => {
   try {
-    return json(listTicketsForInsight(getDb(), params.id!));
+    return json(await listTicketsForInsight(getDb(), params.id!));
   } catch (err) {
     return errorResponse(err);
   }
@@ -75,7 +81,7 @@ route("GET", "/api/insights/:id/tickets", "user", (_req, _user, params) => {
 route("POST", "/api/tickets/:id/mark-raised", "user", async (req, user, params) => {
   try {
     const body = await parseBody(req, MarkRaisedBody);
-    const ticket = markRaised(getDb(), {
+    const ticket = await markRaised(getDb(), {
       ticketId: params.id!,
       externalUrl: body.external_url,
       actor: actorOf(user),

@@ -1,9 +1,7 @@
 import { z } from "zod";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
 import { route, json } from "../router.ts";
 import { getDb } from "../db.ts";
-import { env } from "../config.ts";
+import { blobResponse, type MediaAsset } from "../ingest/media.ts";
 import { generateCsvExport } from "./service.ts";
 
 const ExportBody = z.object({
@@ -22,11 +20,11 @@ route("POST", "/api/exports/csv", "user", async (req, user) => {
 
   const db = getDb();
   if (parsed.data.client_id) {
-    const exists = db.query("SELECT id FROM clients WHERE id = ?").get(parsed.data.client_id);
+    const exists = await db.query("SELECT id FROM clients WHERE id = ?").get(parsed.data.client_id);
     if (!exists) return json({ error: "client not found" }, 404);
   }
 
-  const result = generateCsvExport(db, {
+  const result = await generateCsvExport(db, {
     clientId: parsed.data.client_id ?? null,
     requestedBy: user!.id,
   });
@@ -41,8 +39,8 @@ route("POST", "/api/exports/csv", "user", async (req, user) => {
   );
 });
 
-route("GET", "/api/exports", "user", () => {
-  const rows = getDb()
+route("GET", "/api/exports", "user", async () => {
+  const rows = await getDb()
     .query(
       `SELECT x.id, x.client_id, c.name AS client_name, x.requested_by,
               u.name AS requested_by_name, x.row_count, x.created_at,
@@ -57,22 +55,16 @@ route("GET", "/api/exports", "user", () => {
   return json({ exports: rows });
 });
 
-route("GET", "/api/exports/:id/download", "user", (_req, _user, params) => {
-  const row = getDb()
+route("GET", "/api/exports/:id/download", "user", async (_req, _user, params) => {
+  const row = await getDb()
     .query(
-      `SELECT a.storage_ref, a.filename FROM csv_exports x
+      `SELECT a.storage_backend, a.storage_ref, a.filename FROM csv_exports x
        JOIN media_assets a ON a.id = x.asset_id
        WHERE x.id = ?`,
     )
-    .get(params.id!) as { storage_ref: string; filename: string } | null;
+    .get(params.id!) as { storage_backend: MediaAsset["storage_backend"]; storage_ref: string; filename: string } | null;
   if (!row) return json({ error: "export not found" }, 404);
 
-  const path = join(env.BLOB_DIR, row.storage_ref);
-  if (!existsSync(path)) return json({ error: "export file missing" }, 410);
-  return new Response(Bun.file(path), {
-    headers: {
-      "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename="${row.filename}"`,
-    },
-  });
+  const res = await blobResponse({ ...row, content_type: "text/csv; charset=utf-8" });
+  return res ?? json({ error: "export file missing" }, 410);
 });

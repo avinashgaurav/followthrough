@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, ApiError, type MatchProposal, type Release , insightHandle } from "../api";
-import { formatDate, insightTitle, stateLabel } from "../format";
+import { useAuth } from "../auth";
+import { formatDate, insightTitle, releaseCheckWords, stateLabel } from "../format";
 import {
   Alert,
   Btn,
@@ -62,6 +63,8 @@ function quotesOf(m: MatchProposal): string[] {
 
 export function Proof() {
   const toast = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [tab, setTab] = useState<Tab>("matches");
 
   const [matches, setMatches] = useState<MatchProposal[] | null>(null);
@@ -70,11 +73,15 @@ export function Proof() {
   const [releases, setReleases] = useState<Release[] | null>(null);
   const [releasesError, setReleasesError] = useState<unknown>(null);
   const [tokenConfigured, setTokenConfigured] = useState(true);
+  const [cadence, setCadence] = useState<string | undefined>(undefined);
   const [releasesLoaded, setReleasesLoaded] = useState(false);
 
   // per-card busy + a confirmed flash so the row reads as resolved before refetch
   const [busyId, setBusyId] = useState<string | null>(null);
   const [rejectFor, setRejectFor] = useState<MatchProposal | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [rejectTouched, setRejectTouched] = useState(false);
+  const rejectReasonMissing = rejectTouched && !rejectReason.trim();
 
   const loadMatches = useCallback(async () => {
     setMatchesError(null);
@@ -93,6 +100,7 @@ export function Proof() {
       const env = await api.releasesStatus();
       setReleases(env.releases ?? []);
       setTokenConfigured(env.github_token_configured !== false);
+      setCadence(env.release_check);
     } catch (e) {
       setReleasesError(e);
       setReleases([]);
@@ -126,14 +134,16 @@ export function Proof() {
   }
 
   async function doReject() {
-    if (!rejectFor) return;
+    if (!rejectFor || !rejectReason.trim()) return;
     const m = rejectFor;
     setBusyId(m.id);
     try {
-      await api.rejectMatch(m.id);
+      await api.rejectMatch(m.id, rejectReason.trim());
       toast.push("Proof rejected.", "info");
       setMatches((prev) => (prev ? prev.filter((x) => x.id !== m.id) : prev));
       setRejectFor(null);
+      setRejectReason("");
+      setRejectTouched(false);
     } catch (e) {
       toast.push(e instanceof ApiError ? e.message : "Could not reject. Try again.", "critical");
     } finally {
@@ -210,6 +220,8 @@ export function Proof() {
             releases={releases}
             error={releasesError}
             tokenConfigured={tokenConfigured}
+            cadence={cadence}
+            isAdmin={isAdmin}
             onRetry={() => void loadReleases()}
             onManualSaved={() => {
               void loadReleases();
@@ -222,11 +234,39 @@ export function Proof() {
       <ConfirmModal
         open={!!rejectFor}
         title="Reject this proof"
-        body="This release does not deliver the insight. The insight stays open and the AI can propose a different release later."
+        body={
+          <div className="stack-sm">
+            <p style={{ margin: 0 }}>
+              This release does not deliver the insight. The insight stays open and the AI can propose a
+              different release later.
+            </p>
+            <Field
+              label="Why reject it"
+              htmlFor="match-reject"
+              hint="Required. A short note is enough."
+              error={rejectReasonMissing ? "Add a short reason to reject this proof." : null}
+            >
+              <textarea
+                id="match-reject"
+                className="ctrl"
+                value={rejectReason}
+                aria-invalid={rejectReasonMissing}
+                onChange={(e) => setRejectReason(e.target.value)}
+                onBlur={() => setRejectTouched(true)}
+                placeholder="e.g. This release fixed exports, not the scheduling the client asked for."
+              />
+            </Field>
+          </div>
+        }
         confirmLabel="Reject proof"
         busy={busyId === rejectFor?.id}
+        confirmDisabled={!rejectReason.trim()}
         onConfirm={() => void doReject()}
-        onClose={() => setRejectFor(null)}
+        onClose={() => {
+          setRejectFor(null);
+          setRejectReason("");
+          setRejectTouched(false);
+        }}
       />
     </>
   );
@@ -387,16 +427,23 @@ function ReleasesTab({
   releases,
   error,
   tokenConfigured,
+  cadence,
+  isAdmin,
   onRetry,
   onManualSaved,
 }: {
   releases: Release[] | null;
   error: unknown;
   tokenConfigured: boolean;
+  cadence: string | undefined;
+  isAdmin: boolean;
   onRetry: () => void;
   onManualSaved: () => void;
 }) {
   const rows = useMemo(() => releases ?? [], [releases]);
+  const check = releaseCheckWords(cadence);
+  // Adding a changelog by hand is admin-only on the server.
+  const manualForm = isAdmin ? <ManualChangelogForm onSaved={onManualSaved} /> : null;
 
   if (releases === null && !error) {
     return <Skeleton rows={6} />;
@@ -406,7 +453,7 @@ function ReleasesTab({
     return (
       <div className="stack">
         <ErrorAlert error={error} onRetry={onRetry} />
-        <ManualChangelogForm onSaved={onManualSaved} />
+        {manualForm}
       </div>
     );
   }
@@ -419,11 +466,13 @@ function ReleasesTab({
           <style>{`.manual-empty-wide .empty { max-width: 720px; }`}</style>
           <EmptyState
             title="GitHub is not connected yet"
-            body="The release repo is private, so pulling needs a read-only GitHub token. Add GITHUB_READ_TOKEN to the server's .env and restart; releases then pull automatically every hour. Until then, add changelogs by hand below."
+            body={
+              isAdmin
+                ? `The release repo is private, so pulling needs a read-only GitHub token. Add GITHUB_READ_TOKEN to the server's .env and restart; releases are then checked ${check.every}, or right away with Check GitHub now in Settings. Until then, add changelogs by hand below.`
+                : "The release repo is private, so pulling needs a read-only GitHub token. Ask an admin to connect GitHub or add a changelog by hand."
+            }
             action={
-              <div style={{ textAlign: "left" }}>
-                <ManualChangelogForm onSaved={onManualSaved} />
-              </div>
+              manualForm ? <div style={{ textAlign: "left" }}>{manualForm}</div> : undefined
             }
           />
         </div>
@@ -433,9 +482,9 @@ function ReleasesTab({
       <div className="stack">
         <EmptyState
           title="No releases yet"
-          body="Releases pull automatically every hour. An admin can also pull right now from the Settings page."
+          body={`Releases are checked ${check.every}. An admin can check right away with Check GitHub now on the Settings page.`}
         />
-        <ManualChangelogForm onSaved={onManualSaved} />
+        {manualForm}
       </div>
     );
   }
@@ -479,7 +528,7 @@ function ReleasesTab({
           </table>
         </div>
       </div>
-      <ManualChangelogForm onSaved={onManualSaved} />
+      {manualForm}
     </div>
   );
 }

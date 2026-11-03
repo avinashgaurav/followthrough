@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { HostedLogin } from "./HostedLogin";
 import { useLocation, useNavigate } from "react-router-dom";
 import { api, ApiError, domainRule, emailAllowed } from "../api";
 import { useAuth } from "../auth";
@@ -15,6 +16,14 @@ export function Login() {
   const [busy, setBusy] = useState(false);
 
   const from = (location.state as { from?: string } | null)?.from ?? "/";
+  // Hosted deployments sign in with an emailed code instead of a team password.
+  const [hostedFree, setHostedFree] = useState<number | null>(null);
+  useEffect(() => {
+    api
+      .hostedConfig()
+      .then((c) => c.hosted && setHostedFree(c.free_meetings ?? 0))
+      .catch(() => {});
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -23,6 +32,11 @@ export function Login() {
     const c = code.trim();
     if (!mail || !c) {
       setError("Enter your work email and password.");
+      return;
+    }
+    // The server refuses anything shorter (a 400 that would read as an email problem).
+    if (c.length < 4) {
+      setError("That password or code is too short. It is at least 4 characters.");
       return;
     }
     if (!emailAllowed(mail, allowedDomains)) {
@@ -52,6 +66,8 @@ export function Login() {
       setBusy(false);
     }
   }
+
+  if (hostedFree !== null) return <HostedLogin freeMeetings={hostedFree} />;
 
   return (
     <div className="login-wrap">

@@ -4,6 +4,7 @@ import { ulid } from "../ids.ts";
 import { appendEvent } from "../events.ts";
 import { formatHtml } from "./page.ts";
 import { demoMode } from "../config.ts";
+import { currentWorkspaceId } from "../hosted/tenancy.ts";
 
 /**
  * Client-facing "You asked, we shipped" page (AUDIT.md P2-10).
@@ -15,15 +16,17 @@ import { demoMode } from "../config.ts";
  * follow-up emails already tell them.
  */
 
-route("POST", "/api/clients/:id/share-link", "admin", (_req, user, params) => {
+route("POST", "/api/clients/:id/share-link", "admin", async (_req, user, params) => {
   const db = getDb();
-  const client = db.query("SELECT id, name FROM clients WHERE id = ?").get(params.id ?? "") as
+  const client = await db.query("SELECT id, name FROM clients WHERE id = ?").get(params.id ?? "") as
     | { id: string; name: string }
     | null;
   if (!client) return json({ error: "Client not found" }, 404);
-  const token = ulid() + ulid();
-  db.query("UPDATE clients SET share_token = ? WHERE id = ?").run(token, client.id);
-  appendEvent(db, {
+  // Hosted: the token carries its workspace so the public page can find it.
+  const ws = currentWorkspaceId();
+  const token = (ws ? `${ws}.` : "") + ulid() + ulid();
+  await db.query("UPDATE clients SET share_token = ? WHERE id = ?").run(token, client.id);
+  await appendEvent(db, {
     actorUserId: user!.id,
     entityType: "client",
     entityId: client.id,
@@ -33,11 +36,11 @@ route("POST", "/api/clients/:id/share-link", "admin", (_req, user, params) => {
   return json({ url: `/share/${token}` }, 201);
 });
 
-route("DELETE", "/api/clients/:id/share-link", "admin", (_req, user, params) => {
+route("DELETE", "/api/clients/:id/share-link", "admin", async (_req, user, params) => {
   const db = getDb();
-  const res = db.query("UPDATE clients SET share_token = NULL WHERE id = ?").run(params.id ?? "");
+  const res = await db.query("UPDATE clients SET share_token = NULL WHERE id = ?").run(params.id ?? "");
   if (res.changes === 0) return json({ error: "Client not found" }, 404);
-  appendEvent(db, {
+  await appendEvent(db, {
     actorUserId: user!.id,
     entityType: "client",
     entityId: params.id!,
@@ -47,17 +50,17 @@ route("DELETE", "/api/clients/:id/share-link", "admin", (_req, user, params) => 
   return json({ ok: true });
 });
 
-route("GET", "/share/:token", "public", (_req, _user, params) => {
+route("GET", "/share/:token", "public", async (_req, _user, params) => {
   const db = getDb();
   const token = params.token ?? "";
   // ULID+ULID tokens are 52 chars; refuse trivially short lookups outright.
   if (token.length < 40) return new Response("Not found", { status: 404 });
-  const client = db.query("SELECT id, name FROM clients WHERE share_token = ?").get(token) as
+  const client = await db.query("SELECT id, name FROM clients WHERE share_token = ?").get(token) as
     | { id: string; name: string }
     | null;
   if (!client) return new Response("Not found", { status: 404 });
 
-  const shipped = db
+  const shipped = await db
     .query(
       `SELECT i.title, i.state, i.item_type,
               COALESCE(
@@ -67,7 +70,7 @@ route("GET", "/share/:token", "public", (_req, _user, params) => {
               ) AS asked_at,
               (SELECT MAX(e.occurred_at) FROM events e
                 WHERE e.entity_id = i.id AND e.event_type = 'insight.state_changed'
-                  AND json_extract(e.payload_json, '$.to_state') = 'shipped') AS shipped_at
+                  AND e.to_state = 'shipped') AS shipped_at
        FROM insights i
        WHERE i.client_id = ? AND i.state IN ('shipped','client_notified','closed')
        ORDER BY shipped_at DESC, i.created_at DESC`,
@@ -80,7 +83,7 @@ route("GET", "/share/:token", "public", (_req, _user, params) => {
     shipped_at: string | null;
   }>;
 
-  const inFlight = db
+  const inFlight = await db
     .query(
       `SELECT i.title FROM insights i
        WHERE i.client_id = ? AND i.state IN ('triaged','finalized','ticketed')
@@ -90,7 +93,7 @@ route("GET", "/share/:token", "public", (_req, _user, params) => {
 
   // A public demo link gets hammered; don't grow the event log per view.
   if (!demoMode()) {
-    appendEvent(db, {
+    await appendEvent(db, {
       actorUserId: null,
       entityType: "client",
       entityId: client.id,
