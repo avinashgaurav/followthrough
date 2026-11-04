@@ -814,9 +814,18 @@ export const claudeCliCallLog: Array<{
 }> = [];
 
 /** A CLI call that runs longer than this is killed and fails, so a hung login prompt cannot stall a run. */
-const CLAUDE_CLI_TIMEOUT_MS = 300_000;
+export const CLAUDE_CLI_TIMEOUT_MS = 300_000;
 
-class ClaudeCliLLM implements LLM {
+export class ClaudeCliLLM implements LLM {
+  private readonly timeoutMs: number;
+  private readonly bin: string | undefined;
+
+  /** Test seam: a shorter timeout and a stand-in binary let the kill path be tested without a real 300 s wait. */
+  constructor(opts: { timeoutMs?: number; bin?: string } = {}) {
+    this.timeoutMs = opts.timeoutMs ?? CLAUDE_CLI_TIMEOUT_MS;
+    this.bin = opts.bin;
+  }
+
   private async run(
     system: string | undefined,
     prompt: string,
@@ -840,12 +849,12 @@ class ClaudeCliLLM implements LLM {
     const started = Date.now();
     // Prompt on stdin (not argv) and a neutral cwd so no project context is discovered.
     // CLAUDE_CLI_BIN overrides the binary (default `claude` on PATH).
-    const proc = Bun.spawn([process.env.CLAUDE_CLI_BIN ?? "claude", ...args], {
+    const proc = Bun.spawn([this.bin ?? process.env.CLAUDE_CLI_BIN ?? "claude", ...args], {
       cwd: tmpdir(),
       stdin: new Blob([prompt]),
       stdout: "pipe",
       stderr: "pipe",
-      timeout: CLAUDE_CLI_TIMEOUT_MS,
+      timeout: this.timeoutMs,
       killSignal: "SIGKILL",
     });
     const [out, err, code] = await Promise.all([
@@ -853,8 +862,8 @@ class ClaudeCliLLM implements LLM {
       new Response(proc.stderr).text(),
       proc.exited,
     ]);
-    if (proc.signalCode === "SIGKILL" && Date.now() - started >= CLAUDE_CLI_TIMEOUT_MS) {
-      throw new Error(`claude CLI timed out after ${CLAUDE_CLI_TIMEOUT_MS / 1000} s and was killed`);
+    if (proc.signalCode === "SIGKILL" && Date.now() - started >= this.timeoutMs) {
+      throw new Error(`claude CLI timed out after ${this.timeoutMs / 1000} s and was killed`);
     }
     let r: {
       is_error?: boolean;
