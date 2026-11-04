@@ -6,10 +6,12 @@ import { Alert, Btn } from "../components/ui";
 import { HostedLogin, type SignInResume } from "./HostedLogin";
 
 /**
- * Where the emailed sign-in link lands. Supabase puts a short-lived access
- * token in the URL fragment; the server checks it with Supabase and either
- * signs the person in or asks them to name their workspace (or accept an
- * invite). The fragment is cleared at once so the token is not left in history.
+ * Where the emailed sign-in link lands. The link carries a one-time token hash
+ * in the query (?token_hash=...&type=email); older template links put a
+ * short-lived access token in the fragment. The server checks either with
+ * Supabase and either signs the person in or asks them to name their workspace
+ * (or accept an invite). The URL is cleared at once so no token is left in
+ * history.
  * Error text shown here is fixed: the fragment is attacker-editable, so its
  * free-text description is never displayed.
  */
@@ -30,16 +32,20 @@ export function AuthCallback() {
     if (started.current) return;
     started.current = true;
     const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const query = new URLSearchParams(window.location.search);
     window.history.replaceState(null, "", window.location.pathname);
+    const tokenHash = query.get("token_hash");
     const token = params.get("access_token");
-    if (!token) {
-      const known = LINK_ERRORS[params.get("error_code") ?? ""] ?? LINK_ERRORS[params.get("error") ?? ""];
+    const link = tokenHash ? { token_hash: tokenHash, type: query.get("type") ?? "email" } : token ? { access_token: token } : null;
+    if (!link) {
+      const code = params.get("error_code") ?? query.get("error_code") ?? "";
+      const known = LINK_ERRORS[code] ?? LINK_ERRORS[params.get("error") ?? query.get("error") ?? ""];
       setError(`${known ?? "That sign-in link didn't work."} Request a new one.`);
       return;
     }
     api.hostedConfig().then((c) => setFree(c.free_meetings ?? 0)).catch(() => {});
     api
-      .linkVerify(token)
+      .linkVerify(link)
       .then(async (r) => {
         if (r.needs_workspace && r.signup_token) {
           setResume({ token: r.signup_token, invite: r.invite ?? null });

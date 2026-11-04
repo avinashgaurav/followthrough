@@ -5,13 +5,23 @@ import { ulid } from "../ids.ts";
 import { env, hostedMode, withProduct } from "../config.ts";
 import { readSessionCookie, sessionCookie } from "../auth.ts";
 import { clientIp } from "../demo.ts";
-import { AuthProviderError, emailForAccessToken, sendCode, verifyCode, type FetchLike } from "./supabase-auth.ts";
+import {
+  AuthProviderError,
+  emailForAccessToken,
+  emailForTokenHash,
+  sendCode,
+  verifyCode,
+  type FetchLike,
+  type LinkProof,
+} from "./supabase-auth.ts";
+import { COMMON_PASSWORDS } from "./common-passwords.ts";
 import {
   AlreadyMemberError,
   SignupsFullError,
+  claimLinkUse,
   controlHitCount,
-  evictUnverifiedClaim,
   isUnverifiedClaim,
+  promoteUnverifiedClaim,
   recordControlHit,
   withdrawControlHit,
   acceptInvite,
@@ -159,6 +169,11 @@ const CreateSchema = z.object({
   product_description: z.string().trim().max(160).optional(),
 });
 
+const LinkSchema = z.union([
+  z.object({ token_hash: z.string().min(10).max(512), type: z.string().max(20).optional() }),
+  z.object({ access_token: z.string().min(20).max(4096) }),
+]);
+
 async function readJson(req: Request): Promise<unknown> {
   return req.json().catch(() => null);
 }
@@ -183,15 +198,20 @@ route("POST", "/api/hosted/send-code", "public", async (req) => {
   const body = EmailSchema.safeParse(await readJson(req));
   if (!body.success) return json({ error: "Enter a valid email address." }, 400);
   const db = getDb();
-  const ipBucket = ipKey("code-ip", req);
+  const { email } = body.data;
+  // Per IP, per email from that IP, and a looser per-email ceiling: one
+  // stranger cannot use up the owner's allowance (they would need several
+  // IPs), while nobody can flood an inbox.
+  const ip = clientIp(req);
   if (
-    (ipBucket && (await controlRateLimited(db, ipBucket, 10, HOUR))) ||
-    (await controlRateLimited(db, `code-email:${body.data.email}`, 5, HOUR))
+    (ip && (await controlRateLimited(db, `code-ip:${ip}`, 10, HOUR))) ||
+    (ip && (await controlRateLimited(db, `code-email-ip:${email}:${ip}`, 5, HOUR))) ||
+    (await controlRateLimited(db, `code-email:${email}`, 20, HOUR))
   ) {
     return json({ error: "Too many codes requested. Try again in an hour." }, 429);
   }
   try {
-    await sendCode(body.data.email, authFetch, `${origin}/auth/callback`);
+    await sendCode(email, authFetch, `${origin}/auth/callback`);
   } catch (err) {
     if (err instanceof AuthProviderError) return json({ error: err.message }, err.status);
     throw err;
@@ -208,10 +228,14 @@ route("POST", "/api/hosted/verify", "public", async (req) => {
   if (!body.success) return json({ error: "Enter the code from the email." }, 400);
   const db = getDb();
   const { email, code } = body.data;
-  const ipBucket = ipKey("verify-ip", req);
+  // Same shape as send-code: guesses from one IP cannot lock the owner out,
+  // and the per-email ceiling still caps code guessing (50 an hour against a
+  // 6-digit code).
+  const ip = clientIp(req);
   if (
-    (await controlRateLimited(db, `verify:${email}`, 10, HOUR)) ||
-    (ipBucket && (await controlRateLimited(db, ipBucket, 30, HOUR)))
+    (ip && (await controlRateLimited(db, `verify-ip:${ip}`, 30, HOUR))) ||
+    (ip && (await controlRateLimited(db, `verify-email-ip:${email}:${ip}`, 10, HOUR))) ||
+    (await controlRateLimited(db, `verify:${email}`, 50, HOUR))
   ) {
     return json({ error: "Too many attempts. Request a new code in an hour." }, 429);
   }
@@ -234,8 +258,9 @@ route("POST", "/api/hosted/verify", "public", async (req) => {
 async function completeSignIn(req: Request, email: string): Promise<Response> {
   const db = getDb();
   // The inbox is proven here. An unverified password account on this email
-  // must not receive the verified person: evict it, then continue as new.
-  if (await isUnverifiedClaim(db, email)) await evictUnverifiedClaim(db, email);
+  // becomes this person's: verified, its password and older sessions removed
+  // (promoteUnverifiedClaim). Nothing is deleted on a sign-in.
+  if (await isUnverifiedClaim(db, email)) await promoteUnverifiedClaim(db, email);
   const member = await membershipFor(db, email);
   if (!member || member.status === "invited") {
     const token = ulid() + ulid();
@@ -265,22 +290,31 @@ route("POST", "/api/hosted/link-verify", "public", async (req) => {
   if (off) return off;
   const refused = crossSiteRefusal(req);
   if (refused) return refused;
-  const body = z.object({ access_token: z.string().min(20).max(4096) }).safeParse(await readJson(req));
+  const body = LinkSchema.safeParse(await readJson(req));
   if (!body.success) return json({ error: "That sign-in link is incomplete. Request a new one." }, 400);
   const db = getDb();
   const ipBucket = ipKey("link-ip", req);
   if (ipBucket && (await controlRateLimited(db, ipBucket, 30, HOUR))) {
     return json({ error: "Too many attempts. Try again in an hour." }, 429);
   }
-  let email: string | null;
+  let proof: LinkProof | null;
   try {
-    email = await emailForAccessToken(body.data.access_token, authFetch);
+    // Preferred: the link's token hash, spent with Supabase on the server.
+    // Legacy: an access token from a {{ .ConfirmationURL }} link, accepted only
+    // for emailed code / magic-link sessions (see emailForAccessToken).
+    proof =
+      "token_hash" in body.data
+        ? await emailForTokenHash(body.data.token_hash, body.data.type ?? "email", authFetch)
+        : await emailForAccessToken(body.data.access_token, authFetch);
   } catch (err) {
     if (err instanceof AuthProviderError) return json({ error: err.message }, err.status);
     throw err;
   }
-  if (!email) return json({ error: "That sign-in link is invalid or has expired. Request a new one." }, 401);
-  return completeSignIn(req, email);
+  if (!proof) return json({ error: "That sign-in link is invalid or has expired. Request a new one." }, 401);
+  if (!(await claimLinkUse(db, proof.useKey))) {
+    return json({ error: "That sign-in link was already used. Request a new one." }, 401);
+  }
+  return completeSignIn(req, proof.email);
 });
 
 route("POST", "/api/hosted/create-workspace", "public", async (req) => {
@@ -384,8 +418,10 @@ route("PATCH", "/api/hosted/workspace", "admin", async (req) => {
  * - an email that already has an account or a pending invite cannot be taken;
  * - a password belongs to one membership and dies with it (FK cascade), and
  *   login checks it still matches that membership;
- * - a later verified sign-in for the email evicts the password claim
- *   (completeSignIn), so a squatter never receives the real owner.
+ * - a later verified sign-in for the email promotes the claim
+ *   (completeSignIn): the account is kept for whoever proved the inbox, and
+ *   its password and older sessions are removed, so a squatter is locked out
+ *   and a real owner who forgot the password keeps their data.
  * Signup also answers "taken" for existing emails: accepted, since with no
  * email there is no non-revealing way to refuse (documented in HOSTED.md).
  */
@@ -409,10 +445,7 @@ const hashPassword = (pw: string) => Bun.password.hash(pw, ARGON);
 // which is caught below and counts as a wrong password.
 const decoyHash: Promise<string> = hashPassword("decoy-password-for-timing").catch(() => "");
 
-const COMMON = new Set([
-  "password123", "password1234", "1234567890", "123456789a", "qwertyuiop", "iloveyou123",
-  "passw0rd123", "welcome123", "letmein123", "admin12345", "abcdefghij", "0987654321",
-]);
+const COMMON = new Set(COMMON_PASSWORDS);
 function weakPassword(pw: string, email: string): boolean {
   const low = pw.toLowerCase();
   const local = email.split("@")[0] ?? "";

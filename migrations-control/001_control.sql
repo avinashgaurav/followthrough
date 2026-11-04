@@ -5,15 +5,16 @@ CREATE SCHEMA IF NOT EXISTS control;
 
 -- Workspaces search only their own schema plus "extensions", never public, so
 -- citext must live in extensions (Supabase's default home for extensions; its
--- default search_path already includes it, so anything else using citext from
--- public keeps working). Move it there if an earlier deploy put it in public.
+-- default search_path already includes it). This runs on every hosted boot,
+-- and today hosted mode shares its database with the single-tenant app, so it
+-- never touches an extension that already exists: it only creates citext when
+-- it is missing. If citext sits in another schema, boot stops (see
+-- assertExtensionsReady) and the operator moves it once, by hand:
+--   ALTER EXTENSION citext SET SCHEMA extensions;
 CREATE SCHEMA IF NOT EXISTS extensions;
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM pg_extension e JOIN pg_namespace n ON n.oid = e.extnamespace
-             WHERE e.extname = 'citext' AND n.nspname <> 'extensions') THEN
-    ALTER EXTENSION citext SET SCHEMA extensions;
-  ELSIF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'citext') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'citext') THEN
     CREATE EXTENSION citext SCHEMA extensions;
   END IF;
 END $$;

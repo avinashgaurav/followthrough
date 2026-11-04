@@ -52,7 +52,12 @@ export async function assertExtensionsReady(db: Database): Promise<void> {
               EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'extensions') AS polluted`,
     )
     .get()) as { citext: number; polluted: number };
-  if (!row.citext) throw new Error('Hosted mode needs the citext extension in the "extensions" schema (the control migration moves it).');
+  if (!row.citext) {
+    throw new Error(
+      'Hosted mode needs the citext extension in the "extensions" schema. It exists elsewhere, and boot never moves a ' +
+        "shared extension by itself: run ALTER EXTENSION citext SET SCHEMA extensions; once (docs/HOSTED.md).",
+    );
+  }
   if (row.polluted) throw new Error('Hosted mode found tables in the "extensions" schema; workspaces would share them. Move them out before serving.');
 }
 
@@ -115,8 +120,8 @@ export async function createWorkspace(
 ): Promise<{ workspace: Workspace; userId: string }> {
   const email = input.email.trim().toLowerCase();
   if (await membershipFor(db, email)) throw new AlreadyMemberError(email);
-  const { n } = (await db.query("SELECT COUNT(*) AS n FROM control.workspaces").get()) as { n: number };
-  if (n >= env.MAX_WORKSPACES) throw new SignupsFullError("Sign-ups are full right now.");
+  // Cheap early refusal; the binding check is under the lock below.
+  if ((await workspaceCount(db)) >= env.MAX_WORKSPACES) throw new SignupsFullError("Sign-ups are full right now.");
 
   const id = ulid();
   const schema = schemaFor(id);
@@ -134,15 +139,23 @@ export async function createWorkspace(
         .run(userId, email, email.split("@")[0]!, now);
     });
     await db.transaction(async () => {
+      // Count and insert under one lock, so parallel sign-ups cannot all pass
+      // a check that ran before any of them registered.
+      await db.query("SELECT pg_advisory_xact_lock(hashtext('followthrough:workspaces'))").run();
+      if ((await workspaceCount(db)) >= env.MAX_WORKSPACES) throw new SignupsFullError("Sign-ups are full right now.");
       await db
         .query(
           `INSERT INTO control.workspaces (id, schema_name, name, product_name, product_description, owner_email, meetings_quota, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(id, schema, productName, productName, input.productDescription?.trim() || null, email, env.FREE_MEETINGS_PER_WORKSPACE, now);
+      // Without a password the email was proven (code or link) to get here;
+      // a password sign-up is an unverified claim until the inbox is proven.
       await db
-        .query("INSERT INTO control.members (email, workspace_id, user_id, status, created_at) VALUES (?, ?, ?, 'active', ?)")
-        .run(email, id, userId, now);
+        .query(
+          "INSERT INTO control.members (email, workspace_id, user_id, status, created_at, verified_at) VALUES (?, ?, ?, 'active', ?, ?)",
+        )
+        .run(email, id, userId, now, input.passwordHash ? null : now);
       // Password sign-up: the credential is part of the same transaction, so
       // a failure never leaves an account that has no way to sign in.
       if (input.passwordHash) {
@@ -162,6 +175,11 @@ export async function createWorkspace(
   return { workspace: (await getWorkspace(db, id))!, userId };
 }
 
+async function workspaceCount(db: Database): Promise<number> {
+  const { n } = (await db.query("SELECT COUNT(*) AS n FROM control.workspaces").get()) as { n: number };
+  return n;
+}
+
 /** A teammate added by an admin signs in with their own email code. */
 export class TooManyMembersError extends Error {}
 
@@ -179,14 +197,18 @@ export async function addMember(
 ): Promise<void> {
   const normalized = email.trim().toLowerCase();
   if (await membershipFor(db, normalized)) throw new AlreadyMemberError(normalized);
-  const { n } = (await db.query("SELECT COUNT(*) AS n FROM control.members WHERE workspace_id = ?").get(workspaceId)) as {
-    n: number;
-  };
-  if (n >= env.MAX_MEMBERS_PER_WORKSPACE) throw new TooManyMembersError("This workspace has reached its member limit.");
   try {
-    await db
-      .query("INSERT INTO control.members (email, workspace_id, user_id, status, invited_by, created_at) VALUES (?, ?, ?, 'invited', ?, ?)")
-      .run(normalized, workspaceId, userId, invitedBy, nowIso());
+    // Count and insert under a per-workspace lock (parallel invites cannot overshoot).
+    await db.transaction(async () => {
+      await db.query("SELECT pg_advisory_xact_lock(hashtext(?))").run(`followthrough:members:${workspaceId}`);
+      const { n } = (await db.query("SELECT COUNT(*) AS n FROM control.members WHERE workspace_id = ?").get(workspaceId)) as {
+        n: number;
+      };
+      if (n >= env.MAX_MEMBERS_PER_WORKSPACE) throw new TooManyMembersError("This workspace has reached its member limit.");
+      await db
+        .query("INSERT INTO control.members (email, workspace_id, user_id, status, invited_by, created_at) VALUES (?, ?, ?, 'invited', ?, ?)")
+        .run(normalized, workspaceId, userId, invitedBy, nowIso());
+    });
   } catch (err) {
     if (/duplicate key|unique/i.test(String((err as Error)?.message ?? err))) throw new AlreadyMemberError(normalized);
     throw err;
@@ -194,7 +216,10 @@ export async function addMember(
 }
 
 export async function acceptInvite(db: Database, email: string): Promise<void> {
-  await db.query("UPDATE control.members SET status = 'active' WHERE email = ? AND status = 'invited'").run(email);
+  // Accepting follows an inbox sign-in, so it also verifies the email.
+  await db
+    .query("UPDATE control.members SET status = 'active', verified_at = ? WHERE email = ? AND status = 'invited'")
+    .run(nowIso(), email);
 }
 
 /** Declining (or a revoked teammate) frees the email for its own workspace. */
@@ -273,7 +298,8 @@ export async function pruneControl(db: Database, now = Date.now()): Promise<Reco
   const r = await db.query("DELETE FROM control.rate_hits WHERE at < ?").run(now - 24 * 3_600_000);
   const p = await db.query("DELETE FROM control.pending_signups WHERE expires_at <= ?").run(new Date(now).toISOString());
   const ws = await db.query("DELETE FROM control.llm_spend_ws WHERE day < ?").run(new Date(now - 7 * 86_400_000).toISOString().slice(0, 10));
-  return { sessions: s.changes, rate_hits: r.changes, pending_signups: p.changes, ws_spend_days: ws.changes };
+  const l = await db.query("DELETE FROM control.used_links WHERE expires_at <= ?").run(new Date(now).toISOString());
+  return { sessions: s.changes, rate_hits: r.changes, pending_signups: p.changes, ws_spend_days: ws.changes, used_links: l.changes };
 }
 
 export async function listWorkspaces(db: Database): Promise<Workspace[]> {
@@ -282,36 +308,51 @@ export async function listWorkspaces(db: Database): Promise<Workspace[]> {
 
 /** True when this email's only claim is an unverified password sign-up. */
 export async function isUnverifiedClaim(db: Database, email: string): Promise<boolean> {
-  const row = await db.query("SELECT 1 AS x FROM control.credentials WHERE email = ?").get(email.trim().toLowerCase());
+  const row = await db
+    .query(
+      `SELECT 1 AS x FROM control.members m JOIN control.credentials c ON c.email = m.email
+       WHERE m.email = ? AND m.verified_at IS NULL`,
+    )
+    .get(email.trim().toLowerCase());
   return !!row;
 }
 
 /**
  * Someone just proved they own this inbox (emailed link or code) while an
- * unverified password account holds the email: remove that claim instead of
- * signing the verified person into it. The squatter's membership, password
- * (cascade) and sessions in that workspace go; the workspace's data stays
- * with whoever else belongs to it.
+ * unverified password account holds the email. Nothing tells the real owner
+ * who forgot their password apart from a squatter, so the inbox wins without
+ * deleting anything: the membership becomes verified and stays with its
+ * workspace and data, while the password and every session opened before now
+ * are removed, so whoever only knew the password is out. All in one
+ * transaction. Returns false if there was nothing to promote.
  */
-export async function evictUnverifiedClaim(db: Database, email: string): Promise<void> {
-  const m = await membershipFor(db, email);
-  if (!m) return;
-  // Cut access first (fails closed): if anything below throws, the squatter
-  // has already lost their sessions and their user is disabled.
-  await withTenant(m.workspace.schema_name, async () => {
-    await db.query("DELETE FROM sessions WHERE user_id = ?").run(m.userId);
-    await db.query("UPDATE users SET disabled_at = ? WHERE id = ? AND disabled_at IS NULL").run(nowIso(), m.userId);
+export async function promoteUnverifiedClaim(db: Database, email: string): Promise<boolean> {
+  const normalized = email.trim().toLowerCase();
+  const m = await membershipFor(db, normalized);
+  if (!m) return false;
+  const schema = m.workspace.schema_name;
+  // Named directly below: a transaction outside withTenant has no search_path pin.
+  if (!/^ws_[a-z0-9]{1,40}$/.test(schema)) throw new Error(`not a workspace schema: "${schema}"`);
+  return db.transaction(async () => {
+    const won = await db
+      .query("UPDATE control.members SET verified_at = ? WHERE email = ? AND verified_at IS NULL RETURNING email")
+      .run(nowIso(), normalized);
+    if (won.rows.length === 0) return false; // already verified (a parallel sign-in did it)
+    await db.query("DELETE FROM control.credentials WHERE email = ?").run(normalized);
+    await db
+      .query(`DELETE FROM control.sessions WHERE workspace_id = ? AND id IN (SELECT id FROM ${schema}.sessions WHERE user_id = ?)`)
+      .run(m.workspace.id, m.userId);
+    await db.query(`DELETE FROM ${schema}.sessions WHERE user_id = ?`).run(m.userId);
+    return true;
   });
-  await db.query("DELETE FROM control.members WHERE email = ?").run(email.trim().toLowerCase());
-  // A workspace nobody belongs to any more is the squatter's own data: remove
-  // it, which also frees its MAX_WORKSPACES slot and every session pointing at it.
-  const { n } = (await db.query("SELECT COUNT(*) AS n FROM control.members WHERE workspace_id = ?").get(m.workspace.id)) as {
-    n: number;
-  };
-  if (n === 0) {
-    await db.query("DELETE FROM control.workspaces WHERE id = ?").run(m.workspace.id);
-    await db.exec(`DROP SCHEMA IF EXISTS ${m.workspace.schema_name} CASCADE;`);
-  }
+}
+
+/** Marks an emailed link as used; false if it already was (single use). */
+export async function claimLinkUse(db: Database, key: string, ttlMs = 24 * 3_600_000): Promise<boolean> {
+  const r = await db
+    .query("INSERT INTO control.used_links (key, expires_at) VALUES (?, ?) ON CONFLICT (key) DO NOTHING RETURNING key")
+    .run(key, new Date(Date.now() + ttlMs).toISOString());
+  return r.rows.length > 0;
 }
 
 /** Counts hits without recording one (failure-only lockouts). */

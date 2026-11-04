@@ -1,8 +1,9 @@
 -- Open sign-up with email + password (no email delivery yet, see issue #24).
 -- The email is NOT verified: it is a login name. A password belongs to one
 -- membership (workspace + user) and dies with it (ON DELETE CASCADE), and a
--- later verified sign-in for the same email evicts the unverified claim, so a
--- password can never reach a workspace that someone else proved they own.
+-- later verified sign-in for the same email removes the password (see
+-- 003_verification.sql), so a password can never reach a workspace that
+-- someone else proved they own.
 CREATE TABLE IF NOT EXISTS control.credentials (
   email         TEXT PRIMARY KEY REFERENCES control.members(email) ON DELETE CASCADE,
   workspace_id  TEXT NOT NULL,

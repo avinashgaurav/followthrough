@@ -44,7 +44,7 @@ Or [run your own](#run-your-own).
 
 - **Works today:** sign up, capture by pasting a transcript, AI extraction with quotes, Review, Library, Ask, Confirm shipped, client pages and share links.
 - **Hosted app:** every sign-up gets its own private workspace (a separate database schema), 5 free meetings and a daily AI spend cap.
-- **Emails are not verified yet,** and there is no password reset, because no email sender is connected ([#24](https://github.com/avinashgaurav/followthrough/issues/24)). Use an email you own and keep your password safe: if an email's real owner later proves the inbox, an account made with it is removed along with its workspace. Teammate invites need email sending first.
+- **Emails are not verified yet,** and there is no password reset, because no email sender is connected ([#24](https://github.com/avinashgaurav/followthrough/issues/24)). Use an email you own: whoever proves the inbox (emailed link or code) gets the account and its workspace, and the password stops working. Teammate invites need email sending first.
 - **Your data:** transcripts go to the AI provider to find the asks; everything else stays in the app's database and file storage. Run your own copy to keep it all on your servers.
 - **Needs setup when you run your own:** an AI key, a first admin (`bun run seed` prints a one-time login code), audio transcription (a Deepgram key) and GitHub release matching (GitHub tokens).
 
