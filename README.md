@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Bun](https://img.shields.io/badge/Bun-1.3+-fbf0df?logo=bun&logoColor=black)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-349%20passing-brightgreen.svg)](docs/SETUP.md#development)
+[![Tests](https://img.shields.io/badge/tests-452%20passing-brightgreen.svg)](docs/SETUP.md#development)
 [![LLM: Claude](https://img.shields.io/badge/LLM-Claude-d97757.svg)](https://www.anthropic.com/)
 
 </div>
@@ -27,22 +27,26 @@ Click a poster to play it on the site.
 
 ## Try it
 
-Open the read-only demo at https://followthrough-demo-neon.vercel.app. It uses fictional meetings, needs no login, and saves nothing you do.
+**Start free:** https://followthrough-hosted.vercel.app. Sign up with an email and a password, name your company or product, and paste in a real call. Your first 5 meetings are free.
+
+**Or look around first:** the read-only demo at https://followthrough-demo-neon.vercel.app uses fictional meetings, needs no login, and saves nothing.
 
 1. **Home:** what needs you now, and the pipeline from found to client told.
 2. **Review:** the asks found in each call, with the client's exact quote behind every one.
 3. **Library:** everything learned, searchable across transcripts and quotes.
-4. **Ask:** try an example question; the answer cites the meetings it came from.
+4. **Ask:** ask a question; the answer cites the meetings it came from.
 5. **Confirm shipped:** releases matched to the client asks they close, with changelog evidence.
 6. **A client's share page** (from Clients): what they asked for and what shipped.
 
-Want to paste in your own call? [Ask for a login](https://github.com/avinashgaurav/followthrough/issues/new?title=Demo%20login%20request&body=I%27d%20like%20a%20login%20to%20the%20hosted%20demo%20so%20I%20can%20paste%20in%20my%20own%20call.%0A%0ANo%20need%20to%20post%20your%20email%3B%20we%27ll%20reply%20on%20this%20issue.) to the hosted demo and paste it in there. No need to post your email; we'll reply on the issue. Or [run your own](#run-your-own).
+Or [run your own](#run-your-own).
 
 ## Good to know
 
-- **Works today:** capture by pasting a transcript, AI extraction with quotes, Review, Library, Ask, Confirm shipped, client pages and share links.
-- **The read-only demo:** shows the results with fictional data. Pasting your own call and asking new questions need a login or your own copy.
-- **Needs setup when you run your own:** audio transcription (a Deepgram key), GitHub release matching (GitHub tokens), and sign-in codes, which an admin issues.
+- **Works today:** sign up, capture by pasting a transcript, AI extraction with quotes, Review, Library, Ask, Confirm shipped, client pages and share links.
+- **Hosted app:** every sign-up gets its own private workspace (a separate database schema), 5 free meetings and a daily AI spend cap.
+- **Emails are not verified yet,** and there is no password reset, because no email sender is connected ([#24](https://github.com/avinashgaurav/followthrough/issues/24)). Use an email you own: if its real owner later proves the inbox, an account made with someone else's email is removed. Teammate invites wait for the same fix.
+- **Your data:** transcripts go to the AI provider to find the asks; everything else stays in the app's database. Run your own copy to keep it all on your servers.
+- **Needs setup when you run your own:** audio transcription (a Deepgram key), GitHub release matching (GitHub tokens), and an AI key.
 
 > [!TIP]
 > **In pilot:** a sales team is trying followthrough on its own client calls.
