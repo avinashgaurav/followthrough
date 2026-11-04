@@ -19,7 +19,9 @@ from this deployment's AI key.
   already on its default search path). The control migration creates it there
   when it is missing, and never moves an existing one: if it sits elsewhere,
   boot stops with a message and you run
-  `ALTER EXTENSION citext SET SCHEMA extensions;` once, by hand.
+  `ALTER EXTENSION citext SET SCHEMA extensions;` once, by hand. On a shared
+  database, first check that the other app finds citext through a search path
+  that includes `extensions` (Supabase's default does), or it breaks.
 - **Shared database today:** the hosted deployment uses the same Supabase
   project and database as the single-tenant production app (its tables in
   `public`, hosted in `control` and `ws_*`). Every hosted boot runs the control
@@ -78,11 +80,12 @@ its workspace are created at once. The email is not verified, so:
 - a password account is an unverified claim until someone proves the inbox
   (emailed link or code). That person then gets the account, with its
   workspace and data: it is marked verified, and its password and every
-  session opened before are removed. So an owner who forgot their password
-  signs in by email and keeps everything, and anyone who only knew the
-  password (a squatter) is locked out. Nothing is deleted on a sign-in. If a
-  squatter had invited teammates, they remain; the new owner sees and can
-  revoke them in Settings;
+  session in the workspace are removed, along with every other member and
+  invite (their users are disabled, their data kept). So an owner who forgot
+  their password signs in by email and keeps their data (they re-invite
+  teammates), and a squatter, or anyone a squatter let in, is locked out.
+  Nothing is deleted on a sign-in, but anything a squatter created stays in
+  the workspace for the new owner to review;
 - sign-up says when an email is already taken (accepted: without email there
   is no non-revealing way to refuse);
 - limits: 10 sign-ups an hour per IP and 30 an hour overall; failed logins
@@ -91,7 +94,9 @@ its workspace are created at once. The email is not verified, so:
 Emailed codes and links: 10 code requests an hour per IP, 5 per email from one
 IP and 20 per email overall, and code guesses limited the same way (10 per
 email from one IP, 50 per email an hour), so one stranger cannot use up the
-owner's allowance. Each emailed link signs in once.
+owner's allowance (someone rotating many IPs can still reach the per-email
+ceiling for an hour; Supabase's own email limits also apply). Each emailed
+link signs in once.
 
 Planned with #24: CAPTCHA on sign-up, removing never-used workspaces, and
 password reset (still not available: a forgotten password means signing in by

@@ -253,6 +253,39 @@ export async function openSession(
   return id;
 }
 
+/**
+ * Password login's session: opened only while the password (credential row)
+ * still exists, under a row lock. A promotion (promoteUnverifiedClaim) deletes
+ * that row, so either it commits first and this refuses (null), or it waits
+ * for this to commit and then removes the session it made. Statements name the
+ * schema: a transaction outside withTenant has no search_path pin.
+ */
+export async function openPasswordSession(
+  db: Database,
+  workspace: Workspace,
+  userId: string,
+  email: string,
+  meta: { ip: string | null; userAgent: string | null },
+): Promise<string | null> {
+  const schema = workspace.schema_name;
+  if (!WS_SCHEMA.test(schema)) throw new Error(`not a workspace schema: "${schema}"`);
+  return db.transaction(async () => {
+    const held = await db
+      .query("SELECT 1 AS x FROM control.credentials WHERE email = ? AND workspace_id = ? AND user_id = ? FOR SHARE")
+      .get(email, workspace.id, userId);
+    if (!held) return null;
+    const id = ulid();
+    const expires = new Date(Date.now() + env.SESSION_TTL_HOURS * 3_600_000).toISOString();
+    await db
+      .query(`INSERT INTO ${schema}.sessions (id, user_id, created_at, expires_at, ip, user_agent) VALUES (?, ?, ?, ?, ?, ?)`)
+      .run(id, userId, nowIso(), expires, meta.ip, meta.userAgent);
+    await db.query("INSERT INTO control.sessions (id, workspace_id, expires_at) VALUES (?, ?, ?)").run(id, workspace.id, expires);
+    return id;
+  });
+}
+
+const WS_SCHEMA = /^ws_[a-z0-9]{1,40}$/;
+
 /** The workspace a session cookie belongs to (expiry and the user are checked in the workspace). */
 export async function workspaceForSession(db: Database, sessionId: string | null): Promise<Workspace | null> {
   if (!sessionId) return null;
@@ -321,9 +354,10 @@ export async function isUnverifiedClaim(db: Database, email: string): Promise<bo
  * Someone just proved they own this inbox (emailed link or code) while an
  * unverified password account holds the email. Nothing tells the real owner
  * who forgot their password apart from a squatter, so the inbox wins without
- * deleting anything: the membership becomes verified and stays with its
- * workspace and data, while the password and every session opened before now
- * are removed, so whoever only knew the password is out. All in one
+ * deleting any data: the membership becomes verified and keeps its workspace,
+ * while the password, every session in the workspace, and every other member
+ * or invite (users disabled, rows kept) are removed. A squatter, and anyone
+ * they let in, is out; a real owner re-invites their teammates. All in one
  * transaction. Returns false if there was nothing to promote.
  */
 export async function promoteUnverifiedClaim(db: Database, email: string): Promise<boolean> {
@@ -332,17 +366,18 @@ export async function promoteUnverifiedClaim(db: Database, email: string): Promi
   if (!m) return false;
   const schema = m.workspace.schema_name;
   // Named directly below: a transaction outside withTenant has no search_path pin.
-  if (!/^ws_[a-z0-9]{1,40}$/.test(schema)) throw new Error(`not a workspace schema: "${schema}"`);
+  if (!WS_SCHEMA.test(schema)) throw new Error(`not a workspace schema: "${schema}"`);
   return db.transaction(async () => {
     const won = await db
       .query("UPDATE control.members SET verified_at = ? WHERE email = ? AND verified_at IS NULL RETURNING email")
       .run(nowIso(), normalized);
     if (won.rows.length === 0) return false; // already verified (a parallel sign-in did it)
+    // Waits for any password login holding this row (openPasswordSession).
     await db.query("DELETE FROM control.credentials WHERE email = ?").run(normalized);
-    await db
-      .query(`DELETE FROM control.sessions WHERE workspace_id = ? AND id IN (SELECT id FROM ${schema}.sessions WHERE user_id = ?)`)
-      .run(m.workspace.id, m.userId);
-    await db.query(`DELETE FROM ${schema}.sessions WHERE user_id = ?`).run(m.userId);
+    await db.query("DELETE FROM control.members WHERE workspace_id = ? AND email <> ?").run(m.workspace.id, normalized);
+    await db.query(`UPDATE ${schema}.users SET disabled_at = ? WHERE id <> ? AND disabled_at IS NULL`).run(nowIso(), m.userId);
+    await db.query(`DELETE FROM control.sessions WHERE id IN (SELECT id FROM ${schema}.sessions)`).run();
+    await db.query(`DELETE FROM ${schema}.sessions`).run();
     return true;
   });
 }

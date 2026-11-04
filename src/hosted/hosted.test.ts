@@ -17,6 +17,8 @@ import {
   addMember,
   assertExtensionsReady,
   isUnverifiedClaim,
+  membershipFor,
+  openPasswordSession,
   promoteUnverifiedClaim,
   createWorkspace,
   controlRateLimited,
@@ -709,6 +711,32 @@ describe("email + password sign-up", () => {
     const again = await handleApi(req("POST", "/api/hosted/verify", { body: { email: who, code: "333331" } }));
     expect(again.status).toBe(200);
     expect(cookieOf(again)).not.toBe("");
+  });
+
+  test("promotion also removes anyone the password account let in", async () => {
+    const who = email("pw-accomplice-owner");
+    const sq = await signup({ email: who, password: PW, product_name: "Planted" });
+    const accomplice = email("pw-accomplice");
+    expect((await handleApi(req("POST", "/api/users", { cookie: cookieOf(sq), body: { email: accomplice, name: "A" } }))).status).toBe(201);
+    const v = await handleApi(req("POST", "/api/hosted/verify", { body: { email: accomplice, code: "555551" } }));
+    const vb = (await v.json()) as { signup_token: string };
+    const acc = await handleApi(req("POST", "/api/hosted/accept-invite", { body: { signup_token: vb.signup_token } }));
+    expect(acc.status).toBe(200);
+    // The real owner proves the inbox.
+    const r = await handleApi(req("POST", "/api/hosted/verify", { body: { email: who, code: "555561" } }));
+    expect(cookieOf(r)).not.toBe("");
+    expect((await handleApi(req("GET", "/api/clients", { cookie: cookieOf(acc) }))).status).toBe(401);
+    expect(await db.query("SELECT 1 AS x FROM control.members WHERE email = ?").get(accomplice)).toBeNull();
+    expect((await handleApi(req("GET", "/api/clients", { cookie: cookieOf(r) }))).status).toBe(200);
+  });
+
+  test("a password login that loses the race to a promotion gets no session", async () => {
+    const who = email("pw-race");
+    await signup({ email: who, password: PW, product_name: "Race" });
+    const m = (await membershipFor(db, who))!;
+    // Login checked the password, then the owner proved the inbox before it opened a session.
+    expect(await promoteUnverifiedClaim(db, who)).toBe(true);
+    expect(await openPasswordSession(db, m.workspace, m.userId, who, { ip: null, userAgent: null })).toBeNull();
   });
 
   test("the sign-in path never drops a workspace schema", async () => {

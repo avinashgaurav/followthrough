@@ -173,8 +173,12 @@ export async function emailForAccessToken(
   if (!claims) return null;
   const amr = (claims.amr ?? []) as Array<{ method?: string; timestamp?: number }>;
   if (!Array.isArray(amr)) return null;
+  // At most 10 minutes old, and at most a minute in the future (clock skew).
   const fresh = (seconds: unknown) =>
-    typeof seconds === "number" && Number.isFinite(seconds) && Math.abs(now - seconds * 1000) <= LINK_FRESH_MS;
+    typeof seconds === "number" &&
+    Number.isFinite(seconds) &&
+    now - seconds * 1000 <= LINK_FRESH_MS &&
+    seconds * 1000 - now <= 60_000;
   if (!amr.some((m) => INBOX_METHODS.has(m?.method ?? "") && fresh(m?.timestamp))) return null;
   if (!fresh(claims.iat)) return null;
   const session = typeof claims.session_id === "string" && claims.session_id ? claims.session_id : null;

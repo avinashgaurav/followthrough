@@ -32,6 +32,7 @@ import {
   currentWorkspaceId,
   getWorkspace,
   membershipFor,
+  openPasswordSession,
   openSession,
   workspaceForSession,
   type Workspace,
@@ -539,6 +540,11 @@ route("POST", "/api/hosted/password-login", "public", async (req) => {
   await db
     .query("UPDATE control.credentials SET last_login_at = ? WHERE email = ? AND workspace_id = ?")
     .run(nowIso(), email, cred!.workspace_id);
-  const sid = await openSession(db, member!.workspace, member!.userId, { ip: clientIp(req), userAgent: req.headers.get("user-agent") });
+  const sid = await openPasswordSession(db, member!.workspace, member!.userId, email, {
+    ip: clientIp(req),
+    userAgent: req.headers.get("user-agent"),
+  });
+  // The email's owner proved the inbox while this login was checking: the password is gone.
+  if (!sid) return json({ error: "That email and password don't match." }, 401);
   return json({ ok: true }, 200, { "set-cookie": sessionCookie(sid, secure(req)) });
 });
