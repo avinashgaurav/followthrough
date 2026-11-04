@@ -53,6 +53,32 @@ chooses to join; they can create their own workspace instead.
    the `control` schema and migrates every workspace.
 3. Sign up at your deployment URL with your own email to check the flow end to end.
 
+## Sign-up while no email sender is connected
+
+Until a custom SMTP sender is set up (issue #24), Supabase only emails members
+of the project team, so the main path is **email + password**: an account and
+its workspace are created at once. The email is not verified, so:
+
+- anyone can register any address (each account is still its own isolated
+  workspace with the free quota and AI caps);
+- there is no password reset yet (it needs email);
+- password accounts never pass the invite path, and an email that already has
+  an account or a pending invite cannot be registered by password;
+- a password belongs to one membership and is deleted with it; if the real
+  owner of an email later proves their inbox (emailed link or code), the
+  unverified password account on that email is removed rather than handed to
+  them;
+- sign-up says when an email is already taken (accepted: without email there
+  is no non-revealing way to refuse);
+- limits: 10 sign-ups an hour per IP and 30 an hour overall; failed logins
+  lock an email for 15 minutes from that IP only (100 a day per email overall).
+
+Planned with #24: CAPTCHA on sign-up, removing never-used workspaces, password
+reset, and email verification for password accounts.
+
+The emailed-link sign-in stays in the code and works for everyone once SMTP is
+connected.
+
 ## What a user sees
 
 Email, then the emailed code, then (first time only) "Company or product" and

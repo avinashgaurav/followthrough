@@ -201,6 +201,7 @@ route("POST", "/api/users/:id/revoke", "admin", async (_req, admin, params) => {
   // Disabling the open-access guest would transiently 401 every signed-out user
   // (the session/user lookups filter disabled_at). The guest is system-managed.
   if (params.id === GUEST_USER_ID) return json({ error: "Cannot revoke the open-access guest." }, 400);
+  if (params.id === admin!.id) return json({ error: "You can't revoke your own access." }, 400);
   const db = getDb();
   await revokeCode(db, params.id!);
   // Hosted: free the email so the person can sign in elsewhere.

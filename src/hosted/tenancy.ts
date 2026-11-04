@@ -111,7 +111,7 @@ export async function membershipFor(db: Database, email: string): Promise<Member
  */
 export async function createWorkspace(
   db: Database,
-  input: { email: string; productName: string; productDescription?: string | null },
+  input: { email: string; productName: string; productDescription?: string | null; passwordHash?: string },
 ): Promise<{ workspace: Workspace; userId: string }> {
   const email = input.email.trim().toLowerCase();
   if (await membershipFor(db, email)) throw new AlreadyMemberError(email);
@@ -143,6 +143,15 @@ export async function createWorkspace(
       await db
         .query("INSERT INTO control.members (email, workspace_id, user_id, status, created_at) VALUES (?, ?, ?, 'active', ?)")
         .run(email, id, userId, now);
+      // Password sign-up: the credential is part of the same transaction, so
+      // a failure never leaves an account that has no way to sign in.
+      if (input.passwordHash) {
+        await db
+          .query(
+            "INSERT INTO control.credentials (email, workspace_id, user_id, password_hash, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?)",
+          )
+          .run(email, id, userId, input.passwordHash, now, now);
+      }
     });
   } catch (err) {
     await db.exec(`DROP SCHEMA IF EXISTS ${schema} CASCADE;`).catch(() => {});
@@ -269,4 +278,57 @@ export async function pruneControl(db: Database, now = Date.now()): Promise<Reco
 
 export async function listWorkspaces(db: Database): Promise<Workspace[]> {
   return (await db.query("SELECT * FROM control.workspaces ORDER BY created_at").all()) as Workspace[];
+}
+
+/** True when this email's only claim is an unverified password sign-up. */
+export async function isUnverifiedClaim(db: Database, email: string): Promise<boolean> {
+  const row = await db.query("SELECT 1 AS x FROM control.credentials WHERE email = ?").get(email.trim().toLowerCase());
+  return !!row;
+}
+
+/**
+ * Someone just proved they own this inbox (emailed link or code) while an
+ * unverified password account holds the email: remove that claim instead of
+ * signing the verified person into it. The squatter's membership, password
+ * (cascade) and sessions in that workspace go; the workspace's data stays
+ * with whoever else belongs to it.
+ */
+export async function evictUnverifiedClaim(db: Database, email: string): Promise<void> {
+  const m = await membershipFor(db, email);
+  if (!m) return;
+  // Cut access first (fails closed): if anything below throws, the squatter
+  // has already lost their sessions and their user is disabled.
+  await withTenant(m.workspace.schema_name, async () => {
+    await db.query("DELETE FROM sessions WHERE user_id = ?").run(m.userId);
+    await db.query("UPDATE users SET disabled_at = ? WHERE id = ? AND disabled_at IS NULL").run(nowIso(), m.userId);
+  });
+  await db.query("DELETE FROM control.members WHERE email = ?").run(email.trim().toLowerCase());
+  // A workspace nobody belongs to any more is the squatter's own data: remove
+  // it, which also frees its MAX_WORKSPACES slot and every session pointing at it.
+  const { n } = (await db.query("SELECT COUNT(*) AS n FROM control.members WHERE workspace_id = ?").get(m.workspace.id)) as {
+    n: number;
+  };
+  if (n === 0) {
+    await db.query("DELETE FROM control.workspaces WHERE id = ?").run(m.workspace.id);
+    await db.exec(`DROP SCHEMA IF EXISTS ${m.workspace.schema_name} CASCADE;`);
+  }
+}
+
+/** Counts hits without recording one (failure-only lockouts). */
+export async function controlHitCount(db: Database, key: string, windowMs: number): Promise<number> {
+  const { n } = (await db
+    .query("SELECT COUNT(*) AS n FROM control.rate_hits WHERE key = ? AND at >= ?")
+    .get(key, Date.now() - windowMs)) as { n: number };
+  return n;
+}
+
+/** Records a hit and returns its timestamp, so a hit can be withdrawn (see withdrawControlHit). */
+export async function recordControlHit(db: Database, key: string): Promise<number> {
+  const at = Date.now();
+  await db.query("INSERT INTO control.rate_hits (key, at) VALUES (?, ?)").run(key, at);
+  return at;
+}
+
+export async function withdrawControlHit(db: Database, key: string, at: number): Promise<void> {
+  await db.query("DELETE FROM control.rate_hits WHERE key = ? AND at = ?").run(key, at);
 }

@@ -9,6 +9,11 @@ import { AuthProviderError, emailForAccessToken, sendCode, verifyCode, type Fetc
 import {
   AlreadyMemberError,
   SignupsFullError,
+  controlHitCount,
+  evictUnverifiedClaim,
+  isUnverifiedClaim,
+  recordControlHit,
+  withdrawControlHit,
   acceptInvite,
   removeMember,
   type Membership,
@@ -49,6 +54,8 @@ const OUTSIDE_WORKSPACE = new Set([
   "/api/hosted/create-workspace",
   "/api/hosted/accept-invite",
   "/api/hosted/link-verify",
+  "/api/hosted/password-signup",
+  "/api/hosted/password-login",
 ]);
 
 /** Single-tenant features that would act with this deployment's credentials or files. */
@@ -77,10 +84,22 @@ function crossSiteRefusal(req: Request): Response | null {
   if (!(req.headers.get("content-type") ?? "").toLowerCase().startsWith("application/json")) {
     return json({ error: "Send JSON." }, 415);
   }
-  const origin = req.headers.get("origin");
   const app = appOrigin();
-  if (origin && app && origin !== app) return json({ error: "Cross-site request refused." }, 403);
+  if (!app) return json({ error: "Sign-in is not configured (APP_URL)." }, 503);
+  const origin = req.headers.get("origin");
+  if (origin && origin !== app) return json({ error: "Cross-site request refused." }, 403);
+  if (req.headers.get("sec-fetch-site") === "cross-site") return json({ error: "Cross-site request refused." }, 403);
   return null;
+}
+
+/**
+ * Throttle key and limit for the caller's IP. Password endpoints never skip
+ * the IP limit: an unknown IP (TRUSTED_PROXY_HOPS misconfigured) shares one
+ * bucket with a larger limit, so it neither bypasses nor trivially blocks.
+ */
+function ipBucket(prefix: string, req: Request, limit: number): { key: string; limit: number } {
+  const own = ipKey(prefix, req);
+  return own ? { key: own, limit } : { key: `${prefix}:unknown-ip`, limit: limit * 10 };
 }
 
 /** Throttle key for the caller's IP, or null (skip the IP bucket) when it is unknown. */
@@ -214,6 +233,9 @@ route("POST", "/api/hosted/verify", "public", async (req) => {
  */
 async function completeSignIn(req: Request, email: string): Promise<Response> {
   const db = getDb();
+  // The inbox is proven here. An unverified password account on this email
+  // must not receive the verified person: evict it, then continue as new.
+  if (await isUnverifiedClaim(db, email)) await evictUnverifiedClaim(db, email);
   const member = await membershipFor(db, email);
   if (!member || member.status === "invited") {
     const token = ulid() + ulid();
@@ -352,4 +374,138 @@ route("PATCH", "/api/hosted/workspace", "admin", async (req) => {
     .query("UPDATE control.workspaces SET product_name = ?, product_description = ? WHERE id = ?")
     .run(body.data.product_name, body.data.product_description || null, currentWorkspaceId());
   return json({ ok: true });
+});
+
+// ---------------------------------------------------------------- email + password (open sign-up)
+
+/**
+ * Open sign-up while no email sender is connected (issue #24): an email and a
+ * password create a workspace at once. The email is NOT verified, so:
+ * - an email that already has an account or a pending invite cannot be taken;
+ * - a password belongs to one membership and dies with it (FK cascade), and
+ *   login checks it still matches that membership;
+ * - a later verified sign-in for the email evicts the password claim
+ *   (completeSignIn), so a squatter never receives the real owner.
+ * Signup also answers "taken" for existing emails: accepted, since with no
+ * email there is no non-revealing way to refuse (documented in HOSTED.md).
+ */
+const PasswordSignupSchema = z.object({
+  email: z.string().trim().toLowerCase().email().max(254),
+  password: z.string().min(10).max(200),
+  product_name: z.string().trim().min(1).max(80),
+  product_description: z.string().trim().max(160).optional(),
+});
+const PasswordLoginSchema = z.object({
+  email: z.string().trim().toLowerCase().email().max(254),
+  password: z.string().min(1).max(200),
+});
+
+/** OWASP argon2id baseline: 19 MiB, 2 passes. Fixed so cost does not drift with Bun's defaults. */
+const ARGON = { algorithm: "argon2id", memoryCost: 19_456, timeCost: 2 } as const;
+const hashPassword = (pw: string) => Bun.password.hash(pw, ARGON);
+
+// Computed at load, not on the first miss, so a cold instance does not time an
+// unknown email differently. If hashing ever failed, "" makes verify throw,
+// which is caught below and counts as a wrong password.
+const decoyHash: Promise<string> = hashPassword("decoy-password-for-timing").catch(() => "");
+
+const COMMON = new Set([
+  "password123", "password1234", "1234567890", "123456789a", "qwertyuiop", "iloveyou123",
+  "passw0rd123", "welcome123", "letmein123", "admin12345", "abcdefghij", "0987654321",
+]);
+function weakPassword(pw: string, email: string): boolean {
+  const low = pw.toLowerCase();
+  const local = email.split("@")[0] ?? "";
+  return COMMON.has(low) || /^(.)\1+$/.test(pw) || (local.length >= 4 && low.includes(local));
+}
+
+route("POST", "/api/hosted/password-signup", "public", async (req) => {
+  const off = hostedOnly();
+  if (off) return off;
+  const refused = crossSiteRefusal(req);
+  if (refused) return refused;
+  const body = PasswordSignupSchema.safeParse(await readJson(req));
+  if (!body.success) {
+    const pw = body.error.issues.some((i) => i.path[0] === "password");
+    return json(
+      { error: pw ? "Use a password of at least 10 characters." : "Enter your email, a password and your company or product." },
+      400,
+    );
+  }
+  const { email, password } = body.data;
+  if (weakPassword(password, email)) {
+    return json({ error: "That password is too easy to guess. Pick something longer or less common." }, 400);
+  }
+  const db = getDb();
+  const ip = ipBucket("signup-ip", req, 10);
+  if (await controlRateLimited(db, ip.key, ip.limit, HOUR)) {
+    return json({ error: "Too many sign-ups from here. Try again in an hour." }, 429);
+  }
+  if ((await membershipFor(db, email)) || (await isUnverifiedClaim(db, email))) {
+    return json({ error: "That email already has an account. Sign in instead." }, 409);
+  }
+  // Deployment-wide cap, counted only for requests that are about to create
+  // an account, so junk requests cannot use it up for everyone.
+  if (await controlRateLimited(db, "signup-global", 30, HOUR)) {
+    return json({ error: "Sign-ups are busy right now. Try again in a little while." }, 429);
+  }
+  try {
+    const { workspace, userId } = await createWorkspace(db, {
+      email,
+      productName: body.data.product_name,
+      productDescription: body.data.product_description ?? null,
+      passwordHash: await hashPassword(password),
+    });
+    const sid = await openSession(db, workspace, userId, { ip: clientIp(req), userAgent: req.headers.get("user-agent") });
+    return json({ ok: true }, 201, { "set-cookie": sessionCookie(sid, secure(req)) });
+  } catch (err) {
+    if (err instanceof SignupsFullError) {
+      return json({ error: "Sign-ups are full for now. Star the repo on GitHub and self-host it today." }, 403);
+    }
+    if (err instanceof AlreadyMemberError) return json({ error: "That email already has an account. Sign in instead." }, 409);
+    throw err;
+  }
+});
+
+route("POST", "/api/hosted/password-login", "public", async (req) => {
+  const off = hostedOnly();
+  if (off) return off;
+  const refused = crossSiteRefusal(req);
+  if (refused) return refused;
+  const body = PasswordLoginSchema.safeParse(await readJson(req));
+  if (!body.success) return json({ error: "Enter your email and password." }, 400);
+  const db = getDb();
+  const { email, password } = body.data;
+  const ip = ipBucket("login-ip", req, 50);
+  if (await controlRateLimited(db, ip.key, ip.limit, HOUR)) {
+    return json({ error: "Too many attempts. Wait 15 minutes and try again." }, 429);
+  }
+  // Failed attempts only, keyed on email + IP, so a stranger cannot lock
+  // someone else out; a loose per-email ceiling backs it. The attempt is
+  // recorded BEFORE the password check (parallel guesses all count) and
+  // withdrawn if it succeeds.
+  const failKey = `login-fail:${email}:${ip.key}`;
+  const failAt = await recordControlHit(db, failKey);
+  const emailFailAt = await recordControlHit(db, `login-fail:${email}`);
+  if (
+    (await controlHitCount(db, failKey, 15 * 60_000)) > 10 ||
+    (await controlHitCount(db, `login-fail:${email}`, 24 * HOUR)) > 300
+  ) {
+    return json({ error: "Too many attempts. Wait 15 minutes and try again." }, 429);
+  }
+  const cred = (await db
+    .query("SELECT password_hash, workspace_id, user_id FROM control.credentials WHERE email = ?")
+    .get(email)) as { password_hash: string; workspace_id: string; user_id: string } | null;
+  const ok = await Bun.password.verify(password, cred?.password_hash || (await decoyHash)).catch(() => false);
+  const member = cred && ok ? await membershipFor(db, email) : null;
+  const matches =
+    !!member && member.status === "active" && member.workspace.id === cred!.workspace_id && member.userId === cred!.user_id;
+  if (!matches) return json({ error: "That email and password don't match." }, 401);
+  await withdrawControlHit(db, failKey, failAt);
+  await withdrawControlHit(db, `login-fail:${email}`, emailFailAt);
+  await db
+    .query("UPDATE control.credentials SET last_login_at = ? WHERE email = ? AND workspace_id = ?")
+    .run(nowIso(), email, cred!.workspace_id);
+  const sid = await openSession(db, member!.workspace, member!.userId, { ip: clientIp(req), userAgent: req.headers.get("user-agent") });
+  return json({ ok: true }, 200, { "set-cookie": sessionCookie(sid, secure(req)) });
 });
