@@ -480,3 +480,73 @@ describe("link sign-in", () => {
     expect(cross.status).toBe(403);
   });
 });
+
+describe("email + password sign-up", () => {
+  const signup = (body: Record<string, unknown>) => handleApi(req("POST", "/api/hosted/password-signup", { body }));
+  const login = (body: Record<string, unknown>) => handleApi(req("POST", "/api/hosted/password-login", { body }));
+  const PW = "correct horse battery";
+
+  test("create an account: workspace and session at once, then sign in again", async () => {
+    const who = email("pw-new");
+    const r = await signup({ email: who, password: PW, product_name: "PassCo", product_description: "a test" });
+    expect(r.status).toBe(201);
+    const me = (await (await handleApi(req("GET", "/api/me", { cookie: cookieOf(r) }))).json()) as { user: { email: string; role: string } };
+    expect(me.user.email).toBe(who);
+    expect(me.user.role).toBe("admin");
+    const ws = (await (await handleApi(req("GET", "/api/hosted/workspace", { cookie: cookieOf(r) }))).json()) as { product_name: string };
+    expect(ws.product_name).toBe("PassCo");
+    const back = await login({ email: who.toUpperCase(), password: PW });
+    expect(back.status).toBe(200);
+    expect(cookieOf(back)).not.toBe("");
+  });
+
+  test("wrong password and unknown email get the same answer", async () => {
+    const who = email("pw-wrong");
+    await signup({ email: who, password: PW, product_name: "W" });
+    const wrong = await login({ email: who, password: "not the password" });
+    const unknown = await login({ email: email("pw-nobody"), password: PW });
+    expect(wrong.status).toBe(401);
+    expect(unknown.status).toBe(401);
+    expect(await wrong.text()).toBe(await unknown.text());
+  });
+
+  test("an email that already has an account cannot be claimed again", async () => {
+    const who = email("pw-dup");
+    expect((await signup({ email: who, password: PW, product_name: "A" })).status).toBe(201);
+    expect((await signup({ email: who, password: "another password", product_name: "B" })).status).toBe(409);
+    expect((await login({ email: who, password: "another password" })).status).toBe(401);
+  });
+
+  test("an email with a pending invite (or a link-made account) cannot be claimed by password", async () => {
+    const a = await signedIn("pw-inv");
+    const invited = email("pw-invitee");
+    await handleApi(req("POST", "/api/users", { cookie: a.cookie, body: { email: invited, name: "I" } }));
+    expect((await signup({ email: invited, password: PW, product_name: "Squat" })).status).toBe(409);
+    expect((await signup({ email: a.ws.owner_email, password: PW, product_name: "Squat" })).status).toBe(409);
+  });
+
+  test("short passwords and missing names are refused", async () => {
+    expect((await signup({ email: email("pw-short"), password: "short", product_name: "S" })).status).toBe(400);
+    expect((await signup({ email: email("pw-noname"), password: PW, product_name: "" })).status).toBe(400);
+  });
+
+  test("password guessing is throttled per email", async () => {
+    const who = email("pw-guess");
+    await signup({ email: who, password: PW, product_name: "G" });
+    let last = 0;
+    for (let i = 0; i < 11; i++) last = (await login({ email: who, password: `guess-${i}-xxxx` })).status;
+    expect(last).toBe(429);
+    expect((await login({ email: who, password: PW })).status).toBe(429); // still locked for the window
+  });
+
+  test("cross-site sign-up is refused", async () => {
+    const r = await handleApi(
+      new Request("http://localhost/api/hosted/password-signup", {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: "https://evil.example" },
+        body: JSON.stringify({ email: email("pw-csrf"), password: PW, product_name: "X" }),
+      }),
+    );
+    expect(r.status).toBe(403);
+  });
+});

@@ -4,7 +4,10 @@ import { api, ApiError } from "../api";
 import { useAuth } from "../auth";
 import { Alert, Btn, Field } from "../components/ui";
 
-type Step = "email" | "code" | "invite" | "workspace";
+// "signup" / "signin": email + password (open sign-up while no email sender is
+// connected, issue #24). "email" / "code" / "invite" / "workspace": the emailed
+// link flow, reached from /auth/callback.
+type Step = "signup" | "signin" | "email" | "code" | "invite" | "workspace";
 
 /**
  * Hosted sign-in: email, then the code Supabase emails, then (first time
@@ -23,7 +26,8 @@ export function HostedLogin({ freeMeetings, resume }: { freeMeetings: number; re
   const from = (location.state as { from?: string } | null)?.from ?? "/";
 
   // Arriving from the emailed link: the email is already proven, go straight on.
-  const [step, setStep] = useState<Step>(resume ? (resume.invite ? "invite" : "workspace") : "email");
+  const [step, setStep] = useState<Step>(resume ? (resume.invite ? "invite" : "workspace") : "signup");
+  const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [token, setToken] = useState(resume?.token ?? "");
@@ -59,7 +63,9 @@ export function HostedLogin({ freeMeetings, resume }: { freeMeetings: number; re
           <p className="muted small" style={{ margin: "8px 0 0" }}>
             {step === "workspace"
               ? "One last thing: who does the AI work for?"
-              : `Sign in or start free. Your first ${freeMeetings} meetings are on us.`}
+              : step === "signin"
+                ? "Welcome back."
+                : `Start free. Your first ${freeMeetings} meetings are on us.`}
           </p>
         </div>
         {error && (
@@ -68,6 +74,68 @@ export function HostedLogin({ freeMeetings, resume }: { freeMeetings: number; re
               {error}
             </Alert>
           </div>
+        )}
+
+        {step === "signup" && (
+          <form
+            className="stack"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void run(async () => {
+                await api.passwordSignup(email.trim(), password, product.trim(), what.trim() || undefined);
+                await done();
+              });
+            }}
+          >
+            <Field label="Email" htmlFor="s-email">
+              <input id="s-email" className="ctrl" type="email" autoComplete="email" required placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+            </Field>
+            <Field label="Password" htmlFor="s-password" hint="At least 10 characters. There is no password reset yet, so keep it safe.">
+              <input id="s-password" className="ctrl" type="password" autoComplete="new-password" required minLength={10} value={password} onChange={(e) => setPassword(e.target.value)} />
+            </Field>
+            <Field label="Company or product" htmlFor="s-product" hint="The AI frames every ask around it.">
+              <input id="s-product" className="ctrl" required maxLength={80} placeholder="Acme" value={product} onChange={(e) => setProduct(e.target.value)} />
+            </Field>
+            <Field label="What you sell (optional)" htmlFor="s-what">
+              <input id="s-what" className="ctrl" maxLength={160} placeholder="a payroll platform for small businesses" value={what} onChange={(e) => setWhat(e.target.value)} />
+            </Field>
+            <div className="form-actions" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              <Btn variant="primary" type="submit" disabled={busy}>
+                {busy ? "Creating" : "Create my workspace"}
+              </Btn>
+              <Btn variant="ghost" type="button" disabled={busy} onClick={() => { setError(null); setStep("signin"); }}>
+                I have an account
+              </Btn>
+            </div>
+          </form>
+        )}
+
+        {step === "signin" && (
+          <form
+            className="stack"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void run(async () => {
+                await api.passwordLogin(email.trim(), password);
+                await done();
+              });
+            }}
+          >
+            <Field label="Email" htmlFor="i-email">
+              <input id="i-email" className="ctrl" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+            </Field>
+            <Field label="Password" htmlFor="i-password">
+              <input id="i-password" className="ctrl" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+            </Field>
+            <div className="form-actions" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <Btn variant="primary" type="submit" disabled={busy}>
+                {busy ? "Signing in" : "Sign in"}
+              </Btn>
+              <Btn variant="ghost" type="button" disabled={busy} onClick={() => { setError(null); setStep("signup"); }}>
+                Create an account
+              </Btn>
+            </div>
+          </form>
         )}
 
         {step === "email" && (

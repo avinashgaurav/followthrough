@@ -49,6 +49,8 @@ const OUTSIDE_WORKSPACE = new Set([
   "/api/hosted/create-workspace",
   "/api/hosted/accept-invite",
   "/api/hosted/link-verify",
+  "/api/hosted/password-signup",
+  "/api/hosted/password-login",
 ]);
 
 /** Single-tenant features that would act with this deployment's credentials or files. */
@@ -352,4 +354,103 @@ route("PATCH", "/api/hosted/workspace", "admin", async (req) => {
     .query("UPDATE control.workspaces SET product_name = ?, product_description = ? WHERE id = ?")
     .run(body.data.product_name, body.data.product_description || null, currentWorkspaceId());
   return json({ ok: true });
+});
+
+// ---------------------------------------------------------------- email + password (open sign-up)
+
+/**
+ * Open sign-up while no email sender is connected (issue #24): an email and a
+ * password create a workspace at once. The email is NOT verified, so these
+ * accounts never pass the invite path (that needs a proven inbox), and an
+ * email that already has an account or a pending invite cannot be claimed.
+ */
+const PasswordSignupSchema = z.object({
+  email: z.string().trim().toLowerCase().email().max(254),
+  password: z.string().min(10).max(200),
+  product_name: z.string().trim().min(1).max(80),
+  product_description: z.string().trim().max(160).optional(),
+});
+const PasswordLoginSchema = z.object({
+  email: z.string().trim().toLowerCase().email().max(254),
+  password: z.string().min(1).max(200),
+});
+
+let dummyHash: Promise<string> | null = null;
+/** Verify against a throwaway hash when the email is unknown, so timing does not reveal which emails exist. */
+function decoyHash(): Promise<string> {
+  dummyHash ??= Bun.password.hash("decoy-password-for-timing", { algorithm: "argon2id" });
+  return dummyHash;
+}
+
+route("POST", "/api/hosted/password-signup", "public", async (req) => {
+  const off = hostedOnly();
+  if (off) return off;
+  const refused = crossSiteRefusal(req);
+  if (refused) return refused;
+  const body = PasswordSignupSchema.safeParse(await readJson(req));
+  if (!body.success) {
+    const pw = body.error.issues.some((i) => i.path[0] === "password");
+    return json(
+      { error: pw ? "Use a password of at least 10 characters." : "Enter your email, a password and your company or product." },
+      400,
+    );
+  }
+  const db = getDb();
+  const ipBucket = ipKey("signup-ip", req);
+  if (ipBucket && (await controlRateLimited(db, ipBucket, 10, HOUR))) {
+    return json({ error: "Too many sign-ups from here. Try again in an hour." }, 429);
+  }
+  const { email, password } = body.data;
+  const taken =
+    (await membershipFor(db, email)) ||
+    (await db.query("SELECT 1 AS x FROM control.credentials WHERE email = ?").get(email));
+  if (taken) return json({ error: "That email already has an account. Sign in instead." }, 409);
+  const hash = await Bun.password.hash(password, { algorithm: "argon2id" });
+  try {
+    const { workspace, userId } = await createWorkspace(db, {
+      email,
+      productName: body.data.product_name,
+      productDescription: body.data.product_description ?? null,
+    });
+    await db
+      .query("INSERT INTO control.credentials (email, password_hash, created_at, last_login_at) VALUES (?, ?, ?, ?)")
+      .run(email, hash, nowIso(), nowIso());
+    const sid = await openSession(db, workspace, userId, { ip: clientIp(req), userAgent: req.headers.get("user-agent") });
+    return json({ ok: true }, 201, { "set-cookie": sessionCookie(sid, secure(req)) });
+  } catch (err) {
+    if (err instanceof SignupsFullError) {
+      return json({ error: "Sign-ups are full for now. Star the repo on GitHub and self-host it today." }, 403);
+    }
+    if (err instanceof AlreadyMemberError) return json({ error: "That email already has an account. Sign in instead." }, 409);
+    throw err;
+  }
+});
+
+route("POST", "/api/hosted/password-login", "public", async (req) => {
+  const off = hostedOnly();
+  if (off) return off;
+  const refused = crossSiteRefusal(req);
+  if (refused) return refused;
+  const body = PasswordLoginSchema.safeParse(await readJson(req));
+  if (!body.success) return json({ error: "Enter your email and password." }, 400);
+  const db = getDb();
+  const { email, password } = body.data;
+  const ipBucket = ipKey("login-ip", req);
+  if (
+    (await controlRateLimited(db, `login:${email}`, 10, 15 * 60_000)) ||
+    (ipBucket && (await controlRateLimited(db, ipBucket, 50, HOUR)))
+  ) {
+    return json({ error: "Too many attempts. Wait 15 minutes and try again." }, 429);
+  }
+  const cred = (await db.query("SELECT password_hash FROM control.credentials WHERE email = ?").get(email)) as {
+    password_hash: string;
+  } | null;
+  const ok = await Bun.password.verify(password, cred?.password_hash ?? (await decoyHash())).catch(() => false);
+  const member = cred && ok ? await membershipFor(db, email) : null;
+  if (!cred || !ok || !member || member.status !== "active") {
+    return json({ error: "That email and password don't match." }, 401);
+  }
+  await db.query("UPDATE control.credentials SET last_login_at = ? WHERE email = ?").run(nowIso(), email);
+  const sid = await openSession(db, member.workspace, member.userId, { ip: clientIp(req), userAgent: req.headers.get("user-agent") });
+  return json({ ok: true }, 200, { "set-cookie": sessionCookie(sid, secure(req)) });
 });

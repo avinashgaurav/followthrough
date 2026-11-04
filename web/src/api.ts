@@ -527,6 +527,9 @@ export const api = {
       signup_token?: string;
       invite?: { workspace: string; invited_by: string | null };
     }>("/api/hosted/link-verify", { access_token }),
+  passwordSignup: (email: string, password: string, product_name: string, product_description?: string) =>
+    post<{ ok: true }>("/api/hosted/password-signup", { email, password, product_name, product_description }),
+  passwordLogin: (email: string, password: string) => post<{ ok: true }>("/api/hosted/password-login", { email, password }),
   acceptInvite: (signup_token: string) => post<{ ok: true }>("/api/hosted/accept-invite", { signup_token }),
   createWorkspace: (signup_token: string, product_name: string, product_description?: string) =>
     post<{ ok: true }>("/api/hosted/create-workspace", { signup_token, product_name, product_description }),
