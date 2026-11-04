@@ -5,8 +5,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Bun](https://img.shields.io/badge/Bun-1.3+-fbf0df?logo=bun&logoColor=black)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-452%20passing-brightgreen.svg)](docs/SETUP.md#development)
-[![LLM: Claude](https://img.shields.io/badge/LLM-Claude-d97757.svg)](https://www.anthropic.com/)
+[![Tests](https://img.shields.io/badge/tests-477%20passing-brightgreen.svg)](docs/SETUP.md#development)
+[![LLM: Gemini, Claude or OpenRouter](https://img.shields.io/badge/LLM-Gemini%20%7C%20Claude%20%7C%20OpenRouter-d97757.svg)](docs/SETUP.md)
 
 </div>
 
@@ -27,9 +27,9 @@ Click a poster to play it on the site.
 
 ## Try it
 
-**Start free:** https://followthrough-hosted.vercel.app. Sign up with an email and a password, name your company or product, and paste in a real call. Your first 5 meetings are free.
+**Look around now:** the read-only demo at https://followthrough-demo-neon.vercel.app uses fictional meetings, needs no login, and saves nothing.
 
-**Or look around first:** the read-only demo at https://followthrough-demo-neon.vercel.app uses fictional meetings, needs no login, and saves nothing.
+**Start free (reopening soon):** sign-ups on the hosted app at https://followthrough-hosted.vercel.app are paused for a security update. Once they reopen, you sign up with an email and a password, name your company or product, and paste in a real call. Your first 5 meetings are free.
 
 1. **Home:** what needs you now, and the pipeline from found to client told.
 2. **Review:** the asks found in each call, with the client's exact quote behind every one.
