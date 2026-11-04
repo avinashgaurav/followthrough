@@ -1,0 +1,2 @@
+*.sql text eol=lf
+src/migrations.generated.ts text eol=lf linguist-generated=true -diff

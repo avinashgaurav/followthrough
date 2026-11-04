@@ -1,7 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import postgres from "postgres";
+import { APP_MIGRATIONS } from "./migrations.generated.ts";
 
 /**
  * Postgres access (Supabase in production, PGlite in tests) behind the small
@@ -41,8 +40,6 @@ interface Executor {
   begin<T>(fn: (tx: Executor) => Promise<T>): Promise<T>;
   close(): Promise<void>;
 }
-
-const MIGRATIONS_DIR = join(import.meta.dir, "..", "migrations");
 
 /** `?` / `?N` placeholders to `$N`, leaving quoted strings, identifiers and comments alone. */
 export function toPgPlaceholders(sql: string): string {
@@ -226,12 +223,13 @@ export function getDb(): Database {
   return db;
 }
 
-/** Applies every migrations/*.sql in name order. Each file is idempotent. */
+/** Applies every migrations/*.sql (embedded, see scripts/embed-migrations.ts) in name order. Each is idempotent. */
 export async function migrate(target: Database = getDb()): Promise<void> {
   const schema = dbSchema();
   if (schema && target === db) await target.exec(`CREATE SCHEMA IF NOT EXISTS ${schema};`);
-  for (const file of readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql")).sort()) {
-    await target.exec(readFileSync(join(MIGRATIONS_DIR, file), "utf8"));
+  // Embedded (src/migrations.generated.ts): serverless bundles carry no loose .sql files.
+  for (const m of APP_MIGRATIONS) {
+    await target.exec(m.sql);
   }
 }
 

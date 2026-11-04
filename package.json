@@ -13,7 +13,8 @@
     "seed": "bun run scripts/seed.ts",
     "seed:demo": "bun run scripts/seed-demo.ts",
     "backup": "bash scripts/backup.sh",
-    "db:migrate": "bun run scripts/migrate.ts"
+    "db:migrate": "bun run scripts/migrate.ts",
+    "embed:migrations": "bun run scripts/embed-migrations.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",
