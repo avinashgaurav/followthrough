@@ -124,7 +124,7 @@ The hosted demo linked from the README needs no server at all: `cd web && bun ru
 ```bash
 bun run dev            # server with --watch
 cd web && bun run dev  # vite dev server, proxies /api to :4500
-bun test               # 349 tests (in-process Postgres via PGlite)
+bun test               # 452 tests (in-process Postgres via PGlite)
 bunx tsc --noEmit      # typecheck
 bun run evals          # extraction quality scoring (needs an LLM key)
 ```
