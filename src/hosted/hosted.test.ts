@@ -557,7 +557,9 @@ describe("email + password sign-up", () => {
 
   test("a squatter's password account never receives the real owner who proves the inbox", async () => {
     const who = email("pw-squat");
-    expect((await signup({ email: who, password: PW, product_name: "Squatter" })).status).toBe(201);
+    const sq = await signup({ email: who, password: PW, product_name: "Squatter" });
+    expect(sq.status).toBe(201);
+    const squatWs = (await db.query("SELECT workspace_id FROM control.members WHERE email = ?").get(who)) as { workspace_id: string };
     // The real owner signs in with the emailed link.
     const r = await handleApi(req("POST", "/api/hosted/link-verify", { body: { access_token: linkToken({ email: who }) } }));
     const body = (await r.json()) as { needs_workspace?: boolean };
@@ -567,6 +569,9 @@ describe("email + password sign-up", () => {
     expect((await login({ email: who, password: PW })).status).toBe(401);
     const cred = await db.query("SELECT COUNT(*) AS n FROM control.credentials WHERE email = ?").get(who);
     expect((cred as { n: number }).n).toBe(0);
+    // The squatter's now-empty workspace is gone, and their old session with it.
+    expect(await db.query("SELECT 1 AS x FROM control.workspaces WHERE id = ?").get(squatWs.workspace_id)).toBeNull();
+    expect((await handleApi(req("GET", "/api/clients", { cookie: cookieOf(sq) }))).status).toBe(401);
   });
 
   test("a password only opens the membership it was created with", async () => {

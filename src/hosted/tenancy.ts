@@ -296,11 +296,22 @@ export async function isUnverifiedClaim(db: Database, email: string): Promise<bo
 export async function evictUnverifiedClaim(db: Database, email: string): Promise<void> {
   const m = await membershipFor(db, email);
   if (!m) return;
-  await db.query("DELETE FROM control.members WHERE email = ?").run(email.trim().toLowerCase());
+  // Cut access first (fails closed): if anything below throws, the squatter
+  // has already lost their sessions and their user is disabled.
   await withTenant(m.workspace.schema_name, async () => {
     await db.query("DELETE FROM sessions WHERE user_id = ?").run(m.userId);
     await db.query("UPDATE users SET disabled_at = ? WHERE id = ? AND disabled_at IS NULL").run(nowIso(), m.userId);
   });
+  await db.query("DELETE FROM control.members WHERE email = ?").run(email.trim().toLowerCase());
+  // A workspace nobody belongs to any more is the squatter's own data: remove
+  // it, which also frees its MAX_WORKSPACES slot and every session pointing at it.
+  const { n } = (await db.query("SELECT COUNT(*) AS n FROM control.members WHERE workspace_id = ?").get(m.workspace.id)) as {
+    n: number;
+  };
+  if (n === 0) {
+    await db.query("DELETE FROM control.workspaces WHERE id = ?").run(m.workspace.id);
+    await db.exec(`DROP SCHEMA IF EXISTS ${m.workspace.schema_name} CASCADE;`);
+  }
 }
 
 /** Counts hits without recording one (failure-only lockouts). */
@@ -311,6 +322,13 @@ export async function controlHitCount(db: Database, key: string, windowMs: numbe
   return n;
 }
 
-export async function recordControlHit(db: Database, key: string): Promise<void> {
-  await db.query("INSERT INTO control.rate_hits (key, at) VALUES (?, ?)").run(key, Date.now());
+/** Records a hit and returns its timestamp, so a hit can be withdrawn (see withdrawControlHit). */
+export async function recordControlHit(db: Database, key: string): Promise<number> {
+  const at = Date.now();
+  await db.query("INSERT INTO control.rate_hits (key, at) VALUES (?, ?)").run(key, at);
+  return at;
+}
+
+export async function withdrawControlHit(db: Database, key: string, at: number): Promise<void> {
+  await db.query("DELETE FROM control.rate_hits WHERE key = ? AND at = ?").run(key, at);
 }

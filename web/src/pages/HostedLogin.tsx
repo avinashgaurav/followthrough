@@ -89,7 +89,7 @@ export function HostedLogin({ freeMeetings, resume }: { freeMeetings: number; re
               });
             }}
           >
-            <Field label="Email" htmlFor="s-email">
+            <Field label="Email" htmlFor="s-email" hint="Use an email you own: if its real owner signs in later, an account made with someone else's email is removed.">
               <input id="s-email" className="ctrl" type="email" autoComplete="email" required placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} />
             </Field>
             <Field label="Password" htmlFor="s-password" hint="At least 10 characters. There is no password reset yet, so keep it safe.">

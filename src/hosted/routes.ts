@@ -13,6 +13,7 @@ import {
   evictUnverifiedClaim,
   isUnverifiedClaim,
   recordControlHit,
+  withdrawControlHit,
   acceptInvite,
   removeMember,
   type Membership,
@@ -91,9 +92,14 @@ function crossSiteRefusal(req: Request): Response | null {
   return null;
 }
 
-/** Throttle key for the caller's IP; password endpoints fail closed into one shared bucket. */
-function ipKeyOrShared(prefix: string, req: Request): string {
-  return ipKey(prefix, req) ?? `${prefix}:unknown-ip`;
+/**
+ * Throttle key and limit for the caller's IP. Password endpoints never skip
+ * the IP limit: an unknown IP (TRUSTED_PROXY_HOPS misconfigured) shares one
+ * bucket with a larger limit, so it neither bypasses nor trivially blocks.
+ */
+function ipBucket(prefix: string, req: Request, limit: number): { key: string; limit: number } {
+  const own = ipKey(prefix, req);
+  return own ? { key: own, limit } : { key: `${prefix}:unknown-ip`, limit: limit * 10 };
 }
 
 /** Throttle key for the caller's IP, or null (skip the IP bucket) when it is unknown. */
@@ -398,7 +404,9 @@ const PasswordLoginSchema = z.object({
 const ARGON = { algorithm: "argon2id", memoryCost: 19_456, timeCost: 2 } as const;
 const hashPassword = (pw: string) => Bun.password.hash(pw, ARGON);
 
-// Computed at load, not on the first miss, so a cold instance does not time an unknown email differently.
+// Computed at load, not on the first miss, so a cold instance does not time an
+// unknown email differently. If hashing ever failed, "" makes verify throw,
+// which is caught below and counts as a wrong password.
 const decoyHash: Promise<string> = hashPassword("decoy-password-for-timing").catch(() => "");
 
 const COMMON = new Set([
@@ -429,14 +437,17 @@ route("POST", "/api/hosted/password-signup", "public", async (req) => {
     return json({ error: "That password is too easy to guess. Pick something longer or less common." }, 400);
   }
   const db = getDb();
-  if (
-    (await controlRateLimited(db, ipKeyOrShared("signup-ip", req), 10, HOUR)) ||
-    (await controlRateLimited(db, "signup-global", 30, HOUR))
-  ) {
-    return json({ error: "Sign-ups are busy right now. Try again in a little while." }, 429);
+  const ip = ipBucket("signup-ip", req, 10);
+  if (await controlRateLimited(db, ip.key, ip.limit, HOUR)) {
+    return json({ error: "Too many sign-ups from here. Try again in an hour." }, 429);
   }
   if ((await membershipFor(db, email)) || (await isUnverifiedClaim(db, email))) {
     return json({ error: "That email already has an account. Sign in instead." }, 409);
+  }
+  // Deployment-wide cap, counted only for requests that are about to create
+  // an account, so junk requests cannot use it up for everyone.
+  if (await controlRateLimited(db, "signup-global", 30, HOUR)) {
+    return json({ error: "Sign-ups are busy right now. Try again in a little while." }, 429);
   }
   try {
     const { workspace, userId } = await createWorkspace(db, {
@@ -465,14 +476,20 @@ route("POST", "/api/hosted/password-login", "public", async (req) => {
   if (!body.success) return json({ error: "Enter your email and password." }, 400);
   const db = getDb();
   const { email, password } = body.data;
-  const ipBucket = ipKeyOrShared("login-ip", req);
-  // Per-IP volume first; then FAILED attempts only, keyed on email + IP, so a
-  // stranger cannot lock someone else out; a loose per-email ceiling backs it.
-  const failKey = `login-fail:${email}:${ipBucket}`;
+  const ip = ipBucket("login-ip", req, 50);
+  if (await controlRateLimited(db, ip.key, ip.limit, HOUR)) {
+    return json({ error: "Too many attempts. Wait 15 minutes and try again." }, 429);
+  }
+  // Failed attempts only, keyed on email + IP, so a stranger cannot lock
+  // someone else out; a loose per-email ceiling backs it. The attempt is
+  // recorded BEFORE the password check (parallel guesses all count) and
+  // withdrawn if it succeeds.
+  const failKey = `login-fail:${email}:${ip.key}`;
+  const failAt = await recordControlHit(db, failKey);
+  const emailFailAt = await recordControlHit(db, `login-fail:${email}`);
   if (
-    (await controlRateLimited(db, ipBucket, 50, HOUR)) ||
-    (await controlHitCount(db, failKey, 15 * 60_000)) >= 10 ||
-    (await controlHitCount(db, `login-fail:${email}`, 24 * HOUR)) >= 100
+    (await controlHitCount(db, failKey, 15 * 60_000)) > 10 ||
+    (await controlHitCount(db, `login-fail:${email}`, 24 * HOUR)) > 300
   ) {
     return json({ error: "Too many attempts. Wait 15 minutes and try again." }, 429);
   }
@@ -483,12 +500,12 @@ route("POST", "/api/hosted/password-login", "public", async (req) => {
   const member = cred && ok ? await membershipFor(db, email) : null;
   const matches =
     !!member && member.status === "active" && member.workspace.id === cred!.workspace_id && member.userId === cred!.user_id;
-  if (!matches) {
-    await recordControlHit(db, failKey);
-    await recordControlHit(db, `login-fail:${email}`);
-    return json({ error: "That email and password don't match." }, 401);
-  }
-  await db.query("UPDATE control.credentials SET last_login_at = ? WHERE email = ?").run(nowIso(), email);
+  if (!matches) return json({ error: "That email and password don't match." }, 401);
+  await withdrawControlHit(db, failKey, failAt);
+  await withdrawControlHit(db, `login-fail:${email}`, emailFailAt);
+  await db
+    .query("UPDATE control.credentials SET last_login_at = ? WHERE email = ? AND workspace_id = ?")
+    .run(nowIso(), email, cred!.workspace_id);
   const sid = await openSession(db, member!.workspace, member!.userId, { ip: clientIp(req), userAgent: req.headers.get("user-agent") });
   return json({ ok: true }, 200, { "set-cookie": sessionCookie(sid, secure(req)) });
 });
