@@ -110,11 +110,16 @@ export class LLMRequestError extends Error {
  */
 export function isAIConfigError(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
-  // Anthropic SDK: AuthenticationError (401), PermissionDeniedError (403).
-  if (/^(AuthenticationError|PermissionDeniedError)$/.test(err.constructor?.name ?? "")) return true;
+  const message = String((err as { message?: unknown }).message ?? "");
+  const keyText = /API_KEY_INVALID|API key not valid|invalid[ _-]?(x-)?api[ _-]?key|authentication_error/i.test(message);
+  // Anthropic SDK: AuthenticationError (401) always; PermissionDeniedError (403)
+  // only when it is about the key (a 403 can also be a policy refusal).
+  const name = err.constructor?.name ?? "";
+  if (name === "AuthenticationError") return true;
+  if (name === "PermissionDeniedError") return keyText;
   if (!(err instanceof LLMRequestError)) return false;
-  if (err.status === 401 || err.status === 403) return true;
-  return /API_KEY_INVALID|API key not valid|invalid[ _-]?(x-)?api[ _-]?key|authentication_error/i.test(err.message);
+  if (err.status === 401) return true;
+  return keyText;
 }
 
 /** The call ran out of its overall time (model fallback plus retries). */

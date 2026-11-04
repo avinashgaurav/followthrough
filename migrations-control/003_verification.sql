@@ -6,16 +6,20 @@
 -- promotes the claim (sets this, removes the password and every older session)
 -- instead of deleting the account, so a person who forgot their password never
 -- loses their workspace.
--- Safe when two instances boot at once: the second waits on the ALTER's
--- lock, then gets duplicate_column and skips the backfill.
+-- Checked first, so a normal boot takes no ACCESS EXCLUSIVE lock on
+-- control.members (that would stall every hosted sign-in). If two instances
+-- add it at once, the second gets duplicate_column and skips the backfill.
 DO $$
 BEGIN
-  ALTER TABLE control.members ADD COLUMN verified_at TEXT;
-  -- Backfill once: active members without a password came in through the
-  -- inbox; password accounts and pending invites stay unverified.
-  UPDATE control.members m SET verified_at = m.created_at
-  WHERE m.status = 'active'
-    AND NOT EXISTS (SELECT 1 FROM control.credentials c WHERE c.email = m.email);
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_schema = 'control' AND table_name = 'members' AND column_name = 'verified_at') THEN
+    ALTER TABLE control.members ADD COLUMN verified_at TEXT;
+    -- Backfill once: active members without a password came in through the
+    -- inbox; password accounts and pending invites stay unverified.
+    UPDATE control.members m SET verified_at = m.created_at
+    WHERE m.status = 'active'
+      AND NOT EXISTS (SELECT 1 FROM control.credentials c WHERE c.email = m.email);
+  END IF;
 EXCEPTION WHEN duplicate_column THEN
   NULL;
 END $$;

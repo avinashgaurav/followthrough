@@ -296,8 +296,8 @@ route("POST", "/api/hosted/link-verify", "public", async (req) => {
   const body = LinkSchema.safeParse(await readJson(req));
   if (!body.success) return json({ error: "That sign-in link is incomplete. Request a new one." }, 400);
   const db = getDb();
-  const ipBucket = ipKey("link-ip", req);
-  if (ipBucket && (await controlRateLimited(db, ipBucket, 30, HOUR))) {
+  const linkIp = ipKey("link-ip", req);
+  if (linkIp && (await controlRateLimited(db, linkIp, 30, HOUR))) {
     return json({ error: "Too many attempts. Try again in an hour." }, 429);
   }
   let proof: LinkProof | null;
@@ -320,7 +320,9 @@ route("POST", "/api/hosted/link-verify", "public", async (req) => {
   try {
     return await completeSignIn(req, proof.email);
   } catch (err) {
-    await releaseLinkUse(db, proof.useKey).catch(() => {});
+    // A legacy access-token link can be retried while it is fresh. A token
+    // hash cannot: Supabase already spent it, so there is nothing to give back.
+    if (!("token_hash" in body.data)) await releaseLinkUse(db, proof.useKey).catch(() => {});
     throw err;
   }
 });

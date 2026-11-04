@@ -542,6 +542,17 @@ describe("link sign-in", () => {
     expect((await link(linkToken({}))).status).toBe(401);
   });
 
+  test("legacy tokens: stale or future-dated iat and amr times are refused; fresh ones pass", async () => {
+    const a = await signedIn("link-times");
+    const who = a.ws.owner_email;
+    expect((await link(linkToken({ email: who, issuedAgoMs: 11 * 60_000 }))).status).toBe(401); // stale iat
+    expect((await link(linkToken({ email: who, signedInAgoMs: 11 * 60_000 }))).status).toBe(401); // stale amr
+    expect((await link(linkToken({ email: who, issuedAgoMs: -120_000 }))).status).toBe(401); // iat 2 min ahead
+    expect((await link(linkToken({ email: who, signedInAgoMs: -120_000 }))).status).toBe(401); // amr 2 min ahead
+    expect((await link(linkToken({ email: who, issuedAgoMs: -30_000 }))).status).toBe(200); // small skew is fine
+    expect((await link(linkToken({ email: who, amr: "password" }))).status).toBe(401); // password session
+  });
+
   test("an email/signup session (Confirm email off: no inbox proof) signs nobody in", async () => {
     // POST /auth/v1/signup with the public anon key yields this amr for any address.
     const victim = await signedIn("link-signup-victim");
@@ -566,16 +577,19 @@ describe("link sign-in", () => {
     expect((await handleApi(req("POST", "/api/hosted/link-verify", { body: hash }))).status).toBe(401);
   });
 
-  test("a link whose sign-in fails on our side can be retried", async () => {
-    const who = email("link-retry");
-    const hash = { token_hash: `hash-ok:${who}` };
+  test("a legacy link whose sign-in fails on our side can be retried; a token hash cannot", async () => {
+    const token = linkToken({ email: email("link-retry") });
+    const hash = { token_hash: `hash-ok:${email("link-retry-hash")}` };
     await db.exec("ALTER TABLE control.pending_signups RENAME TO pending_away;");
     try {
+      expect((await link(token)).status).toBe(500);
       expect((await handleApi(req("POST", "/api/hosted/link-verify", { body: hash }))).status).toBe(500);
     } finally {
       await db.exec("ALTER TABLE control.pending_away RENAME TO pending_signups;");
     }
-    expect((await handleApi(req("POST", "/api/hosted/link-verify", { body: hash }))).status).toBe(200);
+    expect((await link(token)).status).toBe(200);
+    // Supabase already spent the hash, so it stays used here too.
+    expect((await handleApi(req("POST", "/api/hosted/link-verify", { body: hash }))).status).toBe(401);
   });
 
   test("token-hash links are checked with Supabase on the server; odd types are refused", async () => {
@@ -740,6 +754,20 @@ describe("email + password sign-up", () => {
     expect((await handleApi(req("GET", "/api/clients", { cookie: cookieOf(acc) }))).status).toBe(401);
     expect(await db.query("SELECT 1 AS x FROM control.members WHERE email = ?").get(accomplice)).toBeNull();
     expect((await handleApi(req("GET", "/api/clients", { cookie: cookieOf(r) }))).status).toBe(200);
+  });
+
+  test("promotion turns off client share links the password holder knew", async () => {
+    const who = email("pw-share");
+    const sq = await signup({ email: who, password: PW, product_name: "Shared" });
+    const made = (await (await handleApi(req("POST", "/api/clients", { cookie: cookieOf(sq), body: { name: "Leaky" } }))).json()) as {
+      client: { id: string };
+    };
+    const shared = (await (
+      await handleApi(req("POST", `/api/clients/${made.client.id}/share-link`, { cookie: cookieOf(sq) }))
+    ).json()) as { url: string };
+    expect((await handleApi(req("GET", shared.url))).status).toBe(200);
+    await handleApi(req("POST", "/api/hosted/verify", { body: { email: who, code: "666661" } }));
+    expect((await handleApi(req("GET", shared.url))).status).toBe(404);
   });
 
   test("a password login that loses the race to a promotion gets no session", async () => {

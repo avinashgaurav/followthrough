@@ -360,7 +360,7 @@ export async function isUnverifiedClaim(db: Database, email: string): Promise<bo
  * who forgot their password apart from a squatter, so the inbox wins without
  * deleting any data: the membership becomes verified and keeps its workspace,
  * while the password, every session in the workspace, and every other member
- * or invite (users disabled, rows kept) are removed. A squatter, and anyone
+ * or invite (users disabled, rows kept) and every client share link are removed. A squatter, and anyone
  * they let in, is out; a real owner re-invites their teammates. All in one
  * transaction. Returns false if there was nothing to promote.
  */
@@ -378,8 +378,20 @@ export async function promoteUnverifiedClaim(db: Database, email: string): Promi
     if (won.rows.length === 0) return false; // already verified (a parallel sign-in did it)
     // Waits for any password login holding this row (openPasswordSession).
     await db.query("DELETE FROM control.credentials WHERE email = ?").run(normalized);
-    await db.query("DELETE FROM control.members WHERE workspace_id = ? AND email <> ?").run(m.workspace.id, normalized);
-    await db.query(`UPDATE ${schema}.users SET disabled_at = ? WHERE id <> ? AND disabled_at IS NULL`).run(nowIso(), m.userId);
+    // Re-read under the member row lock the UPDATE above took: the workspace
+    // and user acted on below are the ones this email holds now.
+    const cur = (await db
+      .query(
+        `SELECT m.user_id, w.id AS workspace_id, w.schema_name FROM control.members m
+         JOIN control.workspaces w ON w.id = m.workspace_id WHERE m.email = ?`,
+      )
+      .get(normalized)) as { user_id: string; workspace_id: string; schema_name: string };
+    if (cur.schema_name !== schema) throw new Error("membership changed during promotion");
+    await db.query("DELETE FROM control.members WHERE workspace_id = ? AND email <> ?").run(cur.workspace_id, normalized);
+    await db.query(`UPDATE ${schema}.users SET disabled_at = ? WHERE id <> ? AND disabled_at IS NULL`).run(nowIso(), cur.user_id);
+    // Whoever held the password knows the client share links: turn them off
+    // (the owner makes new ones from the client page).
+    await db.query(`UPDATE ${schema}.clients SET share_token = NULL WHERE share_token IS NOT NULL`).run();
     await db.query(`DELETE FROM control.sessions WHERE id IN (SELECT id FROM ${schema}.sessions)`).run();
     await db.query(`DELETE FROM ${schema}.sessions`).run();
     return true;

@@ -81,7 +81,8 @@ its workspace are created at once. The email is not verified, so:
   (emailed link or code). That person then gets the account, with its
   workspace and data: it is marked verified, and its password and every
   session in the workspace are removed, along with every other member and
-  invite (their users are disabled, their data kept). So an owner who forgot
+  invite (their users are disabled, their data kept) and every client share
+  link (the old links were known to the password holder). So an owner who forgot
   their password signs in by email and keeps their data (they re-invite
   teammates), and a squatter, or anyone a squatter let in, is locked out.
   Nothing is deleted on a sign-in, but anything a squatter created stays in
@@ -94,9 +95,12 @@ its workspace are created at once. The email is not verified, so:
 Emailed codes and links: 10 code requests an hour per IP, 5 per email from one
 IP and 20 per email overall, and code guesses limited the same way (10 per
 email from one IP, 50 per email an hour), so one stranger cannot use up the
-owner's allowance (someone rotating many IPs can still reach the per-email
-ceiling for an hour; Supabase's own email limits also apply). Each emailed
-link signs in once.
+owner's allowance. Trade-off: someone rotating many IPs can still reach the
+per-email ceiling and keep that email from getting codes for up to an hour
+(Supabase's own email limits also apply); a lower ceiling would let them
+flood the inbox instead. Each emailed link signs in once; a token-hash link
+whose sign-in then fails on our side cannot be reused (Supabase spent it), so
+the person requests a new one.
 
 Planned with #24: CAPTCHA on sign-up, removing never-used workspaces, and
 password reset (still not available: a forgotten password means signing in by

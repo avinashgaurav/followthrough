@@ -71,9 +71,12 @@ export async function dispatch(req: Request): Promise<Response | null> {
     return Promise.resolve(r.handler(req, user, params)).catch((err: unknown) => {
       if (err instanceof LLMBudgetError) return json({ error: err.message, kind: "budget" }, 503);
       if (isAIConfigError(err)) {
+        // Status and the message's first part only ("Gemini 400"): never the upstream body.
+        const e = err as { status?: unknown; message?: unknown };
         console.error(
-          `${req.method} ${url.pathname}: the AI provider rejected this server's API key (check ANTHROPIC_API_KEY / GEMINI_API_KEY / OPENROUTER_API_KEY):`,
-          (err as Error).message,
+          `${req.method} ${url.pathname}: the AI provider rejected this server's API key ` +
+            `(check ANTHROPIC_API_KEY / GEMINI_API_KEY / OPENROUTER_API_KEY): status=${String(e.status ?? "?")} ` +
+            String(e.message ?? "").split(":")[0]!.slice(0, 80),
         );
         return json(
           { error: "AI isn't configured on this server: the AI provider rejected its API key. The operator needs to fix it.", kind: "ai_config" },
