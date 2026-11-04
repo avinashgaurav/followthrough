@@ -11,6 +11,7 @@ import { Meeting } from "./pages/Meeting";
 import { InsightDetail } from "./pages/InsightDetail";
 import { Insights } from "./pages/Insights";
 import { Login } from "./pages/Login";
+import { AuthCallback } from "./pages/AuthCallback";
 import { Numbers } from "./pages/Numbers";
 import { Proof } from "./pages/Proof";
 import { Review } from "./pages/Review";
@@ -40,6 +41,7 @@ export default function App() {
         <ToastProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route
               element={
                 <RequireAuth>

@@ -30,17 +30,26 @@ let seq = 0;
 const email = (tag: string) => `${tag}-${++seq}-${Date.now()}@example.com`;
 
 // Fake Supabase Auth: any 6-digit code ending in 1 is valid.
-const supabase: FetchLike & { sent: string[] } = Object.assign(
-  async (url: string, init: { body: string }) => {
-    const body = JSON.parse(init.body) as { email: string; token?: string };
-    if (url.endsWith("/auth/v1/otp")) {
+// Link sign-in: an access token "link:<email>" is a confirmed user; "link-unconfirmed:<email>" is not.
+const supabase: FetchLike & { sent: string[]; redirects: string[] } = Object.assign(
+  async (url: string, init: { headers: Record<string, string>; body?: string }) => {
+    if (url.endsWith("/auth/v1/user")) {
+      const token = (init.headers.authorization ?? "").replace(/^Bearer /, "");
+      const [kind, who] = token.split("::");
+      if (kind !== "link" && kind !== "link-unconfirmed") return { ok: false, status: 401, text: async () => "{}" };
+      const user = { email: who, email_confirmed_at: kind === "link" ? "2026-11-04T00:00:00Z" : null };
+      return { ok: true, status: 200, text: async () => JSON.stringify(user) };
+    }
+    const body = JSON.parse(init.body ?? "{}") as { email: string; token?: string };
+    if (url.includes("/auth/v1/otp")) {
       supabase.sent.push(body.email);
+      supabase.redirects.push(new URL(url).searchParams.get("redirect_to") ?? "");
       return { ok: true, status: 200, text: async () => "{}" };
     }
     const ok = /^\d{5}1$/.test(body.token ?? "");
     return { ok, status: ok ? 200 : 403, text: async () => "{}" };
   },
-  { sent: [] as string[] },
+  { sent: [] as string[], redirects: [] as string[] },
 );
 
 beforeAll(async () => {
@@ -374,5 +383,44 @@ describe("hosted orphan-upload sweep", () => {
     expect(await store.exists(orphanA)).toBe(false);
     expect(await store.exists(keptA)).toBe(true);
     expect(await store.exists(fileB)).toBe(true); // another workspace's file is never considered
+  });
+});
+
+describe("link sign-in", () => {
+  const link = (token: string) => handleApi(req("POST", "/api/hosted/link-verify", { body: { access_token: token } }));
+
+  test("the emailed link returns people to /auth/callback on this app", async () => {
+    const who = email("link-redirect");
+    await handleApi(req("POST", "/api/hosted/send-code", { body: { email: who } }));
+    expect(supabase.redirects.at(-1)).toBe("http://localhost/auth/callback");
+  });
+
+  test("a new email: the link leads to naming the workspace, then a session", async () => {
+    const who = email("link-new");
+    const r = await link(`link::${who}`);
+    const body = (await r.json()) as { needs_workspace: boolean; signup_token: string };
+    expect(body.needs_workspace).toBe(true);
+    expect(cookieOf(r)).toBe("");
+    const c = await handleApi(req("POST", "/api/hosted/create-workspace", { body: { signup_token: body.signup_token, product_name: "LinkCo" } }));
+    expect(c.status).toBe(201);
+    const back = await link(`link::${who}`);
+    expect(back.status).toBe(200);
+    expect(cookieOf(back)).not.toBe("");
+  });
+
+  test("an invalid or unconfirmed token signs nobody in", async () => {
+    const who = email("link-bad");
+    expect((await link("not-a-real-token-at-all-xyz")).status).toBe(401);
+    expect((await link(`link-unconfirmed::${who}`)).status).toBe(401);
+  });
+
+  test("an invite still needs accepting after a link sign-in", async () => {
+    const a = await signedIn("link-inv");
+    const who = email("link-invitee");
+    await handleApi(req("POST", "/api/users", { cookie: a.cookie, body: { email: who, name: "I" } }));
+    const r = await link(`link::${who}`);
+    const body = (await r.json()) as { invite?: { workspace: string } };
+    expect(body.invite?.workspace).toBe("link-inv Inc");
+    expect(cookieOf(r)).toBe("");
   });
 });

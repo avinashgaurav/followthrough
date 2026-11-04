@@ -5,7 +5,7 @@ import { ulid } from "../ids.ts";
 import { env, hostedMode, withProduct } from "../config.ts";
 import { readSessionCookie, sessionCookie } from "../auth.ts";
 import { clientIp } from "../demo.ts";
-import { AuthProviderError, sendCode, verifyCode, type FetchLike } from "./supabase-auth.ts";
+import { AuthProviderError, emailForAccessToken, sendCode, verifyCode, type FetchLike } from "./supabase-auth.ts";
 import {
   AlreadyMemberError,
   SignupsFullError,
@@ -48,6 +48,7 @@ const OUTSIDE_WORKSPACE = new Set([
   "/api/hosted/verify",
   "/api/hosted/create-workspace",
   "/api/hosted/accept-invite",
+  "/api/hosted/link-verify",
 ]);
 
 /** Single-tenant features that would act with this deployment's credentials or files. */
@@ -60,6 +61,11 @@ function blockedWhenHosted(method: string, path: string): boolean {
   // addresses are checked at fetch time, not only when the URL is saved.
   if (path.startsWith("/api/calendar")) return true;
   return false;
+}
+
+/** Where emailed links send people back: APP_URL if set, else this request's origin. */
+function appOrigin(req: Request): string {
+  return (process.env.APP_URL || new URL(req.url).origin).replace(/\/+$/, "");
 }
 
 function secure(req: Request): boolean {
@@ -141,7 +147,7 @@ route("POST", "/api/hosted/send-code", "public", async (req) => {
     return json({ error: "Too many codes requested. Try again in an hour." }, 429);
   }
   try {
-    await sendCode(body.data.email, authFetch);
+    await sendCode(body.data.email, authFetch, `${appOrigin(req)}/auth/callback`);
   } catch (err) {
     if (err instanceof AuthProviderError) return json({ error: err.message }, err.status);
     throw err;
@@ -171,6 +177,15 @@ route("POST", "/api/hosted/verify", "public", async (req) => {
   }
   if (!ok) return json({ error: "That code is wrong or has expired." }, 401);
 
+  return completeSignIn(req, email);
+});
+
+/**
+ * After the email is proven (code or link): an active member gets a session;
+ * a new email or a pending invite gets a single-use token for the next step.
+ */
+async function completeSignIn(req: Request, email: string): Promise<Response> {
+  const db = getDb();
   const member = await membershipFor(db, email);
   if (!member || member.status === "invited") {
     const token = ulid() + ulid();
@@ -193,6 +208,26 @@ route("POST", "/api/hosted/verify", "public", async (req) => {
     userAgent: req.headers.get("user-agent"),
   });
   return json({ ok: true }, 200, { "set-cookie": sessionCookie(sid, secure(req)) });
+}
+
+route("POST", "/api/hosted/link-verify", "public", async (req) => {
+  const off = hostedOnly();
+  if (off) return off;
+  const body = z.object({ access_token: z.string().min(20).max(4096) }).safeParse(await readJson(req));
+  if (!body.success) return json({ error: "That sign-in link is incomplete. Request a new one." }, 400);
+  const db = getDb();
+  if (await controlRateLimited(db, `link-ip:${clientIp(req) ?? "unknown"}`, 30, HOUR)) {
+    return json({ error: "Too many attempts. Try again in an hour." }, 429);
+  }
+  let email: string | null;
+  try {
+    email = await emailForAccessToken(body.data.access_token, authFetch);
+  } catch (err) {
+    if (err instanceof AuthProviderError) return json({ error: err.message }, err.status);
+    throw err;
+  }
+  if (!email) return json({ error: "That sign-in link is invalid or has expired. Request a new one." }, 401);
+  return completeSignIn(req, email);
 });
 
 route("POST", "/api/hosted/create-workspace", "public", async (req) => {

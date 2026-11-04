@@ -11,19 +11,25 @@ type Step = "email" | "code" | "invite" | "workspace";
  * only) the company or product the AI should work for. One flow for sign-up
  * and sign-in; the server decides which it is after the code checks out.
  */
-export function HostedLogin({ freeMeetings }: { freeMeetings: number }) {
+export interface SignInResume {
+  token: string;
+  invite: { workspace: string; invited_by: string | null } | null;
+}
+
+export function HostedLogin({ freeMeetings, resume }: { freeMeetings: number; resume?: SignInResume }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { refresh } = useAuth();
   const from = (location.state as { from?: string } | null)?.from ?? "/";
 
-  const [step, setStep] = useState<Step>("email");
+  // Arriving from the emailed link: the email is already proven, go straight on.
+  const [step, setStep] = useState<Step>(resume ? (resume.invite ? "invite" : "workspace") : "email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
-  const [token, setToken] = useState("");
+  const [token, setToken] = useState(resume?.token ?? "");
   const [product, setProduct] = useState("");
   const [what, setWhat] = useState("");
-  const [invite, setInvite] = useState<{ workspace: string; invited_by: string | null } | null>(null);
+  const [invite, setInvite] = useState<{ workspace: string; invited_by: string | null } | null>(resume?.invite ?? null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -80,7 +86,7 @@ export function HostedLogin({ freeMeetings }: { freeMeetings: number }) {
             </Field>
             <div className="form-actions">
               <Btn variant="primary" type="submit" disabled={busy}>
-                {busy ? "Sending" : "Email me a code"}
+                {busy ? "Sending" : "Email me a sign-in link"}
               </Btn>
             </div>
           </form>
@@ -103,10 +109,13 @@ export function HostedLogin({ freeMeetings }: { freeMeetings: number }) {
               });
             }}
           >
-            <p className="small muted" style={{ margin: 0 }}>
-              We sent a code to <b>{email.trim()}</b>.
+            <p className="small" style={{ margin: 0 }}>
+              We sent an email to <b>{email.trim()}</b>. <b>Click the link in it</b> to sign in. You can close this tab.
             </p>
-            <Field label="Code" htmlFor="h-code">
+            <p className="small muted" style={{ margin: 0 }}>
+              If the email shows a code instead, type it here.
+            </p>
+            <Field label="Code (optional)" htmlFor="h-code">
               <input id="h-code" className="ctrl mono" inputMode="numeric" autoComplete="one-time-code" required value={code} onChange={(e) => setCode(e.target.value)} />
             </Field>
             <div className="form-actions" style={{ display: "flex", gap: 8 }}>
