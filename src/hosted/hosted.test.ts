@@ -8,12 +8,18 @@ import { blobKeyAllowed, newBlobKey } from "../ingest/media.ts";
 import { hostedSpendLedger } from "../llm/provider.ts";
 import { localStore, sweepOrphanUploads } from "../storage.ts";
 import { ulid } from "../ids.ts";
+import { CONTROL_MIGRATIONS } from "../migrations.generated.ts";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   SignupsFullError,
+  addMember,
   assertExtensionsReady,
+  isUnverifiedClaim,
+  membershipFor,
+  openPasswordSession,
+  promoteUnverifiedClaim,
   createWorkspace,
   controlRateLimited,
   migrateAllWorkspaces,
@@ -30,18 +36,29 @@ let seq = 0;
 const email = (tag: string) => `${tag}-${++seq}-${Date.now()}@example.com`;
 
 // Fake Supabase Auth: any 6-digit code ending in 1 is valid.
-// Link sign-in: tokens are JWT-shaped; the fake Supabase "validates" any token
-// starting with "valid." and describes the user from its payload.
+// Link sign-in (legacy): tokens are JWT-shaped; the fake Supabase "validates"
+// any token starting with "valid." and describes the user from its payload.
+// Link sign-in (token hash): "hash-ok:<email>" verifies as that email.
 interface FakeLinkUser {
   email?: string;
   confirmed?: boolean;
   provider?: string;
   amr?: string;
   signedInAgoMs?: number;
+  issuedAgoMs?: number;
+  sessionId?: string;
 }
-const linkToken = (u: FakeLinkUser) =>
-  `valid.${Buffer.from(JSON.stringify({ amr: [{ method: u.amr ?? "otp", timestamp: 1 }], ...u })).toString("base64url")}.sig`;
-const supabase: FetchLike & { sent: string[]; redirects: string[] } = Object.assign(
+const linkToken = (u: FakeLinkUser) => {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const claims = {
+    amr: [{ method: u.amr ?? "otp", timestamp: nowSec - Math.floor((u.signedInAgoMs ?? 5_000) / 1000) }],
+    iat: nowSec - Math.floor((u.issuedAgoMs ?? 5_000) / 1000),
+    session_id: u.sessionId ?? ulid(),
+    ...u,
+  };
+  return `valid.${Buffer.from(JSON.stringify(claims)).toString("base64url")}.sig`;
+};
+const supabase: FetchLike & { sent: string[]; redirects: string[]; hashTypes: string[] } = Object.assign(
   async (url: string, init: { headers: Record<string, string>; body?: string }) => {
     if (url.endsWith("/auth/v1/user")) {
       const token = (init.headers.authorization ?? "").replace(/^Bearer /, "");
@@ -50,12 +67,19 @@ const supabase: FetchLike & { sent: string[]; redirects: string[] } = Object.ass
       const user = {
         email: u.email,
         email_confirmed_at: u.confirmed === false ? null : "2026-11-04T00:00:00Z",
-        last_sign_in_at: new Date(Date.now() - (u.signedInAgoMs ?? 5_000)).toISOString(),
+        // Always "just now": the server must not trust it for freshness.
+        last_sign_in_at: new Date().toISOString(),
         app_metadata: { provider: u.provider ?? "email" },
       };
       return { ok: true, status: 200, text: async () => JSON.stringify(user) };
     }
-    const body = JSON.parse(init.body ?? "{}") as { email: string; token?: string };
+    const body = JSON.parse(init.body ?? "{}") as { email: string; token?: string; token_hash?: string; type?: string };
+    if (body.token_hash !== undefined) {
+      supabase.hashTypes.push(body.type ?? "");
+      const m = /^hash-ok:(.+)$/.exec(body.token_hash);
+      if (!m) return { ok: false, status: 403, text: async () => "{}" };
+      return { ok: true, status: 200, text: async () => JSON.stringify({ access_token: "x", user: { email: m[1] } }) };
+    }
     if (url.includes("/auth/v1/otp")) {
       supabase.sent.push(body.email);
       supabase.redirects.push(new URL(url).searchParams.get("redirect_to") ?? "");
@@ -64,7 +88,7 @@ const supabase: FetchLike & { sent: string[]; redirects: string[] } = Object.ass
     const ok = /^\d{5}1$/.test(body.token ?? "");
     return { ok, status: ok ? 200 : 403, text: async () => "{}" };
   },
-  { sent: [] as string[], redirects: [] as string[] },
+  { sent: [] as string[], redirects: [] as string[], hashTypes: [] as string[] },
 );
 
 beforeAll(async () => {
@@ -159,6 +183,18 @@ describe("workspace isolation", () => {
   });
 
   test("citext is ready in the extensions schema", async () => {
+    await assertExtensionsReady(db);
+  });
+
+  test("boot never moves a shared extension and is safe to rerun", async () => {
+    // Hosted shares its database with the single-tenant app today: the control
+    // migrations may create citext when missing, never ALTER an existing one.
+    for (const m of CONTROL_MIGRATIONS) {
+      const code = m.sql.replace(/--.*$/gm, "");
+      expect(/ALTER\s+EXTENSION/i.test(code)).toBe(false);
+    }
+    await migrateControl(db);
+    await migrateControl(db);
     await assertExtensionsReady(db);
   });
 });
@@ -342,6 +378,60 @@ describe("review fixes", () => {
     expect((row as { n: number }).n).toBe(0);
   });
 
+  test("parallel sign-ups cannot overshoot MAX_WORKSPACES", async () => {
+    const { n } = (await db.query("SELECT COUNT(*) AS n FROM control.workspaces").get()) as { n: number };
+    env.MAX_WORKSPACES = n + 2;
+    try {
+      const results = await Promise.allSettled(
+        Array.from({ length: 6 }, (_, i) => createWorkspace(db, { email: email(`race-ws-${i}`), productName: "Race" })),
+      );
+      expect(results.filter((r) => r.status === "fulfilled").length).toBe(2);
+      expect(results.filter((r) => r.status === "rejected").every((r) => (r as PromiseRejectedResult).reason instanceof SignupsFullError)).toBe(
+        true,
+      );
+      const after = (await db.query("SELECT COUNT(*) AS n FROM control.workspaces").get()) as { n: number };
+      expect(after.n).toBe(n + 2);
+    } finally {
+      env.MAX_WORKSPACES = 1000;
+    }
+  });
+
+  test("parallel invites cannot overshoot MAX_MEMBERS_PER_WORKSPACE", async () => {
+    const a = await signedIn("race-members");
+    const savedMax = env.MAX_MEMBERS_PER_WORKSPACE;
+    env.MAX_MEMBERS_PER_WORKSPACE = 3; // the admin plus two invites
+    try {
+      await Promise.allSettled(
+        Array.from({ length: 6 }, (_, i) => addMember(db, a.ws.id, email(`race-mate-${i}`), ulid(), "admin")),
+      );
+      const { n } = (await db.query("SELECT COUNT(*) AS n FROM control.members WHERE workspace_id = ?").get(a.ws.id)) as { n: number };
+      expect(n).toBe(3);
+    } finally {
+      env.MAX_MEMBERS_PER_WORKSPACE = savedMax;
+    }
+  });
+
+  test("a stranger cannot use up someone's sign-in code allowance", async () => {
+    const who = email("code-lock");
+    const from = (ip: string, path: string, body: unknown) =>
+      handleApi(
+        new Request(`http://localhost${path}`, {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-forwarded-for": ip },
+          body: JSON.stringify(body),
+        }),
+      );
+    for (let i = 0; i < 5; i++) expect((await from("203.0.113.50", "/api/hosted/send-code", { email: who })).status).toBe(200);
+    expect((await from("203.0.113.50", "/api/hosted/send-code", { email: who })).status).toBe(429);
+    // The owner, elsewhere, still gets a code.
+    expect((await from("198.51.100.50", "/api/hosted/send-code", { email: who })).status).toBe(200);
+    // Same for wrong-code guesses: they lock that IP, not the owner.
+    for (let i = 0; i < 10; i++) await from("203.0.113.51", "/api/hosted/verify", { email: who, code: "000000" });
+    expect((await from("203.0.113.51", "/api/hosted/verify", { email: who, code: "123451" })).status).toBe(429);
+    const owner = await from("198.51.100.51", "/api/hosted/verify", { email: who, code: "123451" });
+    expect(owner.status).toBe(200);
+  });
+
   test("parallel requests cannot slip past a rate limit", async () => {
     const key = `race-${Date.now()}`;
     const results = await Promise.all(Array.from({ length: 20 }, () => controlRateLimited(db, key, 5, 60_000)));
@@ -448,7 +538,70 @@ describe("link sign-in", () => {
     expect((await link(linkToken({ email: who, amr: "oauth" }))).status).toBe(401);
     expect((await link(linkToken({ email: who, provider: "google" }))).status).toBe(401);
     expect((await link(linkToken({ email: who, signedInAgoMs: 11 * 60_000 }))).status).toBe(401);
+    expect((await link(linkToken({ email: who, issuedAgoMs: 11 * 60_000 }))).status).toBe(401);
     expect((await link(linkToken({}))).status).toBe(401);
+  });
+
+  test("legacy tokens: stale or future-dated iat and amr times are refused; fresh ones pass", async () => {
+    const a = await signedIn("link-times");
+    const who = a.ws.owner_email;
+    expect((await link(linkToken({ email: who, issuedAgoMs: 11 * 60_000 }))).status).toBe(401); // stale iat
+    expect((await link(linkToken({ email: who, signedInAgoMs: 11 * 60_000 }))).status).toBe(401); // stale amr
+    expect((await link(linkToken({ email: who, issuedAgoMs: -120_000 }))).status).toBe(401); // iat 2 min ahead
+    expect((await link(linkToken({ email: who, signedInAgoMs: -120_000 }))).status).toBe(401); // amr 2 min ahead
+    expect((await link(linkToken({ email: who, issuedAgoMs: -30_000 }))).status).toBe(200); // small skew is fine
+    expect((await link(linkToken({ email: who, amr: "password" }))).status).toBe(401); // password session
+  });
+
+  test("an email/signup session (Confirm email off: no inbox proof) signs nobody in", async () => {
+    // POST /auth/v1/signup with the public anon key yields this amr for any address.
+    const victim = await signedIn("link-signup-victim");
+    const r = await link(linkToken({ email: victim.ws.owner_email, amr: "email/signup" }));
+    expect(r.status).toBe(401);
+    expect(cookieOf(r)).toBe("");
+  });
+
+  test("a link signs in once: replaying the same session or token hash is refused", async () => {
+    const a = await signedIn("link-once");
+    const token = linkToken({ email: a.ws.owner_email });
+    expect((await link(token)).status).toBe(200);
+    expect((await link(token)).status).toBe(401);
+    // A fresh token from the same Supabase session is the same sign-in.
+    const sessionId = ulid();
+    expect((await link(linkToken({ email: a.ws.owner_email, sessionId }))).status).toBe(200);
+    expect((await link(linkToken({ email: a.ws.owner_email, sessionId }))).status).toBe(401);
+    const hash = { token_hash: `hash-ok:${a.ws.owner_email}`, type: "email" };
+    const first = await handleApi(req("POST", "/api/hosted/link-verify", { body: hash }));
+    expect(first.status).toBe(200);
+    expect(cookieOf(first)).not.toBe("");
+    expect((await handleApi(req("POST", "/api/hosted/link-verify", { body: hash }))).status).toBe(401);
+  });
+
+  test("a legacy link whose sign-in fails on our side can be retried; a token hash cannot", async () => {
+    const token = linkToken({ email: email("link-retry") });
+    const hash = { token_hash: `hash-ok:${email("link-retry-hash")}` };
+    await db.exec("ALTER TABLE control.pending_signups RENAME TO pending_away;");
+    try {
+      expect((await link(token)).status).toBe(500);
+      expect((await handleApi(req("POST", "/api/hosted/link-verify", { body: hash }))).status).toBe(500);
+    } finally {
+      await db.exec("ALTER TABLE control.pending_away RENAME TO pending_signups;");
+    }
+    expect((await link(token)).status).toBe(200);
+    // Supabase already spent the hash, so it stays used here too.
+    expect((await handleApi(req("POST", "/api/hosted/link-verify", { body: hash }))).status).toBe(401);
+  });
+
+  test("token-hash links are checked with Supabase on the server; odd types are refused", async () => {
+    const who = email("link-hash");
+    const r = await handleApi(req("POST", "/api/hosted/link-verify", { body: { token_hash: `hash-ok:${who}` } }));
+    expect(((await r.json()) as { needs_workspace?: boolean }).needs_workspace).toBe(true);
+    expect(supabase.hashTypes.at(-1)).toBe("email");
+    expect((await handleApi(req("POST", "/api/hosted/link-verify", { body: { token_hash: "hash-bad-0000" } }))).status).toBe(401);
+    const recovery = await handleApi(
+      req("POST", "/api/hosted/link-verify", { body: { token_hash: `hash-ok:${email("link-rec")}`, type: "recovery" } }),
+    );
+    expect(recovery.status).toBe(401);
   });
 
   test("an invite still needs accepting after a link sign-in", async () => {
@@ -555,23 +708,103 @@ describe("email + password sign-up", () => {
     for (let i = 0; i < 12; i++) expect((await loginFrom("192.0.2.44", { email: who, password: PW })).status).toBe(200);
   });
 
-  test("a squatter's password account never receives the real owner who proves the inbox", async () => {
+  test("proving the inbox promotes a password account: the owner keeps the data, a squatter is out", async () => {
     const who = email("pw-squat");
     const sq = await signup({ email: who, password: PW, product_name: "Squatter" });
     expect(sq.status).toBe(201);
-    const squatWs = (await db.query("SELECT workspace_id FROM control.members WHERE email = ?").get(who)) as { workspace_id: string };
-    // The real owner signs in with the emailed link.
-    const r = await handleApi(req("POST", "/api/hosted/link-verify", { body: { access_token: linkToken({ email: who }) } }));
-    const body = (await r.json()) as { needs_workspace?: boolean };
-    expect(cookieOf(r)).toBe(""); // not signed into the squatter's workspace
-    expect(body.needs_workspace).toBe(true);
-    // The squatter's password is gone with the claim.
+    const made = await handleApi(req("POST", "/api/clients", { cookie: cookieOf(sq), body: { name: "Kept Client" } }));
+    expect(made.status).toBe(201);
+    const wsId = ((await db.query("SELECT workspace_id FROM control.members WHERE email = ?").get(who)) as { workspace_id: string })
+      .workspace_id;
+    // Whoever proves the inbox (an owner who forgot the password, or the real
+    // owner of a squatted email) gets the account, not a fresh one.
+    const r = await handleApi(req("POST", "/api/hosted/link-verify", { body: { token_hash: `hash-ok:${who}` } }));
+    expect(r.status).toBe(200);
+    const cookie = cookieOf(r);
+    expect(cookie).not.toBe("");
+    const clients = (await (await handleApi(req("GET", "/api/clients", { cookie }))).json()) as { clients: { name: string }[] };
+    expect(clients.clients.map((c) => c.name)).toContain("Kept Client");
+    // Nothing was deleted, and the member is now verified.
+    expect(await db.query("SELECT 1 AS x FROM control.workspaces WHERE id = ?").get(wsId)).not.toBeNull();
+    const m = (await db.query("SELECT verified_at FROM control.members WHERE email = ?").get(who)) as { verified_at: string | null };
+    expect(m.verified_at).not.toBeNull();
+    // The password and every session opened with it are gone.
     expect((await login({ email: who, password: PW })).status).toBe(401);
     const cred = await db.query("SELECT COUNT(*) AS n FROM control.credentials WHERE email = ?").get(who);
     expect((cred as { n: number }).n).toBe(0);
-    // The squatter's now-empty workspace is gone, and their old session with it.
-    expect(await db.query("SELECT 1 AS x FROM control.workspaces WHERE id = ?").get(squatWs.workspace_id)).toBeNull();
     expect((await handleApi(req("GET", "/api/clients", { cookie: cookieOf(sq) }))).status).toBe(401);
+    // And a later inbox sign-in is an ordinary one.
+    const again = await handleApi(req("POST", "/api/hosted/verify", { body: { email: who, code: "333331" } }));
+    expect(again.status).toBe(200);
+    expect(cookieOf(again)).not.toBe("");
+  });
+
+  test("promotion also removes anyone the password account let in", async () => {
+    const who = email("pw-accomplice-owner");
+    const sq = await signup({ email: who, password: PW, product_name: "Planted" });
+    const accomplice = email("pw-accomplice");
+    expect((await handleApi(req("POST", "/api/users", { cookie: cookieOf(sq), body: { email: accomplice, name: "A" } }))).status).toBe(201);
+    const v = await handleApi(req("POST", "/api/hosted/verify", { body: { email: accomplice, code: "555551" } }));
+    const vb = (await v.json()) as { signup_token: string };
+    const acc = await handleApi(req("POST", "/api/hosted/accept-invite", { body: { signup_token: vb.signup_token } }));
+    expect(acc.status).toBe(200);
+    // The real owner proves the inbox.
+    const r = await handleApi(req("POST", "/api/hosted/verify", { body: { email: who, code: "555561" } }));
+    expect(cookieOf(r)).not.toBe("");
+    expect((await handleApi(req("GET", "/api/clients", { cookie: cookieOf(acc) }))).status).toBe(401);
+    expect(await db.query("SELECT 1 AS x FROM control.members WHERE email = ?").get(accomplice)).toBeNull();
+    expect((await handleApi(req("GET", "/api/clients", { cookie: cookieOf(r) }))).status).toBe(200);
+  });
+
+  test("promotion turns off client share links the password holder knew", async () => {
+    const who = email("pw-share");
+    const sq = await signup({ email: who, password: PW, product_name: "Shared" });
+    const made = (await (await handleApi(req("POST", "/api/clients", { cookie: cookieOf(sq), body: { name: "Leaky" } }))).json()) as {
+      client: { id: string };
+    };
+    const shared = (await (
+      await handleApi(req("POST", `/api/clients/${made.client.id}/share-link`, { cookie: cookieOf(sq) }))
+    ).json()) as { url: string };
+    expect((await handleApi(req("GET", shared.url))).status).toBe(200);
+    await handleApi(req("POST", "/api/hosted/verify", { body: { email: who, code: "666661" } }));
+    expect((await handleApi(req("GET", shared.url))).status).toBe(404);
+  });
+
+  test("a password login that loses the race to a promotion gets no session", async () => {
+    const who = email("pw-race");
+    await signup({ email: who, password: PW, product_name: "Race" });
+    const m = (await membershipFor(db, who))!;
+    // Login checked the password, then the owner proved the inbox before it opened a session.
+    expect(await promoteUnverifiedClaim(db, who)).toBe(true);
+    expect(await openPasswordSession(db, m.workspace, m.userId, who, { ip: null, userAgent: null })).toBeNull();
+  });
+
+  test("the sign-in path never drops a workspace schema", async () => {
+    const who = email("pw-nodrop");
+    await signup({ email: who, password: PW, product_name: "Kept" });
+    const schema = ((await db.query(
+      "SELECT w.schema_name FROM control.members m JOIN control.workspaces w ON w.id = m.workspace_id WHERE m.email = ?",
+    ).get(who)) as { schema_name: string }).schema_name;
+    await handleApi(req("POST", "/api/hosted/verify", { body: { email: who, code: "444441" } }));
+    expect(await db.query("SELECT 1 AS x FROM pg_namespace WHERE nspname = ?").get(schema)).not.toBeNull();
+  });
+
+  test("promotion is all or nothing", async () => {
+    const who = email("pw-atomic");
+    await signup({ email: who, password: PW, product_name: "Atomic" });
+    const m = (await db.query(
+      "SELECT m.user_id, w.schema_name FROM control.members m JOIN control.workspaces w ON w.id = m.workspace_id WHERE m.email = ?",
+    ).get(who)) as { user_id: string; schema_name: string };
+    // Break the last step: the workspace sessions table is gone.
+    await db.exec(`ALTER TABLE ${m.schema_name}.sessions RENAME TO sessions_away;`);
+    try {
+      await expect(promoteUnverifiedClaim(db, who)).rejects.toThrow();
+    } finally {
+      await db.exec(`ALTER TABLE ${m.schema_name}.sessions_away RENAME TO sessions;`);
+    }
+    // The earlier steps rolled back: still unverified, password intact.
+    expect(await isUnverifiedClaim(db, who)).toBe(true);
+    expect((await login({ email: who, password: PW })).status).toBe(200);
   });
 
   test("a password only opens the membership it was created with", async () => {
@@ -591,8 +824,31 @@ describe("email + password sign-up", () => {
 
   test("easily guessed passwords are refused", async () => {
     expect((await signup({ email: email("pw-weak"), password: "password123", product_name: "W" })).status).toBe(400);
+    // From the bundled common-password list, matched case-insensitively.
+    expect((await signup({ email: email("pw-weak2"), password: "BasketBall", product_name: "W" })).status).toBe(400);
+    expect((await signup({ email: email("pw-weak3"), password: "1q2w3e4r5t", product_name: "W" })).status).toBe(400);
     const who = email("longlocalpart");
     expect((await signup({ email: who, password: `${who.split("@")[0]}!!`, product_name: "W" })).status).toBe(400);
+  });
+
+  test("an invalid email gets its own message", async () => {
+    const r = await signup({ email: "a@b", password: PW, product_name: "X" });
+    expect(r.status).toBe(400);
+    expect(((await r.json()) as { error: string }).error).toBe("Enter a valid email address.");
+  });
+
+  test("sign-ups paused by the operator's trigger answer 503 with its message", async () => {
+    await db.exec(`
+      CREATE OR REPLACE FUNCTION control.test_pause() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN RAISE EXCEPTION 'Sign-ups are paused for maintenance.'; END $$;
+      CREATE TRIGGER test_pause BEFORE INSERT ON control.workspaces FOR EACH ROW EXECUTE FUNCTION control.test_pause();`);
+    try {
+      const r = await signup({ email: email("pw-paused"), password: PW, product_name: "Paused" });
+      expect(r.status).toBe(503);
+      expect(((await r.json()) as { error: string }).error).toBe("Sign-ups are paused for maintenance.");
+    } finally {
+      await db.exec("DROP TRIGGER test_pause ON control.workspaces; DROP FUNCTION control.test_pause();");
+    }
   });
 
   test("cross-site sign-up is refused", async () => {

@@ -103,6 +103,25 @@ export class LLMRequestError extends Error {
   }
 }
 
+/**
+ * True when the AI provider rejected this server's own credentials (bad,
+ * revoked or missing API key): an operator problem, not something a retry or
+ * the user can fix.
+ */
+export function isAIConfigError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const message = String((err as { message?: unknown }).message ?? "");
+  const keyText = /API_KEY_INVALID|API key not valid|invalid[ _-]?(x-)?api[ _-]?key|authentication_error/i.test(message);
+  // Anthropic SDK: AuthenticationError (401) always; PermissionDeniedError (403)
+  // only when it is about the key (a 403 can also be a policy refusal).
+  const name = err.constructor?.name ?? "";
+  if (name === "AuthenticationError") return true;
+  if (name === "PermissionDeniedError") return keyText;
+  if (!(err instanceof LLMRequestError)) return false;
+  if (err.status === 401) return true;
+  return keyText;
+}
+
 /** The call ran out of its overall time (model fallback plus retries). */
 export class LLMDeadlineError extends Error {}
 

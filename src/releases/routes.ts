@@ -5,7 +5,7 @@ import { route, json } from "../router.ts";
 import { getDb, nowIso } from "../db.ts";
 import { ulid, insightHandle } from "../ids.ts";
 import { appendEvent, transitionInsight, TransitionError, type Role } from "../events.ts";
-import { getLLM, LLMBudgetError, LLMRateLimitError, type LLM } from "../llm/provider.ts";
+import { getLLM, isAIConfigError, LLMBudgetError, LLMRateLimitError, type LLM } from "../llm/provider.ts";
 import { addManualRelease, fetchReleases, upsertReleases, type FetchLike } from "./poller.ts";
 import { matchRelease } from "./matcher.ts";
 
@@ -260,7 +260,7 @@ route("POST", "/api/releases/manual", "admin", async (req, user) => {
     return json({ release_id: rel.id, entry_count: rel.entry_count, matches_proposed: run.proposed }, 201);
   } catch (e) {
     // The changelog is saved even when matching fails; the admin can re-poll later.
-    if (e instanceof LLMBudgetError || e instanceof LLMRateLimitError) throw e;
+    if (e instanceof LLMBudgetError || e instanceof LLMRateLimitError || isAIConfigError(e)) throw e;
     console.error("release matching failed:", e);
     return json(
       { release_id: rel.id, entry_count: rel.entry_count, matches_proposed: 0,
@@ -281,7 +281,7 @@ route("POST", "/api/releases/poll", "admin", async () => {
     const counts = await runPollPipeline(getDb(), getLLM());
     return json(counts);
   } catch (err) {
-    if (err instanceof LLMBudgetError || err instanceof LLMRateLimitError) throw err;
+    if (err instanceof LLMBudgetError || err instanceof LLMRateLimitError || isAIConfigError(err)) throw err;
     console.warn("release poll failed:", err);
     // A private RELEASE_REPO 404s without auth; tell the admin what to fix.
     const hint = env.GITHUB_READ_TOKEN

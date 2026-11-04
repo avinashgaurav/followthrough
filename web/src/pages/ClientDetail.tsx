@@ -28,6 +28,8 @@ interface ClientDetailData {
   contacts: Contact[];
   meetings: Meeting[];
   openInsights: Insight[];
+  /** Every insight ever found for this client, closed ones included (null if the server did not say). */
+  insightsTotal: number | null;
 }
 
 /** getClient returns a loose object; pull the pieces out defensively. */
@@ -38,6 +40,7 @@ function shapeDetail(raw: Record<string, unknown>): ClientDetailData {
     contacts: asArray<Contact>(raw.contacts),
     meetings: asArray<Meeting>(raw.meetings),
     openInsights: asArray<Insight>(raw.open_insights ?? raw.openInsights),
+    insightsTotal: typeof raw.insights_total === "number" ? raw.insights_total : null,
   };
 }
 
@@ -360,7 +363,7 @@ export function ClientDetail() {
     );
   }
 
-  const { client, contacts, meetings, openInsights } = data;
+  const { client, contacts, meetings, openInsights, insightsTotal } = data;
 
   // Meetings chronological (oldest first), seq badges read #1, #2, #3 in order.
   const orderedMeetings = [...meetings].sort((a, b) => {
@@ -461,7 +464,9 @@ export function ClientDetail() {
           {openInsights.length === 0 ? (
             <div className="card">
               <p className="muted small" style={{ margin: 0 }}>
-                Nothing outstanding. Every insight from this client has been closed out.
+                {insightsTotal === 0
+                  ? "Nothing yet. Add a meeting with this client and the asks it surfaces show up here."
+                  : "Nothing outstanding. Every insight from this client has been closed out."}
               </p>
             </div>
           ) : (

@@ -14,10 +14,19 @@ from this deployment's AI key.
   that starts with `SET LOCAL search_path`, so the Supabase transaction pooler
   can never carry one workspace's path into another's query.
 - Workspaces resolve names in their own schema and `extensions` only, never
-  `public`, so a workspace cannot fall through to shared tables. The control
-  migration moves `citext` into `extensions` (Supabase's default home for
-  extensions, already on its default search path), so a single-tenant app in
-  the same database keeps working.
+  `public`, so a workspace cannot fall through to shared tables. `citext` must
+  therefore live in `extensions` (Supabase's default home for extensions,
+  already on its default search path). The control migration creates it there
+  when it is missing, and never moves an existing one: if it sits elsewhere,
+  boot stops with a message and you run
+  `ALTER EXTENSION citext SET SCHEMA extensions;` once, by hand. On a shared
+  database, first check that the other app finds citext through a search path
+  that includes `extensions` (Supabase's default does), or it breaks.
+- **Shared database today:** the hosted deployment uses the same Supabase
+  project and database as the single-tenant production app (its tables in
+  `public`, hosted in `control` and `ws_*`). Every hosted boot runs the control
+  migrations, which only touch `control`, `extensions` and new workspace
+  schemas. A separate database for hosted mode is the cleaner end state.
 
 ## Limits that protect your bill
 
@@ -44,12 +53,15 @@ chooses to join; they can create their own workspace instead.
    - Database URL: Project Settings, Database, Connection string, **Transaction pooler** (port 6543) → `DATABASE_URL`.
    - Project URL and **anon** key: Project Settings, API → `SUPABASE_URL`, `SUPABASE_ANON_KEY`.
    - Authentication, URL Configuration: add `APP_URL/auth/callback` (exact, no wildcards) to **Redirect URLs**. People sign in by clicking the emailed link.
-   - Optional, needs custom SMTP first: put `{{ .Token }}` in **Confirm signup** and **Magic Link** so the email also carries a typed code.
+   - Authentication, Email Templates: in **Confirm signup** and **Magic Link**, make the link `APP_URL/auth/callback?token_hash={{ .TokenHash }}&type=email` (your real APP_URL, e.g. `https://followthrough-hosted.vercel.app/auth/callback?token_hash={{ .TokenHash }}&type=email`). The server then checks the link with Supabase itself and spends it. The old `{{ .ConfirmationURL }}` link still works for returning users, but a first sign-up by link needs the token-hash link (or the typed code), because the server no longer accepts `email/signup` sessions: with **Confirm email** off, anyone can create one for any address.
+   - Optional, needs custom SMTP first: put `{{ .Token }}` in the same two templates so the email also carries a typed code.
    - Authentication, SMTP: connect a sender (e.g. Resend). Supabase's built-in sender only allows a few emails an hour, which a launch will exceed.
 2. **Vercel**: import the repo (root directory: repo root) and set
    `HOSTED_MODE=true`, `APP_URL` (the public URL), `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`,
    one AI key (`ANTHROPIC_API_KEY` or `GEMINI_API_KEY`), `LLM_DAILY_BUDGET_USD`,
-   and `CRON_SECRET`. The production build runs `bun run db:migrate`, which creates
+   and `CRON_SECRET`. Leave `TRUSTED_PROXY_HOPS` at its default of 1: Vercel
+   replaces `X-Forwarded-For` with the client's address, so the one entry is
+   the real client and sign-in throttles are per person, not shared. The production build runs `bun run db:migrate`, which creates
    the `control` schema and migrates every workspace.
 3. Sign up at your deployment URL with your own email to check the flow end to end.
 
@@ -64,17 +76,35 @@ its workspace are created at once. The email is not verified, so:
 - there is no password reset yet (it needs email);
 - password accounts never pass the invite path, and an email that already has
   an account or a pending invite cannot be registered by password;
-- a password belongs to one membership and is deleted with it; if the real
-  owner of an email later proves their inbox (emailed link or code), the
-  unverified password account on that email is removed rather than handed to
-  them;
+- a password belongs to one membership and is deleted with it;
+- a password account is an unverified claim until someone proves the inbox
+  (emailed link or code). That person then gets the account, with its
+  workspace and data: it is marked verified, and its password and every
+  session in the workspace are removed, along with every other member and
+  invite (their users are disabled, their data kept) and every client share
+  link (the old links were known to the password holder). So an owner who forgot
+  their password signs in by email and keeps their data (they re-invite
+  teammates), and a squatter, or anyone a squatter let in, is locked out.
+  Nothing is deleted on a sign-in, but anything a squatter created stays in
+  the workspace for the new owner to review;
 - sign-up says when an email is already taken (accepted: without email there
   is no non-revealing way to refuse);
 - limits: 10 sign-ups an hour per IP and 30 an hour overall; failed logins
-  lock an email for 15 minutes from that IP only (100 a day per email overall).
+  lock an email for 15 minutes from that IP only (300 a day per email overall).
 
-Planned with #24: CAPTCHA on sign-up, removing never-used workspaces, password
-reset, and email verification for password accounts.
+Emailed codes and links: 10 code requests an hour per IP, 5 per email from one
+IP and 20 per email overall, and code guesses limited the same way (10 per
+email from one IP, 50 per email an hour), so one stranger cannot use up the
+owner's allowance. Trade-off: someone rotating many IPs can still reach the
+per-email ceiling and keep that email from getting codes for up to an hour
+(Supabase's own email limits also apply); a lower ceiling would let them
+flood the inbox instead. Each emailed link signs in once; a token-hash link
+whose sign-in then fails on our side cannot be reused (Supabase spent it), so
+the person requests a new one.
+
+Planned with #24: CAPTCHA on sign-up, removing never-used workspaces, and
+password reset (still not available: a forgotten password means signing in by
+emailed link or code, which turns the password off).
 
 The emailed-link sign-in stays in the code and works for everyone once SMTP is
 connected.

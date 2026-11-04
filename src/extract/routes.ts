@@ -2,7 +2,7 @@ import { extractionNudgeText, sendChat } from "../notify.ts";
 import { z } from "zod";
 import { route, json } from "../router.ts";
 import { getDb } from "../db.ts";
-import { getLLM, LLMBudgetError, LLMRateLimitError } from "../llm/provider.ts";
+import { getLLM, isAIConfigError, LLMBudgetError, LLMRateLimitError } from "../llm/provider.ts";
 import { ItemTypeSchema } from "./prompts.ts";
 import { ExtractionError, manualAddInsight, runExtraction } from "./pipeline.ts";
 import { latestAnalysis, runMeetingAnalysis } from "./analysis.ts";
@@ -19,7 +19,7 @@ const GUARD_STATUS: Record<string, number> = {
 
 function errorResponse(err: unknown): Response {
   // Budget and rate-limit errors get the shared 503 answer from the router.
-  if (err instanceof LLMBudgetError || err instanceof LLMRateLimitError) throw err;
+  if (err instanceof LLMBudgetError || err instanceof LLMRateLimitError || isAIConfigError(err)) throw err;
   if (err instanceof ExtractionError) {
     return json({ error: err.message, code: err.code }, GUARD_STATUS[err.code] ?? 409);
   }
@@ -90,7 +90,7 @@ route("POST", "/api/meetings/:id/analyze", "user", async (_req, _user, params) =
     const r = await runMeetingAnalysis(getDb(), getLLM(), params.id ?? "");
     return json({ markdown: r.markdown });
   } catch (err) {
-    if (err instanceof LLMBudgetError || err instanceof LLMRateLimitError) throw err;
+    if (err instanceof LLMBudgetError || err instanceof LLMRateLimitError || isAIConfigError(err)) throw err;
     console.error("meeting analysis failed:", err);
     return json({ error: "The meeting brief could not be generated. Try again.", code: "analysis_failed" }, 502);
   }

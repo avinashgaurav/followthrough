@@ -154,7 +154,10 @@ describe("clients", () => {
     const detail = (await res.json()) as {
       meetings: { seq: number; has_transcript: number }[];
       open_insights: { state: string; track: string | null }[];
+      insights_total: number;
     };
+    // Closed ones count toward the total, so the UI can tell "none yet" from "all closed".
+    expect(detail.insights_total).toBe(5);
     expect(detail.meetings.map((m) => m.seq)).toEqual([1, 2]);
     expect(detail.meetings[0]!.has_transcript).toBe(1);
     expect(detail.open_insights).toHaveLength(2);

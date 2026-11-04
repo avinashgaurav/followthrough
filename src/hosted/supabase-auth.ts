@@ -3,9 +3,9 @@ import { env } from "../config.ts";
 /**
  * Email sign-in through Supabase Auth's REST API. Supabase sends the email:
  * a link (default templates) and, once the templates include {{ .Token }}, a
- * code. This server asks for the email, then checks either the typed code or
- * the access token the link hands back. No Supabase session is kept: a proven
- * email opens our own session.
+ * code. This server asks for the email, then checks the typed code or the
+ * link's token hash with Supabase itself. No Supabase session is kept: a
+ * proven email opens our own session.
  */
 
 export type FetchLike = (url: string, init: { method: string; headers: Record<string, string>; body?: string }) => Promise<{
@@ -73,9 +73,52 @@ export async function verifyCode(
   return false; // 400/401/403: wrong or expired code
 }
 
-/** How Supabase says a session was obtained (JWT "amr"). Only these prove the inbox. */
-const INBOX_METHODS = new Set(["otp", "magiclink", "email/signup"]);
-/** A link sign-in must be used within this long of Supabase confirming it. */
+/** A proven link sign-in: the email and a key that marks this link as used. */
+export interface LinkProof {
+  email: string;
+  /** Single-use key for control.used_links (link token hash or Supabase session id). */
+  useKey: string;
+}
+
+/** Link types an emailed sign-in link may carry. All of them prove the inbox. */
+export const LINK_TYPES = new Set(["email", "magiclink", "signup"]);
+
+/**
+ * Checks an emailed link's token_hash with Supabase (POST /verify), on the
+ * server. This is the inbox proof itself: Supabase only issues the hash in an
+ * email, and spends it on first use. Needs the email templates to link to
+ * APP_URL/auth/callback?token_hash={{ .TokenHash }}&type=email (docs/HOSTED.md).
+ */
+export async function emailForTokenHash(
+  tokenHash: string,
+  type: string,
+  fetchImpl: FetchLike = fetch as unknown as FetchLike,
+): Promise<LinkProof | null> {
+  if (!LINK_TYPES.has(type)) return null;
+  const res = await call("verify", { type, token_hash: tokenHash }, fetchImpl);
+  if (res.status >= 500) {
+    console.warn(`supabase verify failed (${res.status}): ${(await res.text()).slice(0, 300)}`);
+    throw new AuthProviderError("Sign-in is unavailable right now. Try again in a minute.", 502);
+  }
+  if (!res.ok) return null; // wrong, used or expired link
+  let body: { user?: { email?: string } };
+  try {
+    body = JSON.parse(await res.text());
+  } catch {
+    throw new AuthProviderError("Sign-in is unavailable right now. Try again in a minute.", 502);
+  }
+  const email = body.user?.email?.trim().toLowerCase();
+  if (!email) return null;
+  return { email, useKey: `hash:${new Bun.CryptoHasher("sha256").update(tokenHash).digest("hex")}` };
+}
+
+/**
+ * How Supabase says a session was obtained (JWT "amr"). Only an emailed code or
+ * magic link proves the inbox. "email/signup" does not: with "Confirm email"
+ * off, anyone can POST /signup for any address and get that amr.
+ */
+const INBOX_METHODS = new Set(["otp", "magiclink"]);
+/** A link sign-in must be used within this long of Supabase issuing the token. */
 const LINK_FRESH_MS = 10 * 60_000;
 
 function jwtPayload(token: string): Record<string, unknown> | null {
@@ -89,18 +132,20 @@ function jwtPayload(token: string): Record<string, unknown> | null {
 }
 
 /**
- * The email behind a Supabase access token from an emailed link, checked with
- * Supabase itself. Null unless all hold: Supabase accepts the token; the email
- * is confirmed; the user signs in by email (not password or OAuth); the token
- * came from an email link or code (amr), so it proves the inbox even if the
- * shared project allows other sign-up routes; and that sign-in happened in the
- * last 10 minutes, so an old or leaked token is not a sign-in credential here.
+ * Legacy link format (access token in the URL fragment), kept while the email
+ * templates still use {{ .ConfirmationURL }}. Null unless all hold: Supabase
+ * accepts the token; the email is confirmed; the user signs in by email; the
+ * session came from an emailed code or magic link (amr), and that sign-in and
+ * the token itself are under 10 minutes old (the token's own times, never the
+ * user's last_sign_in_at, which any later sign-in moves). A first-time sign-up
+ * by link reports "email/signup" and is refused here: it needs the token_hash
+ * link (emailForTokenHash) or the typed code.
  */
 export async function emailForAccessToken(
   accessToken: string,
   fetchImpl: FetchLike = fetch as unknown as FetchLike,
   now: number = Date.now(),
-): Promise<string | null> {
+): Promise<LinkProof | null> {
   const { url, key } = config();
   const res = await fetchImpl(`${url}/auth/v1/user`, {
     method: "GET",
@@ -114,7 +159,6 @@ export async function emailForAccessToken(
   let user: {
     email?: string;
     email_confirmed_at?: string | null;
-    last_sign_in_at?: string | null;
     app_metadata?: { provider?: string };
   };
   try {
@@ -124,10 +168,22 @@ export async function emailForAccessToken(
   }
   if (!user.email || !user.email_confirmed_at) return null;
   if (user.app_metadata?.provider !== "email") return null;
-  // Supabase already verified the signature; the payload is read, not trusted alone.
-  const amr = (jwtPayload(accessToken)?.amr ?? []) as Array<{ method?: string }>;
-  if (!Array.isArray(amr) || !amr.some((m) => INBOX_METHODS.has(m?.method ?? ""))) return null;
-  const signedIn = Date.parse(user.last_sign_in_at ?? "");
-  if (!Number.isFinite(signedIn) || now - signedIn > LINK_FRESH_MS) return null;
-  return user.email.trim().toLowerCase();
+  // Supabase already verified the signature, so the payload's claims are its own.
+  const claims = jwtPayload(accessToken);
+  if (!claims) return null;
+  const amr = (claims.amr ?? []) as Array<{ method?: string; timestamp?: number }>;
+  if (!Array.isArray(amr)) return null;
+  // At most 10 minutes old, and at most a minute in the future (clock skew).
+  const fresh = (seconds: unknown) =>
+    typeof seconds === "number" &&
+    Number.isFinite(seconds) &&
+    now - seconds * 1000 <= LINK_FRESH_MS &&
+    seconds * 1000 - now <= 60_000;
+  if (!amr.some((m) => INBOX_METHODS.has(m?.method ?? "") && fresh(m?.timestamp))) return null;
+  if (!fresh(claims.iat)) return null;
+  const session = typeof claims.session_id === "string" && claims.session_id ? claims.session_id : null;
+  const useKey = session
+    ? `session:${session}`
+    : `token:${new Bun.CryptoHasher("sha256").update(accessToken).digest("hex")}`;
+  return { email: user.email.trim().toLowerCase(), useKey };
 }

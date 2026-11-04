@@ -34,15 +34,23 @@ describe("share page (you asked → shipped)", () => {
     expect(html).not.toContain("In progress"); // no in-flight list
   });
 
-  test("nothing shipped → in-flight headline", () => {
-    const html = formatHtml("Acme", [], []);
-    expect(html).toContain("in flight");
-  });
-
   test("escapes client name and titles (no XSS)", () => {
     const html = formatHtml("<b>x</b>", [item({ title: "<script>alert(1)</script>", shipped_at: "2026-05-10T00:00:00Z" })], []);
     expect(html).not.toContain("<b>x</b>");
     expect(html).not.toContain("<script>alert(1)</script>");
     expect(html).toContain("&lt;b&gt;");
+  });
+
+  test("with nothing shipped or in flight, no empty-state line repeats", () => {
+    const html = formatHtml("Acme", [], []);
+    expect(html).not.toContain("in flight");
+    expect(html.match(/Nothing shipped yet/g)?.length).toBe(1);
+    expect(html).not.toContain("In progress");
+  });
+
+  test("with nothing shipped but work in progress, the headline says so once", () => {
+    const html = formatHtml("Acme", [], ["Dark mode"]);
+    expect(html.match(/We are working on what you asked for/g)?.length).toBe(1);
+    expect(html).toContain("Dark mode");
   });
 });

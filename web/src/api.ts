@@ -2,6 +2,9 @@
 // module so any backend field drift gets fixed in one file at integration time.
 // Response shapes are typed loosely (optional fields) and pages render defensively.
 
+/** Window event: a free hosted meeting was just used, so the header counter refetches. */
+export const QUOTA_CHANGED = "ft:quota-changed";
+
 export class ApiError extends Error {
   status: number;
   data: unknown;
@@ -520,13 +523,13 @@ export const api = {
       signup_token?: string;
       invite?: { workspace: string; invited_by: string | null };
     }>("/api/hosted/verify", { email, code }),
-  linkVerify: (access_token: string) =>
+  linkVerify: (link: { token_hash: string; type?: string } | { access_token: string }) =>
     post<{
       ok?: true;
       needs_workspace?: boolean;
       signup_token?: string;
       invite?: { workspace: string; invited_by: string | null };
-    }>("/api/hosted/link-verify", { access_token }),
+    }>("/api/hosted/link-verify", link),
   passwordSignup: (email: string, password: string, product_name: string, product_description?: string) =>
     post<{ ok: true }>("/api/hosted/password-signup", { email, password, product_name, product_description }),
   passwordLogin: (email: string, password: string) => post<{ ok: true }>("/api/hosted/password-login", { email, password }),
