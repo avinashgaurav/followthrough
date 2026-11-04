@@ -30,17 +30,41 @@ let seq = 0;
 const email = (tag: string) => `${tag}-${++seq}-${Date.now()}@example.com`;
 
 // Fake Supabase Auth: any 6-digit code ending in 1 is valid.
-const supabase: FetchLike & { sent: string[] } = Object.assign(
-  async (url: string, init: { body: string }) => {
-    const body = JSON.parse(init.body) as { email: string; token?: string };
-    if (url.endsWith("/auth/v1/otp")) {
+// Link sign-in: tokens are JWT-shaped; the fake Supabase "validates" any token
+// starting with "valid." and describes the user from its payload.
+interface FakeLinkUser {
+  email?: string;
+  confirmed?: boolean;
+  provider?: string;
+  amr?: string;
+  signedInAgoMs?: number;
+}
+const linkToken = (u: FakeLinkUser) =>
+  `valid.${Buffer.from(JSON.stringify({ amr: [{ method: u.amr ?? "otp", timestamp: 1 }], ...u })).toString("base64url")}.sig`;
+const supabase: FetchLike & { sent: string[]; redirects: string[] } = Object.assign(
+  async (url: string, init: { headers: Record<string, string>; body?: string }) => {
+    if (url.endsWith("/auth/v1/user")) {
+      const token = (init.headers.authorization ?? "").replace(/^Bearer /, "");
+      if (!token.startsWith("valid.")) return { ok: false, status: 401, text: async () => "{}" };
+      const u = JSON.parse(Buffer.from(token.split(".")[1]!, "base64url").toString()) as FakeLinkUser;
+      const user = {
+        email: u.email,
+        email_confirmed_at: u.confirmed === false ? null : "2026-11-04T00:00:00Z",
+        last_sign_in_at: new Date(Date.now() - (u.signedInAgoMs ?? 5_000)).toISOString(),
+        app_metadata: { provider: u.provider ?? "email" },
+      };
+      return { ok: true, status: 200, text: async () => JSON.stringify(user) };
+    }
+    const body = JSON.parse(init.body ?? "{}") as { email: string; token?: string };
+    if (url.includes("/auth/v1/otp")) {
       supabase.sent.push(body.email);
+      supabase.redirects.push(new URL(url).searchParams.get("redirect_to") ?? "");
       return { ok: true, status: 200, text: async () => "{}" };
     }
     const ok = /^\d{5}1$/.test(body.token ?? "");
     return { ok, status: ok ? 200 : 403, text: async () => "{}" };
   },
-  { sent: [] as string[] },
+  { sent: [] as string[], redirects: [] as string[] },
 );
 
 beforeAll(async () => {
@@ -50,6 +74,7 @@ beforeAll(async () => {
   env.HOSTED_MODE = "true";
   env.SUPABASE_URL = "https://example.supabase.co";
   env.SUPABASE_ANON_KEY = "anon";
+  env.APP_URL = "http://localhost";
   env.MAX_WORKSPACES = 1000;
   env.FREE_MEETINGS_PER_WORKSPACE = 5;
   setAuthFetch(supabase);
@@ -374,5 +399,84 @@ describe("hosted orphan-upload sweep", () => {
     expect(await store.exists(orphanA)).toBe(false);
     expect(await store.exists(keptA)).toBe(true);
     expect(await store.exists(fileB)).toBe(true); // another workspace's file is never considered
+  });
+});
+
+describe("link sign-in", () => {
+  const link = (token: string) => handleApi(req("POST", "/api/hosted/link-verify", { body: { access_token: token } }));
+
+  test("the emailed link returns people to APP_URL/auth/callback, never the request's host", async () => {
+    const who = email("link-redirect");
+    await handleApi(
+      new Request("http://evil.example/api/hosted/send-code", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: who }),
+      }),
+    );
+    expect(supabase.redirects.at(-1)).toBe("http://localhost/auth/callback");
+  });
+
+  test("without APP_URL, sending a link is refused", async () => {
+    const saved = env.APP_URL;
+    env.APP_URL = undefined;
+    try {
+      expect((await handleApi(req("POST", "/api/hosted/send-code", { body: { email: email("noapp") } }))).status).toBe(503);
+    } finally {
+      env.APP_URL = saved;
+    }
+  });
+
+  test("a new email: the link leads to naming the workspace, then a session", async () => {
+    const who = email("link-new");
+    const r = await link(linkToken({ email: who }));
+    const body = (await r.json()) as { needs_workspace: boolean; signup_token: string };
+    expect(body.needs_workspace).toBe(true);
+    expect(cookieOf(r)).toBe("");
+    const c = await handleApi(req("POST", "/api/hosted/create-workspace", { body: { signup_token: body.signup_token, product_name: "LinkCo" } }));
+    expect(c.status).toBe(201);
+    const back = await link(linkToken({ email: who }));
+    expect(back.status).toBe(200);
+    expect(cookieOf(back)).not.toBe("");
+  });
+
+  test("tokens that do not prove the inbox, or are stale, sign nobody in", async () => {
+    const who = email("link-bad");
+    expect((await link("not-a-real-token-at-all-xyz")).status).toBe(401);
+    expect((await link(linkToken({ email: who, confirmed: false }))).status).toBe(401);
+    expect((await link(linkToken({ email: who, amr: "password" }))).status).toBe(401);
+    expect((await link(linkToken({ email: who, amr: "oauth" }))).status).toBe(401);
+    expect((await link(linkToken({ email: who, provider: "google" }))).status).toBe(401);
+    expect((await link(linkToken({ email: who, signedInAgoMs: 11 * 60_000 }))).status).toBe(401);
+    expect((await link(linkToken({}))).status).toBe(401);
+  });
+
+  test("an invite still needs accepting after a link sign-in", async () => {
+    const a = await signedIn("link-inv");
+    const who = email("link-invitee");
+    await handleApi(req("POST", "/api/users", { cookie: a.cookie, body: { email: who, name: "I" } }));
+    const r = await link(linkToken({ email: who }));
+    const body = (await r.json()) as { invite?: { workspace: string } };
+    expect(body.invite?.workspace).toBe("link-inv Inc");
+    expect(cookieOf(r)).toBe("");
+  });
+
+  test("sign-in POSTs must be JSON and same-origin (no login CSRF)", async () => {
+    const form = await handleApi(
+      new Request("http://localhost/api/hosted/link-verify", {
+        method: "POST",
+        headers: { "content-type": "text/plain" },
+        body: JSON.stringify({ access_token: linkToken({ email: email("csrf") }) }),
+      }),
+    );
+    expect(form.status).toBe(415);
+    const cross = await handleApi(
+      new Request("http://localhost/api/hosted/link-verify", {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: "https://evil.example" },
+        body: JSON.stringify({ access_token: linkToken({ email: email("csrf2") }) }),
+      }),
+    );
+    expect(cross.status).toBe(403);
   });
 });

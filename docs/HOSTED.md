@@ -43,10 +43,11 @@ chooses to join; they can create their own workspace instead.
 1. **Supabase**: create a new project.
    - Database URL: Project Settings, Database, Connection string, **Transaction pooler** (port 6543) → `DATABASE_URL`.
    - Project URL and **anon** key: Project Settings, API → `SUPABASE_URL`, `SUPABASE_ANON_KEY`.
-   - Authentication, Emails, Templates: put `{{ .Token }}` in both **Confirm signup** (first sign-in) and **Magic Link** (returning users), so the email carries a code.
+   - Authentication, URL Configuration: add `APP_URL/auth/callback` (exact, no wildcards) to **Redirect URLs**. People sign in by clicking the emailed link.
+   - Optional, needs custom SMTP first: put `{{ .Token }}` in **Confirm signup** and **Magic Link** so the email also carries a typed code.
    - Authentication, SMTP: connect a sender (e.g. Resend). Supabase's built-in sender only allows a few emails an hour, which a launch will exceed.
 2. **Vercel**: import the repo (root directory: repo root) and set
-   `HOSTED_MODE=true`, `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`,
+   `HOSTED_MODE=true`, `APP_URL` (the public URL), `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`,
    one AI key (`ANTHROPIC_API_KEY` or `GEMINI_API_KEY`), `LLM_DAILY_BUDGET_USD`,
    and `CRON_SECRET`. The production build runs `bun run db:migrate`, which creates
    the `control` schema and migrates every workspace.
