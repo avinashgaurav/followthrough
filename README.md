@@ -5,8 +5,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Bun](https://img.shields.io/badge/Bun-1.3+-fbf0df?logo=bun&logoColor=black)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-452%20passing-brightgreen.svg)](docs/SETUP.md#development)
-[![LLM: Claude](https://img.shields.io/badge/LLM-Claude-d97757.svg)](https://www.anthropic.com/)
+[![Tests](https://img.shields.io/badge/tests-477%20passing-brightgreen.svg)](docs/SETUP.md#development)
+[![LLM: Gemini, Claude or OpenRouter](https://img.shields.io/badge/LLM-Gemini%20%7C%20Claude%20%7C%20OpenRouter-d97757.svg)](docs/SETUP.md)
 
 </div>
 
@@ -22,14 +22,14 @@ A client asks for a feature on a call, it ships weeks later, and nobody tells th
 
 Click a poster to play it on the site.
 
-- **Launch video** (36 s): the problem in three lines, then every ask cited to the client's exact words, a person confirming it shipped, how fast the loop closes, and the free sign-up. [Or download the MP4](https://github.com/avinashgaurav/followthrough/releases/download/videos-2026-11-04-signup/FollowThrough-launch.mp4).
-- **Walkthrough** (48 s): the live demo on fictional data: Home, Review, the Library, one ask with the client's quote, a client page, Confirm shipped, Speed and Ask, ending on the free sign-up form. [Or download the MP4](https://github.com/avinashgaurav/followthrough/releases/download/videos-2026-11-04-signup/FollowThrough-walkthrough.mp4).
+- **Launch video** (36 s): the problem in three lines, then every ask cited to the client's exact words, a person confirming it shipped, how fast the loop closes, and the free sign-up (reopening soon). [Or download the MP4](https://github.com/avinashgaurav/followthrough/releases/download/videos-2026-11-04-signup/FollowThrough-launch.mp4).
+- **Walkthrough** (48 s): the live demo on fictional data: Home, Review, the Library, one ask with the client's quote, a client page, Confirm shipped, Speed and Ask, ending on the free sign-up form (sign-ups reopening soon). [Or download the MP4](https://github.com/avinashgaurav/followthrough/releases/download/videos-2026-11-04-signup/FollowThrough-walkthrough.mp4).
 
 ## Try it
 
-**Start free:** https://followthrough-hosted.vercel.app. Sign up with an email and a password, name your company or product, and paste in a real call. Your first 5 meetings are free.
+**Look around now:** the read-only demo at https://followthrough-demo-neon.vercel.app uses fictional meetings, needs no login, and saves nothing.
 
-**Or look around first:** the read-only demo at https://followthrough-demo-neon.vercel.app uses fictional meetings, needs no login, and saves nothing.
+**Start free (reopening soon):** sign-ups on the hosted app at https://followthrough-hosted.vercel.app are paused for a security update. Once they reopen, you sign up with an email and a password, name your company or product, and paste in a real call. Your first 5 meetings are free.
 
 1. **Home:** what needs you now, and the pipeline from found to client told.
 2. **Review:** the asks found in each call, with the client's exact quote behind every one.
@@ -42,8 +42,8 @@ Or [run your own](#run-your-own).
 
 ## Good to know
 
-- **Works today:** sign up, capture by pasting a transcript, AI extraction with quotes, Review, Library, Ask, Confirm shipped, client pages and share links.
-- **Hosted app:** every sign-up gets its own private workspace (a separate database schema), 5 free meetings and a daily AI spend cap.
+- **Works today:** capture by pasting a transcript, AI extraction with quotes, Review, Library, Ask, Confirm shipped, client pages and share links.
+- **Hosted app (sign-ups paused for a security update):** every sign-up gets its own private workspace (a separate database schema), 5 free meetings and a daily AI spend cap.
 - **Emails are not verified yet,** and there is no password reset, because no email sender is connected ([#24](https://github.com/avinashgaurav/followthrough/issues/24)). Use an email you own: whoever proves the inbox (emailed link or code) gets the account and its workspace, and the password stops working. Teammate invites need email sending first.
 - **Your data:** transcripts go to the AI provider to find the asks; everything else stays in the app's database and file storage. Run your own copy to keep it all on your servers.
 - **Needs setup when you run your own:** an AI key, a first admin (`bun run seed` prints a one-time login code), audio transcription (a Deepgram key) and GitHub release matching (GitHub tokens).
