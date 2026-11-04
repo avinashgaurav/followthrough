@@ -10,15 +10,20 @@
 
 </div>
 
+A client asks for a feature on a call, it ships weeks later, and nobody tells the client; Followthrough tracks each ask from the client's exact words to "shipped" to "client told".
+
 ## Watch
 
 <p>
-  <a href="https://github.com/avinashgaurav/followthrough/releases/download/demo-videos-2026-11-04/FollowThrough-brag.mp4"><img src="docs/media/launch-video.png" height="270" alt="Launch video, 44 seconds"></a>
+  <a href="https://followthrough-eight.vercel.app/#watch"><img src="docs/media/launch-video.png" height="270" alt="Launch video, 44 seconds"></a>
   &nbsp;
-  <a href="https://github.com/avinashgaurav/followthrough/releases/download/demo-videos-2026-11-04/FollowThrough-user-journey.mp4"><img src="docs/media/user-journey.png" height="270" alt="User journey video, 86 seconds"></a>
+  <a href="https://followthrough-eight.vercel.app/#watch"><img src="docs/media/user-journey.png" height="270" alt="User journey video, 86 seconds"></a>
 </p>
 
-**Launch video** (44 s) and **user journey** (86 s), from signing in to the client's share page. Both are also on the [release page](https://github.com/avinashgaurav/followthrough/releases/tag/demo-videos-2026-11-04).
+Click a poster to play it on the site.
+
+- **Launch video** (44 s): The problem in three lines, then the loop: paste in the call, no quote means no item, a person signs off, proof it shipped, ask your meetings, tell the client. Ends with the test result on 4 new made-up calls: 100% of flagged items right, 76% of expected items found. [Or download the MP4](https://github.com/avinashgaurav/followthrough/releases/download/demo-videos-2026-11-04/FollowThrough-brag.mp4).
+- **User journey** (86 s): Ten steps on fictional data: sign in, Home, Review, Library and search, Ask, Confirm shipped, client page, Capture, the AI pulling out the asks, and the client's share page. Ends with what needs setup. [Or download the MP4](https://github.com/avinashgaurav/followthrough/releases/download/demo-videos-2026-11-04/FollowThrough-user-journey.mp4).
 
 ## Try it
 
@@ -31,15 +36,13 @@ Open the read-only demo at https://followthrough-demo-neon.vercel.app. It uses f
 5. **Confirm shipped:** releases matched to the client asks they close, with changelog evidence.
 6. **A client's share page** (from Clients): what they asked for and what shipped.
 
-Want to paste in your own call? [Ask for a login](https://github.com/avinashgaurav/followthrough/issues/new?title=Demo%20login%20request), or [run your own](#run-your-own).
+Want to paste in your own call? [Ask for a login](https://github.com/avinashgaurav/followthrough/issues/new?title=Demo%20login%20request&body=I%27d%20like%20a%20login%20to%20the%20hosted%20demo%20so%20I%20can%20paste%20in%20my%20own%20call.%0A%0ANo%20need%20to%20post%20your%20email%3B%20we%27ll%20reply%20on%20this%20issue.) to the hosted demo and paste it in there. No need to post your email; we'll reply on the issue. Or [run your own](#run-your-own).
 
 ## Good to know
 
-- **Live on the hosted app:** capture by pasting a transcript, AI extraction with quotes, Review, Library, Ask, Confirm shipped, client pages and share links.
-- **The read-only demo shows all of it** with fictional data.
+- **Works today:** capture by pasting a transcript, AI extraction with quotes, Review, Library, Ask, Confirm shipped, client pages and share links.
+- **The read-only demo:** shows the results with fictional data. Pasting your own call and asking new questions need a login or your own copy.
 - **Needs setup when you run your own:** audio transcription (a Deepgram key), GitHub release matching (GitHub tokens), and sign-in codes, which an admin issues.
-
-A client asks for a feature on a call, it ships weeks later, and nobody tells the client; Followthrough tracks each ask from the client's exact words to "shipped" to "client told".
 
 > [!TIP]
 > **In pilot:** a sales team is trying followthrough on its own client calls.
