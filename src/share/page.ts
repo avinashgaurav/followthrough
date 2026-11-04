@@ -58,7 +58,9 @@ export function formatHtml(clientName: string, shipped: ShippedItem[], inFlightT
 
   const headline =
     shipped.length === 0
-      ? "The first items from our conversations are in flight — this page updates as they ship."
+      ? inFlightTitles.length > 0
+        ? "We are working on what you asked for. This page updates as items ship."
+        : "This page shows what we ship from your requests, as it ships."
       : `We shipped ${shipped.length} ${shipped.length === 1 ? "request" : "requests"} you raised${
           med !== null ? `, typically <strong>${med} ${med === 1 ? "day" : "days"}</strong> from when you asked to when it shipped` : ""
         }.`;
@@ -139,7 +141,7 @@ export function formatHtml(clientName: string, shipped: ShippedItem[], inFlightT
   <p class="sub">${headline}</p>
 
   <div class="lbl">Shipped</div>
-  ${shipped.length > 0 ? `<ul>${rows}</ul>` : `<div class="empty">The first items from our conversations are in flight — this page updates as they ship.</div>`}
+  ${shipped.length > 0 ? `<ul>${rows}</ul>` : `<div class="empty">Nothing shipped yet.</div>`}
 
   ${
     inFlightTitles.length > 0

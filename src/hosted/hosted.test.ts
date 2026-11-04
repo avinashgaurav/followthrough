@@ -566,6 +566,18 @@ describe("link sign-in", () => {
     expect((await handleApi(req("POST", "/api/hosted/link-verify", { body: hash }))).status).toBe(401);
   });
 
+  test("a link whose sign-in fails on our side can be retried", async () => {
+    const who = email("link-retry");
+    const hash = { token_hash: `hash-ok:${who}` };
+    await db.exec("ALTER TABLE control.pending_signups RENAME TO pending_away;");
+    try {
+      expect((await handleApi(req("POST", "/api/hosted/link-verify", { body: hash }))).status).toBe(500);
+    } finally {
+      await db.exec("ALTER TABLE control.pending_away RENAME TO pending_signups;");
+    }
+    expect((await handleApi(req("POST", "/api/hosted/link-verify", { body: hash }))).status).toBe(200);
+  });
+
   test("token-hash links are checked with Supabase on the server; odd types are refused", async () => {
     const who = email("link-hash");
     const r = await handleApi(req("POST", "/api/hosted/link-verify", { body: { token_hash: `hash-ok:${who}` } }));
@@ -789,6 +801,26 @@ describe("email + password sign-up", () => {
     expect((await signup({ email: email("pw-weak3"), password: "1q2w3e4r5t", product_name: "W" })).status).toBe(400);
     const who = email("longlocalpart");
     expect((await signup({ email: who, password: `${who.split("@")[0]}!!`, product_name: "W" })).status).toBe(400);
+  });
+
+  test("an invalid email gets its own message", async () => {
+    const r = await signup({ email: "a@b", password: PW, product_name: "X" });
+    expect(r.status).toBe(400);
+    expect(((await r.json()) as { error: string }).error).toBe("Enter a valid email address.");
+  });
+
+  test("sign-ups paused by the operator's trigger answer 503 with its message", async () => {
+    await db.exec(`
+      CREATE OR REPLACE FUNCTION control.test_pause() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN RAISE EXCEPTION 'Sign-ups are paused for maintenance.'; END $$;
+      CREATE TRIGGER test_pause BEFORE INSERT ON control.workspaces FOR EACH ROW EXECUTE FUNCTION control.test_pause();`);
+    try {
+      const r = await signup({ email: email("pw-paused"), password: PW, product_name: "Paused" });
+      expect(r.status).toBe(503);
+      expect(((await r.json()) as { error: string }).error).toBe("Sign-ups are paused for maintenance.");
+    } finally {
+      await db.exec("DROP TRIGGER test_pause ON control.workspaces; DROP FUNCTION control.test_pause();");
+    }
   });
 
   test("cross-site sign-up is refused", async () => {

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { api } from "../api";
+import { api, QUOTA_CHANGED } from "../api";
 import { useAuth } from "../auth";
 import { CommandPalette } from "./CommandPalette";
 import { SHORTCUTS, useShortcuts } from "./shortcuts";
@@ -106,13 +106,21 @@ export function Shell() {
   const { user, demo, hosted } = useAuth();
   const location = useLocation();
   const [quota, setQuota] = useState<{ used: number; total: number } | null>(null);
+  const [quotaTick, setQuotaTick] = useState(0);
   useEffect(() => {
     if (!hosted) return;
     api
       .workspace()
       .then((w) => setQuota({ used: w.meetings_used, total: w.meetings_quota }))
       .catch(() => {});
-  }, [hosted, location.pathname]);
+  }, [hosted, location.pathname, quotaTick]);
+  // Pages that spend a free meeting say so (QUOTA_CHANGED), so the counter is
+  // current without navigating.
+  useEffect(() => {
+    const bump = () => setQuotaTick((n) => n + 1);
+    window.addEventListener(QUOTA_CHANGED, bump);
+    return () => window.removeEventListener(QUOTA_CHANGED, bump);
+  }, []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const isAdmin = user?.role === "admin";
@@ -174,7 +182,7 @@ export function Shell() {
             aria-label="Open command palette"
           >
             <span aria-hidden="true">&#8981;</span>
-            <span>Search insights, clients, transcripts</span>
+            <span className="search-label">Search insights, clients, transcripts</span>
             <span className="kbd">Cmd K</span>
           </button>
           <div className="right">

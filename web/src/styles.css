@@ -313,6 +313,22 @@ button {
   margin-left: auto;
 }
 
+/* One line at any width: the label truncates instead of wrapping. */
+.search {
+  min-width: 0;
+}
+.search .search-label {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+@media (max-width: 480px) {
+  .search .kbd {
+    display: none;
+  }
+}
+
 .kbd {
   font-family: var(--mono);
   font-size: 9.5px;

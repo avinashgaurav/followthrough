@@ -2,7 +2,7 @@ import { getDb } from "./db.ts";
 import { userForSession, readSessionCookie, guestUser, type AuthedUser } from "./auth.ts";
 import { authRequired } from "./settings.ts";
 import { demoBlocks, DEMO_BLOCKED_MESSAGE } from "./demo.ts";
-import { LLMBudgetError, LLMRateLimitError } from "./llm/provider.ts";
+import { isAIConfigError, LLMBudgetError, LLMRateLimitError } from "./llm/provider.ts";
 
 export type Handler = (
   req: Request,
@@ -70,6 +70,16 @@ export async function dispatch(req: Request): Promise<Response | null> {
     }
     return Promise.resolve(r.handler(req, user, params)).catch((err: unknown) => {
       if (err instanceof LLMBudgetError) return json({ error: err.message, kind: "budget" }, 503);
+      if (isAIConfigError(err)) {
+        console.error(
+          `${req.method} ${url.pathname}: the AI provider rejected this server's API key (check ANTHROPIC_API_KEY / GEMINI_API_KEY / OPENROUTER_API_KEY):`,
+          (err as Error).message,
+        );
+        return json(
+          { error: "AI isn't configured on this server: the AI provider rejected its API key. The operator needs to fix it.", kind: "ai_config" },
+          503,
+        );
+      }
       if (err instanceof LLMRateLimitError) {
         return json({ error: "The AI provider is rate limited right now. Try again in a minute.", kind: "rate_limit" }, 503);
       }

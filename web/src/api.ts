@@ -2,6 +2,9 @@
 // module so any backend field drift gets fixed in one file at integration time.
 // Response shapes are typed loosely (optional fields) and pages render defensively.
 
+/** Window event: a free hosted meeting was just used, so the header counter refetches. */
+export const QUOTA_CHANGED = "ft:quota-changed";
+
 export class ApiError extends Error {
   status: number;
   data: unknown;

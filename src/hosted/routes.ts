@@ -18,7 +18,9 @@ import { COMMON_PASSWORDS } from "./common-passwords.ts";
 import {
   AlreadyMemberError,
   SignupsFullError,
+  SignupsPausedError,
   claimLinkUse,
+  releaseLinkUse,
   controlHitCount,
   isUnverifiedClaim,
   promoteUnverifiedClaim,
@@ -315,7 +317,12 @@ route("POST", "/api/hosted/link-verify", "public", async (req) => {
   if (!(await claimLinkUse(db, proof.useKey))) {
     return json({ error: "That sign-in link was already used. Request a new one." }, 401);
   }
-  return completeSignIn(req, proof.email);
+  try {
+    return await completeSignIn(req, proof.email);
+  } catch (err) {
+    await releaseLinkUse(db, proof.useKey).catch(() => {});
+    throw err;
+  }
 });
 
 route("POST", "/api/hosted/create-workspace", "public", async (req) => {
@@ -343,6 +350,7 @@ route("POST", "/api/hosted/create-workspace", "public", async (req) => {
     if (err instanceof SignupsFullError) {
       return json({ error: "Sign-ups are full for now. Star the repo on GitHub and self-host it today." }, 403);
     }
+    if (err instanceof SignupsPausedError) return json({ error: err.message }, 503);
     if (err instanceof AlreadyMemberError) return json({ error: "That email already has a workspace. Sign in instead." }, 409);
     throw err;
   }
@@ -460,11 +468,13 @@ route("POST", "/api/hosted/password-signup", "public", async (req) => {
   if (refused) return refused;
   const body = PasswordSignupSchema.safeParse(await readJson(req));
   if (!body.success) {
-    const pw = body.error.issues.some((i) => i.path[0] === "password");
-    return json(
-      { error: pw ? "Use a password of at least 10 characters." : "Enter your email, a password and your company or product." },
-      400,
-    );
+    const field = (name: string) => body.error.issues.some((i) => i.path[0] === name);
+    const error = field("email")
+      ? "Enter a valid email address."
+      : field("password")
+        ? "Use a password of at least 10 characters."
+        : "Enter your email, a password and your company or product.";
+    return json({ error }, 400);
   }
   const { email, password } = body.data;
   if (weakPassword(password, email)) {
@@ -496,6 +506,7 @@ route("POST", "/api/hosted/password-signup", "public", async (req) => {
     if (err instanceof SignupsFullError) {
       return json({ error: "Sign-ups are full for now. Star the repo on GitHub and self-host it today." }, 403);
     }
+    if (err instanceof SignupsPausedError) return json({ error: err.message }, 503);
     if (err instanceof AlreadyMemberError) return json({ error: "That email already has an account. Sign in instead." }, 409);
     throw err;
   }

@@ -6,6 +6,7 @@ import {
   attachAudio,
   MEETING_SOURCES,
   MEETING_TYPES,
+  QUOTA_CHANGED,
   type CalendarEvent,
   type Client,
   type Meeting,
@@ -24,6 +25,7 @@ import {
   Tooltip,
   useToast,
 } from "../components/ui";
+import { useAuth } from "../auth";
 import { ageOf, formatDate, formatDateTime, titleCase, meetingStatusLabel } from "../format";
 
 // ============================================================ helpers (local to this page)
@@ -66,6 +68,7 @@ type Path = "calendar" | "manual";
 
 export function Capture() {
   const navigate = useNavigate();
+  const { hosted } = useAuth();
   const toast = useToast();
   const [searchParams] = useSearchParams();
 
@@ -146,15 +149,18 @@ export function Capture() {
   useEffect(() => {
     void loadClients();
     void loadRecent();
-    api
-      .calendarStatus()
-      .then((r) => setCalConfigured(!!r?.configured))
-      .catch(() => setCalConfigured(false));
+    // Calendar feeds are off on the hosted app (the route 404s there).
+    if (hosted) setCalConfigured(false);
+    else
+      api
+        .calendarStatus()
+        .then((r) => setCalConfigured(!!r?.configured))
+        .catch(() => setCalConfigured(false));
     api
       .sttStatus()
       .then((r) => setSttOk(!!(r?.ok ?? r?.available ?? r?.enabled)))
       .catch(() => setSttOk(false));
-  }, [loadClients, loadRecent]);
+  }, [loadClients, loadRecent, hosted]);
 
   const clientMeetingCount = useCallback((c: Client): number | undefined => {
     const v = c.meetings_count ?? c.meeting_count;
@@ -268,6 +274,7 @@ export function Capture() {
         }
         setCreatedMeeting(meeting);
         setDuplicate(!!res?.duplicate);
+        window.dispatchEvent(new Event(QUOTA_CHANGED));
         setHadAudioOnly(audioOnly && !res?.duplicate);
         if (res?.duplicate) {
           toast.push("That meeting was already in the system.", "info");

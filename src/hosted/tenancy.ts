@@ -22,6 +22,8 @@ export interface Workspace {
 }
 
 export class SignupsFullError extends Error {}
+/** The operator paused sign-ups with a database trigger whose message starts "Sign-ups are paused". */
+export class SignupsPausedError extends Error {}
 export class AlreadyMemberError extends Error {}
 
 export function schemaFor(workspaceId: string): string {
@@ -169,7 +171,9 @@ export async function createWorkspace(
   } catch (err) {
     await db.exec(`DROP SCHEMA IF EXISTS ${schema} CASCADE;`).catch(() => {});
     // Two sign-ups for one email racing: the loser hits the members key.
-    if (/duplicate key|unique/i.test(String((err as Error)?.message ?? err))) throw new AlreadyMemberError(email);
+    const message = String((err as Error)?.message ?? err);
+    if (/duplicate key|unique/i.test(message)) throw new AlreadyMemberError(email);
+    if (/^Sign-ups are paused/.test(message)) throw new SignupsPausedError(message);
     throw err;
   }
   return { workspace: (await getWorkspace(db, id))!, userId };
@@ -388,6 +392,11 @@ export async function claimLinkUse(db: Database, key: string, ttlMs = 24 * 3_600
     .query("INSERT INTO control.used_links (key, expires_at) VALUES (?, ?) ON CONFLICT (key) DO NOTHING RETURNING key")
     .run(key, new Date(Date.now() + ttlMs).toISOString());
   return r.rows.length > 0;
+}
+
+/** Gives a link back when the sign-in it started failed on our side (it can be retried). */
+export async function releaseLinkUse(db: Database, key: string): Promise<void> {
+  await db.query("DELETE FROM control.used_links WHERE key = ?").run(key);
 }
 
 /** Counts hits without recording one (failure-only lockouts). */

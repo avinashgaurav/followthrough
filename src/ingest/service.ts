@@ -152,7 +152,10 @@ export async function getClientDetail(db: Database, clientId: string): Promise<R
        ORDER BY priority DESC, created_at`,
     )
     .all(clientId);
-  return { client, contacts, meetings, open_insights: openInsights };
+  const { n: insightsTotal } = (await db.query("SELECT COUNT(*) AS n FROM insights WHERE client_id = ?").get(clientId)) as {
+    n: number;
+  };
+  return { client, contacts, meetings, open_insights: openInsights, insights_total: insightsTotal };
 }
 
 export async function addContact(
