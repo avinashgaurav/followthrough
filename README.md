@@ -15,15 +15,15 @@ A client asks for a feature on a call, it ships weeks later, and nobody tells th
 ## Watch
 
 <p>
-  <a href="https://followthrough-eight.vercel.app/#watch"><img src="docs/media/launch-video.png" height="270" alt="Launch video, 44 seconds"></a>
+  <a href="https://followthrough-eight.vercel.app/#watch"><img src="docs/media/launch.png" height="230" alt="Launch video, 36 seconds"></a>
   &nbsp;
-  <a href="https://followthrough-eight.vercel.app/#watch"><img src="docs/media/user-journey.png" height="270" alt="User journey video, 86 seconds"></a>
+  <a href="https://followthrough-eight.vercel.app/#watch"><img src="docs/media/walkthrough.png" height="230" alt="Walkthrough video, 48 seconds"></a>
 </p>
 
 Click a poster to play it on the site.
 
-- **Launch video** (44 s): The problem in three lines, then the loop: paste in the call, no quote means no item, a person signs off, proof it shipped, ask your meetings, tell the client. Ends with the test result on 4 new made-up calls: 100% of flagged items right, 76% of expected items found. [Or download the MP4](https://github.com/avinashgaurav/followthrough/releases/download/demo-videos-2026-11-04/FollowThrough-brag.mp4).
-- **User journey** (86 s): Ten steps on fictional data: sign in, Home, Review, Library and search, Ask, Confirm shipped, client page, Capture, the AI pulling out the asks, and the client's share page. Ends with what needs setup. [Or download the MP4](https://github.com/avinashgaurav/followthrough/releases/download/demo-videos-2026-11-04/FollowThrough-user-journey.mp4).
+- **Launch video** (36 s): the problem in three lines, then every ask cited to the client's exact words, a person confirming it shipped, how fast the loop closes, and the free sign-up. [Or download the MP4](https://github.com/avinashgaurav/followthrough/releases/download/videos-2026-11-04-signup/FollowThrough-launch.mp4).
+- **Walkthrough** (48 s): the live demo on fictional data: Home, Review, the Library, one ask with the client's quote, a client page, Confirm shipped, Speed and Ask, ending on the free sign-up form. [Or download the MP4](https://github.com/avinashgaurav/followthrough/releases/download/videos-2026-11-04-signup/FollowThrough-walkthrough.mp4).
 
 ## Try it
 
