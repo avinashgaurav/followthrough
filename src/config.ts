@@ -51,6 +51,10 @@ const EnvSchema = z.object({
   HOSTED_MODE: z.string().optional(),
   SUPABASE_URL: z.string().optional(),
   SUPABASE_ANON_KEY: z.string().optional(),
+  // The hosted app's public origin, e.g. https://followthrough-hosted.vercel.app.
+  // Emailed sign-in links return here; required in hosted mode (never derived
+  // from a request's Host header).
+  APP_URL: z.string().url().optional(),
   // Meetings each new workspace may process on this deployment's AI key.
   FREE_MEETINGS_PER_WORKSPACE: z.coerce.number().int().min(0).default(5),
   // Hard cap on sign-ups, so a launch spike cannot outgrow the AI budget.

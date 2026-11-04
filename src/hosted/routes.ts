@@ -63,9 +63,30 @@ function blockedWhenHosted(method: string, path: string): boolean {
   return false;
 }
 
-/** Where emailed links send people back: APP_URL if set, else this request's origin. */
-function appOrigin(req: Request): string {
-  return (process.env.APP_URL || new URL(req.url).origin).replace(/\/+$/, "");
+/** Where emailed links send people back. Configured, never taken from a request. */
+function appOrigin(): string | null {
+  return env.APP_URL ? new URL(env.APP_URL).origin : null;
+}
+
+/**
+ * Sign-in POSTs must be JSON from the app's own pages: no cross-site form can
+ * sign a browser into someone else's workspace (login CSRF). Requests without
+ * an Origin header (non-browser clients) are allowed; a mismatched one is not.
+ */
+function crossSiteRefusal(req: Request): Response | null {
+  if (!(req.headers.get("content-type") ?? "").toLowerCase().startsWith("application/json")) {
+    return json({ error: "Send JSON." }, 415);
+  }
+  const origin = req.headers.get("origin");
+  const app = appOrigin();
+  if (origin && app && origin !== app) return json({ error: "Cross-site request refused." }, 403);
+  return null;
+}
+
+/** Throttle key for the caller's IP, or null (skip the IP bucket) when it is unknown. */
+function ipKey(prefix: string, req: Request): string | null {
+  const ip = clientIp(req);
+  return ip ? `${prefix}:${ip}` : null;
 }
 
 function secure(req: Request): boolean {
@@ -136,18 +157,22 @@ route("GET", "/api/hosted/config", "public", async () => {
 route("POST", "/api/hosted/send-code", "public", async (req) => {
   const off = hostedOnly();
   if (off) return off;
+  const refused = crossSiteRefusal(req);
+  if (refused) return refused;
+  const origin = appOrigin();
+  if (!origin) return json({ error: "Sign-in is not configured (APP_URL)." }, 503);
   const body = EmailSchema.safeParse(await readJson(req));
   if (!body.success) return json({ error: "Enter a valid email address." }, 400);
   const db = getDb();
-  const ip = clientIp(req) ?? "unknown";
+  const ipBucket = ipKey("code-ip", req);
   if (
-    (await controlRateLimited(db, `code-ip:${ip}`, 10, HOUR)) ||
+    (ipBucket && (await controlRateLimited(db, ipBucket, 10, HOUR))) ||
     (await controlRateLimited(db, `code-email:${body.data.email}`, 5, HOUR))
   ) {
     return json({ error: "Too many codes requested. Try again in an hour." }, 429);
   }
   try {
-    await sendCode(body.data.email, authFetch, `${appOrigin(req)}/auth/callback`);
+    await sendCode(body.data.email, authFetch, `${origin}/auth/callback`);
   } catch (err) {
     if (err instanceof AuthProviderError) return json({ error: err.message }, err.status);
     throw err;
@@ -158,13 +183,16 @@ route("POST", "/api/hosted/send-code", "public", async (req) => {
 route("POST", "/api/hosted/verify", "public", async (req) => {
   const off = hostedOnly();
   if (off) return off;
+  const refused = crossSiteRefusal(req);
+  if (refused) return refused;
   const body = VerifySchema.safeParse(await readJson(req));
   if (!body.success) return json({ error: "Enter the code from the email." }, 400);
   const db = getDb();
   const { email, code } = body.data;
+  const ipBucket = ipKey("verify-ip", req);
   if (
     (await controlRateLimited(db, `verify:${email}`, 10, HOUR)) ||
-    (await controlRateLimited(db, `verify-ip:${clientIp(req) ?? "unknown"}`, 30, HOUR))
+    (ipBucket && (await controlRateLimited(db, ipBucket, 30, HOUR)))
   ) {
     return json({ error: "Too many attempts. Request a new code in an hour." }, 429);
   }
@@ -213,10 +241,13 @@ async function completeSignIn(req: Request, email: string): Promise<Response> {
 route("POST", "/api/hosted/link-verify", "public", async (req) => {
   const off = hostedOnly();
   if (off) return off;
+  const refused = crossSiteRefusal(req);
+  if (refused) return refused;
   const body = z.object({ access_token: z.string().min(20).max(4096) }).safeParse(await readJson(req));
   if (!body.success) return json({ error: "That sign-in link is incomplete. Request a new one." }, 400);
   const db = getDb();
-  if (await controlRateLimited(db, `link-ip:${clientIp(req) ?? "unknown"}`, 30, HOUR)) {
+  const ipBucket = ipKey("link-ip", req);
+  if (ipBucket && (await controlRateLimited(db, ipBucket, 30, HOUR))) {
     return json({ error: "Too many attempts. Try again in an hour." }, 429);
   }
   let email: string | null;
@@ -233,6 +264,8 @@ route("POST", "/api/hosted/link-verify", "public", async (req) => {
 route("POST", "/api/hosted/create-workspace", "public", async (req) => {
   const off = hostedOnly();
   if (off) return off;
+  const refused = crossSiteRefusal(req);
+  if (refused) return refused;
   const body = CreateSchema.safeParse(await readJson(req));
   if (!body.success) return json({ error: "Name your company or product (up to 80 characters)." }, 400);
   const db = getDb();
@@ -276,6 +309,8 @@ async function declineInvite(m: Membership, email: string): Promise<void> {
 route("POST", "/api/hosted/accept-invite", "public", async (req) => {
   const off = hostedOnly();
   if (off) return off;
+  const refused = crossSiteRefusal(req);
+  if (refused) return refused;
   const body = z.object({ signup_token: z.string().min(20) }).safeParse(await readJson(req));
   if (!body.success) return json({ error: "Request a new code." }, 400);
   const pending = await takeSignupToken(body.data.signup_token);

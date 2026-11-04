@@ -116,7 +116,7 @@ export function HostedLogin({ freeMeetings, resume }: { freeMeetings: number; re
               If the email shows a code instead, type it here.
             </p>
             <Field label="Code (optional)" htmlFor="h-code">
-              <input id="h-code" className="ctrl mono" inputMode="numeric" autoComplete="one-time-code" required value={code} onChange={(e) => setCode(e.target.value)} />
+              <input id="h-code" className="ctrl mono" inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(e) => setCode(e.target.value)} />
             </Field>
             <div className="form-actions" style={{ display: "flex", gap: 8 }}>
               <Btn variant="primary" type="submit" disabled={busy}>

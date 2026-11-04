@@ -10,7 +10,13 @@ import { HostedLogin, type SignInResume } from "./HostedLogin";
  * token in the URL fragment; the server checks it with Supabase and either
  * signs the person in or asks them to name their workspace (or accept an
  * invite). The fragment is cleared at once so the token is not left in history.
+ * Error text shown here is fixed: the fragment is attacker-editable, so its
+ * free-text description is never displayed.
  */
+const LINK_ERRORS: Record<string, string> = {
+  otp_expired: "That sign-in link has expired or was already used.",
+  access_denied: "That sign-in link is no longer valid.",
+};
 export function AuthCallback() {
   const navigate = useNavigate();
   const { refresh } = useAuth();
@@ -20,15 +26,15 @@ export function AuthCallback() {
   const started = useRef(false);
 
   useEffect(() => {
-    // Run once: the token is single-use and the fragment is cleared below.
+    // Run once: the fragment (and its token) is cleared below.
     if (started.current) return;
     started.current = true;
     const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
     window.history.replaceState(null, "", window.location.pathname);
     const token = params.get("access_token");
     if (!token) {
-      const reason = params.get("error_description");
-      setError(reason ? `${reason.replace(/\+/g, " ")}. Request a new sign-in link.` : "That sign-in link is incomplete. Request a new one.");
+      const known = LINK_ERRORS[params.get("error_code") ?? ""] ?? LINK_ERRORS[params.get("error") ?? ""];
+      setError(`${known ?? "That sign-in link didn't work."} Request a new one.`);
       return;
     }
     api.hostedConfig().then((c) => setFree(c.free_meetings ?? 0)).catch(() => {});
