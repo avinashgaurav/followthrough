@@ -1,8 +1,12 @@
 -- Open sign-up with email + password (no email delivery yet, see issue #24).
--- The email is not verified: it is a login name. Accounts made this way can
--- never accept a teammate invite (that needs a proven inbox).
+-- The email is NOT verified: it is a login name. A password belongs to one
+-- membership (workspace + user) and dies with it (ON DELETE CASCADE), and a
+-- later verified sign-in for the same email evicts the unverified claim, so a
+-- password can never reach a workspace that someone else proved they own.
 CREATE TABLE IF NOT EXISTS control.credentials (
-  email         TEXT PRIMARY KEY,
+  email         TEXT PRIMARY KEY REFERENCES control.members(email) ON DELETE CASCADE,
+  workspace_id  TEXT NOT NULL,
+  user_id       TEXT NOT NULL,
   password_hash TEXT NOT NULL,
   created_at    TEXT NOT NULL,
   last_login_at TEXT

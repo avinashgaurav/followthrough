@@ -530,13 +530,64 @@ describe("email + password sign-up", () => {
     expect((await signup({ email: email("pw-noname"), password: PW, product_name: "" })).status).toBe(400);
   });
 
-  test("password guessing is throttled per email", async () => {
+  const loginFrom = (ip: string, body: Record<string, unknown>) =>
+    handleApi(
+      new Request("http://localhost/api/hosted/password-login", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-forwarded-for": ip },
+        body: JSON.stringify(body),
+      }),
+    );
+
+  test("failed guesses lock that email from that IP only; the owner elsewhere still gets in", async () => {
     const who = email("pw-guess");
     await signup({ email: who, password: PW, product_name: "G" });
     let last = 0;
-    for (let i = 0; i < 11; i++) last = (await login({ email: who, password: `guess-${i}-xxxx` })).status;
-    expect(last).toBe(429);
-    expect((await login({ email: who, password: PW })).status).toBe(429); // still locked for the window
+    for (let i = 0; i < 10; i++) last = (await loginFrom("203.0.113.7", { email: who, password: `guess-${i}-xxxx` })).status;
+    expect(last).toBe(401);
+    expect((await loginFrom("203.0.113.7", { email: who, password: PW })).status).toBe(429);
+    expect((await loginFrom("198.51.100.9", { email: who, password: PW })).status).toBe(200);
+  });
+
+  test("successful logins do not count toward a lockout", async () => {
+    const who = email("pw-ok-many");
+    await signup({ email: who, password: PW, product_name: "OK" });
+    for (let i = 0; i < 12; i++) expect((await loginFrom("192.0.2.44", { email: who, password: PW })).status).toBe(200);
+  });
+
+  test("a squatter's password account never receives the real owner who proves the inbox", async () => {
+    const who = email("pw-squat");
+    expect((await signup({ email: who, password: PW, product_name: "Squatter" })).status).toBe(201);
+    // The real owner signs in with the emailed link.
+    const r = await handleApi(req("POST", "/api/hosted/link-verify", { body: { access_token: linkToken({ email: who }) } }));
+    const body = (await r.json()) as { needs_workspace?: boolean };
+    expect(cookieOf(r)).toBe(""); // not signed into the squatter's workspace
+    expect(body.needs_workspace).toBe(true);
+    // The squatter's password is gone with the claim.
+    expect((await login({ email: who, password: PW })).status).toBe(401);
+    const cred = await db.query("SELECT COUNT(*) AS n FROM control.credentials WHERE email = ?").get(who);
+    expect((cred as { n: number }).n).toBe(0);
+  });
+
+  test("a password only opens the membership it was created with", async () => {
+    const who = email("pw-bound");
+    await signup({ email: who, password: PW, product_name: "Bound" });
+    // Simulate the email ending up attached to a different membership.
+    await db.query("UPDATE control.credentials SET user_id = 'SOMEONEELSE' WHERE email = ?").run(who);
+    expect((await login({ email: who, password: PW })).status).toBe(401);
+  });
+
+  test("an admin cannot revoke themselves (no orphaned password)", async () => {
+    const who = email("pw-selfrevoke");
+    const r = await signup({ email: who, password: PW, product_name: "Self" });
+    const me = (await (await handleApi(req("GET", "/api/me", { cookie: cookieOf(r) }))).json()) as { user: { id: string } };
+    expect((await handleApi(req("POST", `/api/users/${me.user.id}/revoke`, { cookie: cookieOf(r) }))).status).toBe(400);
+  });
+
+  test("easily guessed passwords are refused", async () => {
+    expect((await signup({ email: email("pw-weak"), password: "password123", product_name: "W" })).status).toBe(400);
+    const who = email("longlocalpart");
+    expect((await signup({ email: who, password: `${who.split("@")[0]}!!`, product_name: "W" })).status).toBe(400);
   });
 
   test("cross-site sign-up is refused", async () => {

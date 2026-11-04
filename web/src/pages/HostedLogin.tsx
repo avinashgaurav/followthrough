@@ -28,6 +28,7 @@ export function HostedLogin({ freeMeetings, resume }: { freeMeetings: number; re
   // Arriving from the emailed link: the email is already proven, go straight on.
   const [step, setStep] = useState<Step>(resume ? (resume.invite ? "invite" : "workspace") : "signup");
   const [password, setPassword] = useState("");
+  const [password2, setPassword2] = useState("");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [token, setToken] = useState(resume?.token ?? "");
@@ -82,6 +83,7 @@ export function HostedLogin({ freeMeetings, resume }: { freeMeetings: number; re
             onSubmit={(e) => {
               e.preventDefault();
               void run(async () => {
+                if (password !== password2) throw new Error("The two passwords don't match.");
                 await api.passwordSignup(email.trim(), password, product.trim(), what.trim() || undefined);
                 await done();
               });
@@ -92,6 +94,9 @@ export function HostedLogin({ freeMeetings, resume }: { freeMeetings: number; re
             </Field>
             <Field label="Password" htmlFor="s-password" hint="At least 10 characters. There is no password reset yet, so keep it safe.">
               <input id="s-password" className="ctrl" type="password" autoComplete="new-password" required minLength={10} value={password} onChange={(e) => setPassword(e.target.value)} />
+            </Field>
+            <Field label="Confirm password" htmlFor="s-password2">
+              <input id="s-password2" className="ctrl" type="password" autoComplete="new-password" required minLength={10} value={password2} onChange={(e) => setPassword2(e.target.value)} />
             </Field>
             <Field label="Company or product" htmlFor="s-product" hint="The AI frames every ask around it.">
               <input id="s-product" className="ctrl" required maxLength={80} placeholder="Acme" value={product} onChange={(e) => setProduct(e.target.value)} />

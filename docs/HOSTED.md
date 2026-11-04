@@ -63,7 +63,18 @@ its workspace are created at once. The email is not verified, so:
   workspace with the free quota and AI caps);
 - there is no password reset yet (it needs email);
 - password accounts never pass the invite path, and an email that already has
-  an account or a pending invite cannot be registered by password.
+  an account or a pending invite cannot be registered by password;
+- a password belongs to one membership and is deleted with it; if the real
+  owner of an email later proves their inbox (emailed link or code), the
+  unverified password account on that email is removed rather than handed to
+  them;
+- sign-up says when an email is already taken (accepted: without email there
+  is no non-revealing way to refuse);
+- limits: 10 sign-ups an hour per IP and 30 an hour overall; failed logins
+  lock an email for 15 minutes from that IP only (100 a day per email overall).
+
+Planned with #24: CAPTCHA on sign-up, removing never-used workspaces, password
+reset, and email verification for password accounts.
 
 The emailed-link sign-in stays in the code and works for everyone once SMTP is
 connected.
