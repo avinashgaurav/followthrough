@@ -854,15 +854,24 @@ export class ClaudeCliLLM implements LLM {
       stdin: new Blob([prompt]),
       stdout: "pipe",
       stderr: "pipe",
-      timeout: this.timeoutMs,
-      killSignal: "SIGKILL",
     });
-    const [out, err, code] = await Promise.all([
-      new Response(proc.stdout).text(),
-      new Response(proc.stderr).text(),
-      proc.exited,
-    ]);
-    if (proc.signalCode === "SIGKILL" && Date.now() - started >= this.timeoutMs) {
+    // Our own timer, so a kill is reported as a timeout only when we caused it.
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      proc.kill("SIGKILL");
+    }, this.timeoutMs);
+    let out: string, err: string, code: number;
+    try {
+      [out, err, code] = await Promise.all([
+        new Response(proc.stdout).text(),
+        new Response(proc.stderr).text(),
+        proc.exited,
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
+    if (timedOut) {
       throw new Error(`claude CLI timed out after ${this.timeoutMs / 1000} s and was killed`);
     }
     let r: {

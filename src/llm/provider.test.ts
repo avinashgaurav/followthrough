@@ -60,6 +60,16 @@ describe("claude-cli timeout", () => {
     expect(Date.now() - started).toBeLessThan(5_000);
   });
 
+  test("a kill it did not cause is not reported as a timeout", async () => {
+    const llm = new ClaudeCliLLM({ timeoutMs: 5_000, bin: fakeBin("kill -9 $$") });
+    const err = await llm.complete({ prompt: "hi" }).then(
+      () => null,
+      (e: Error) => e,
+    );
+    expect(err?.message).toMatch(/without a JSON result/);
+    expect(err?.message).not.toMatch(/timed out/);
+  });
+
   test("a call that finishes inside the timeout returns its result", async () => {
     const out = JSON.stringify({ result: "ok", usage: { input_tokens: 3, output_tokens: 1 }, total_cost_usd: 0 });
     const llm = new ClaudeCliLLM({ timeoutMs: 5_000, bin: fakeBin(`cat >/dev/null; echo '${out}'`) });
