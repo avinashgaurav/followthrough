@@ -91,6 +91,7 @@ bun run build:web && bun run start   # http://localhost:4500, open by default: t
 
 ## More
 
+- [Roadmap](docs/ROADMAP.md): what comes next, and which built features need keys to switch on
 - [docs/PRD.md](docs/PRD.md): product brief: user, problem, metrics, cost per meeting.
 - [EVALS.md](EVALS.md): how the tests were run, the results and every miss.
 - [docs/DESIGN-NOTES.md](docs/DESIGN-NOTES.md): screenshots, how it differs from a summarizer, and what each screen is for.
