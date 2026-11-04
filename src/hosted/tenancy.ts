@@ -1,8 +1,7 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { type Database, migrate, nowIso, withTenant, currentTenant } from "../db.ts";
 import { ulid } from "../ids.ts";
 import { env } from "../config.ts";
+import { CONTROL_MIGRATIONS } from "../migrations.generated.ts";
 
 /**
  * Hosted mode: one Postgres schema per workspace (ws_<id>), plus a small
@@ -10,8 +9,6 @@ import { env } from "../config.ts";
  * the free meeting quota. Every control query names its schema explicitly, so
  * it reads the same inside or outside withTenant().
  */
-
-const CONTROL_DIR = join(import.meta.dir, "..", "..", "migrations-control");
 
 export interface Workspace {
   id: string;
@@ -38,8 +35,8 @@ export function currentWorkspaceId(): string | null {
 }
 
 export async function migrateControl(db: Database): Promise<void> {
-  for (const file of readdirSync(CONTROL_DIR).filter((f) => f.endsWith(".sql")).sort()) {
-    await db.exec(readFileSync(join(CONTROL_DIR, file), "utf8"));
+  for (const m of CONTROL_MIGRATIONS) {
+    await db.exec(m.sql);
   }
 }
 
