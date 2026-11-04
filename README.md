@@ -12,7 +12,37 @@
 
 A client asks for a feature on a call, it ships weeks later, and nobody tells the client; Followthrough tracks each ask from the client's exact words to "shipped" to "client told".
 
-**Live demo:** https://followthrough-demo-neon.vercel.app (read-only, fictional meetings; run it yourself to process your own calls).
+## Watch
+
+<p>
+  <a href="https://followthrough-eight.vercel.app/#watch"><img src="docs/media/launch-video.png" height="270" alt="Launch video, 44 seconds"></a>
+  &nbsp;
+  <a href="https://followthrough-eight.vercel.app/#watch"><img src="docs/media/user-journey.png" height="270" alt="User journey video, 86 seconds"></a>
+</p>
+
+Click a poster to play it on the site.
+
+- **Launch video** (44 s): The problem in three lines, then the loop: paste in the call, no quote means no item, a person signs off, proof it shipped, ask your meetings, tell the client. Ends with the test result on 4 new made-up calls: 100% of flagged items right, 76% of expected items found. [Or download the MP4](https://github.com/avinashgaurav/followthrough/releases/download/demo-videos-2026-11-04/FollowThrough-brag.mp4).
+- **User journey** (86 s): Ten steps on fictional data: sign in, Home, Review, Library and search, Ask, Confirm shipped, client page, Capture, the AI pulling out the asks, and the client's share page. Ends with what needs setup. [Or download the MP4](https://github.com/avinashgaurav/followthrough/releases/download/demo-videos-2026-11-04/FollowThrough-user-journey.mp4).
+
+## Try it
+
+Open the read-only demo at https://followthrough-demo-neon.vercel.app. It uses fictional meetings, needs no login, and saves nothing you do.
+
+1. **Home:** what needs you now, and the pipeline from found to client told.
+2. **Review:** the asks found in each call, with the client's exact quote behind every one.
+3. **Library:** everything learned, searchable across transcripts and quotes.
+4. **Ask:** try an example question; the answer cites the meetings it came from.
+5. **Confirm shipped:** releases matched to the client asks they close, with changelog evidence.
+6. **A client's share page** (from Clients): what they asked for and what shipped.
+
+Want to paste in your own call? [Ask for a login](https://github.com/avinashgaurav/followthrough/issues/new?title=Demo%20login%20request&body=I%27d%20like%20a%20login%20to%20the%20hosted%20demo%20so%20I%20can%20paste%20in%20my%20own%20call.%0A%0ANo%20need%20to%20post%20your%20email%3B%20we%27ll%20reply%20on%20this%20issue.) to the hosted demo and paste it in there. No need to post your email; we'll reply on the issue. Or [run your own](#run-your-own).
+
+## Good to know
+
+- **Works today:** capture by pasting a transcript, AI extraction with quotes, Review, Library, Ask, Confirm shipped, client pages and share links.
+- **The read-only demo:** shows the results with fictional data. Pasting your own call and asking new questions need a login or your own copy.
+- **Needs setup when you run your own:** audio transcription (a Deepgram key), GitHub release matching (GitHub tokens), and sign-in codes, which an admin issues.
 
 > [!TIP]
 > **In pilot:** a sales team is trying followthrough on its own client calls.
@@ -42,9 +72,9 @@ A client asks for a feature on a call, it ships weeks later, and nobody tells th
 | Triage, reword, route and finalize; confirm a release really shipped an ask | A person (Review and Confirm shipped screens) | The client relationship is on the line, so a human signs off every outward step. |
 | Pipeline state, allowed transitions, and every turnaround time | Code (`src/events.ts`, `migrations/001_init.sql`, `src/metrics/queries.ts`) | Timings must be exact and auditable, so they come from an append-only event log. |
 
-## Quick start
+## Run your own
 
-Deploys to **Vercel with Supabase** (Postgres + file storage): import the repo, add Supabase from the Vercel Marketplace, set an AI key (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY` or `OPENROUTER_API_KEY`), `PRODUCT_NAME` and `CRON_SECRET`, and deploy. Step by step: [docs/SETUP.md](docs/SETUP.md).
+To process your own calls, run your own copy. It deploys to **Vercel with Supabase** (Postgres + file storage): import the repo, add Supabase from the Vercel Marketplace, set an AI key (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY` or `OPENROUTER_API_KEY`), `PRODUCT_NAME` and `CRON_SECRET`, and deploy. Step by step: [docs/SETUP.md](docs/SETUP.md).
 
 Locally, with [Bun](https://bun.sh) 1.3+ and a Postgres URL:
 
