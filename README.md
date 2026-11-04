@@ -10,9 +10,36 @@
 
 </div>
 
-A client asks for a feature on a call, it ships weeks later, and nobody tells the client; Followthrough tracks each ask from the client's exact words to "shipped" to "client told".
+## Watch
 
-**Live demo:** https://followthrough-demo-neon.vercel.app (read-only, fictional meetings; run it yourself to process your own calls).
+<p>
+  <a href="https://github.com/avinashgaurav/followthrough/releases/download/demo-videos-2026-11-04/FollowThrough-brag.mp4"><img src="docs/media/launch-video.png" height="270" alt="Launch video, 44 seconds"></a>
+  &nbsp;
+  <a href="https://github.com/avinashgaurav/followthrough/releases/download/demo-videos-2026-11-04/FollowThrough-user-journey.mp4"><img src="docs/media/user-journey.png" height="270" alt="User journey video, 86 seconds"></a>
+</p>
+
+**Launch video** (44 s) and **user journey** (86 s), from signing in to the client's share page. Both are also on the [release page](https://github.com/avinashgaurav/followthrough/releases/tag/demo-videos-2026-11-04).
+
+## Try it
+
+Open the read-only demo at https://followthrough-demo-neon.vercel.app. It uses fictional meetings, needs no login, and saves nothing you do.
+
+1. **Home:** what needs you now, and the pipeline from found to client told.
+2. **Review:** the asks found in each call, with the client's exact quote behind every one.
+3. **Library:** everything learned, searchable across transcripts and quotes.
+4. **Ask:** try an example question; the answer cites the meetings it came from.
+5. **Confirm shipped:** releases matched to the client asks they close, with changelog evidence.
+6. **A client's share page** (from Clients): what they asked for and what shipped.
+
+Want to paste in your own call? [Ask for a login](https://github.com/avinashgaurav/followthrough/issues/new?title=Demo%20login%20request), or [run your own](#run-your-own).
+
+## Good to know
+
+- **Live on the hosted app:** capture by pasting a transcript, AI extraction with quotes, Review, Library, Ask, Confirm shipped, client pages and share links.
+- **The read-only demo shows all of it** with fictional data.
+- **Needs setup when you run your own:** audio transcription (a Deepgram key), GitHub release matching (GitHub tokens), and sign-in codes, which an admin issues.
+
+A client asks for a feature on a call, it ships weeks later, and nobody tells the client; Followthrough tracks each ask from the client's exact words to "shipped" to "client told".
 
 > [!TIP]
 > **In pilot:** a sales team is trying followthrough on its own client calls.
@@ -42,9 +69,9 @@ A client asks for a feature on a call, it ships weeks later, and nobody tells th
 | Triage, reword, route and finalize; confirm a release really shipped an ask | A person (Review and Confirm shipped screens) | The client relationship is on the line, so a human signs off every outward step. |
 | Pipeline state, allowed transitions, and every turnaround time | Code (`src/events.ts`, `migrations/001_init.sql`, `src/metrics/queries.ts`) | Timings must be exact and auditable, so they come from an append-only event log. |
 
-## Quick start
+## Run your own
 
-Deploys to **Vercel with Supabase** (Postgres + file storage): import the repo, add Supabase from the Vercel Marketplace, set an AI key (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY` or `OPENROUTER_API_KEY`), `PRODUCT_NAME` and `CRON_SECRET`, and deploy. Step by step: [docs/SETUP.md](docs/SETUP.md).
+To process your own calls, run your own copy. It deploys to **Vercel with Supabase** (Postgres + file storage): import the repo, add Supabase from the Vercel Marketplace, set an AI key (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY` or `OPENROUTER_API_KEY`), `PRODUCT_NAME` and `CRON_SECRET`, and deploy. Step by step: [docs/SETUP.md](docs/SETUP.md).
 
 Locally, with [Bun](https://bun.sh) 1.3+ and a Postgres URL:
 
