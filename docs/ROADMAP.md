@@ -4,7 +4,7 @@ What comes next for Followthrough. Items are independent, so they can land in an
 
 ## Switch on more of what's built
 
-These features exist in the code and work once the hosted app has the right keys.
+These features exist in the code and work once the keys are set (when you run your own).
 
 | Feature | What it needs | Status |
 |---|---|---|
@@ -13,9 +13,9 @@ These features exist in the code and work once the hosted app has the right keys
 
 ## Accounts and email
 
-- **Password reset by email.** Needs a custom email provider (for example Resend) on the hosted app's Supabase project; Supabase's built-in sender only reaches the project team. [#12](https://github.com/avinashgaurav/followthrough/issues/12)
+- **Connect an email sender** for the hosted app. Emails aren't verified yet and there is no password reset, because no sender is connected. Once one is (for example Resend), confirmation emails, password reset and teammate invites follow. [#24](https://github.com/avinashgaurav/followthrough/issues/24), [#12](https://github.com/avinashgaurav/followthrough/issues/12)
 - **Sign-up protection:** CAPTCHA and a minimum password length of 8, set in Supabase > Authentication > Attack Protection.
-- **Hosted mode hardening:** a guard against running hosted mode on a shared database, and protection against code-request lockouts. [#22](https://github.com/avinashgaurav/followthrough/issues/22)
+- **Hosted mode hardening:** a guard against running hosted mode on a shared database, and protection against sign-in lockouts. [#22](https://github.com/avinashgaurav/followthrough/issues/22)
 
 ## Product
 
