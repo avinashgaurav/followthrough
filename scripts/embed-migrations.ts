@@ -13,7 +13,8 @@ export function readMigrations(dir: string): Array<{ name: string; sql: string }
   return readdirSync(join(root, dir))
     .filter((f) => f.endsWith(".sql"))
     .sort()
-    .map((name) => ({ name, sql: readFileSync(join(root, dir, name), "utf8") }));
+    // LF regardless of checkout, so the generated file is identical everywhere.
+    .map((name) => ({ name, sql: readFileSync(join(root, dir, name), "utf8").replace(/\r\n/g, "\n") }));
 }
 
 export function render(): string {

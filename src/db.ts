@@ -1,5 +1,4 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import { join } from "node:path";
 import postgres from "postgres";
 import { APP_MIGRATIONS } from "./migrations.generated.ts";
 
@@ -41,7 +40,6 @@ interface Executor {
   begin<T>(fn: (tx: Executor) => Promise<T>): Promise<T>;
   close(): Promise<void>;
 }
-
 
 /** `?` / `?N` placeholders to `$N`, leaving quoted strings, identifiers and comments alone. */
 export function toPgPlaceholders(sql: string): string {
@@ -225,7 +223,7 @@ export function getDb(): Database {
   return db;
 }
 
-/** Applies every migrations/*.sql in name order. Each file is idempotent. */
+/** Applies every migrations/*.sql (embedded, see scripts/embed-migrations.ts) in name order. Each is idempotent. */
 export async function migrate(target: Database = getDb()): Promise<void> {
   const schema = dbSchema();
   if (schema && target === db) await target.exec(`CREATE SCHEMA IF NOT EXISTS ${schema};`);

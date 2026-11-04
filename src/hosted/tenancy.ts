@@ -56,7 +56,7 @@ export async function assertExtensionsReady(db: Database): Promise<void> {
   if (row.polluted) throw new Error('Hosted mode found tables in the "extensions" schema; workspaces would share them. Move them out before serving.');
 }
 
-/** Applies migrations/*.sql to every workspace schema (run on deploy). */
+/** Applies migrations/*.sql (embedded) to every workspace schema (run on deploy). */
 export async function migrateAllWorkspaces(db: Database): Promise<number> {
   const all = (await db
     .query(
