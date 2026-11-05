@@ -22,14 +22,14 @@ A client asks for a feature on a call, it ships weeks later, and nobody tells th
 
 Click a poster to play it on the site.
 
-- **Launch video** (36 s): the problem in three lines, then every ask cited to the client's exact words, a person confirming it shipped, how fast the loop closes, and the free sign-up (reopening soon). [Or download the MP4](https://github.com/avinashgaurav/followthrough/releases/download/videos-2026-11-04-signup/FollowThrough-launch.mp4).
-- **Walkthrough** (48 s): the live demo on fictional data: Home, Review, the Library, one ask with the client's quote, a client page, Confirm shipped, Speed and Ask, ending on the free sign-up form (sign-ups reopening soon). [Or download the MP4](https://github.com/avinashgaurav/followthrough/releases/download/videos-2026-11-04-signup/FollowThrough-walkthrough.mp4).
+- **Launch video** (36 s): the problem in three lines, then every ask cited to the client's exact words, a person confirming it shipped, how fast the loop closes, and the free sign-up. [Or download the MP4](https://github.com/avinashgaurav/followthrough/releases/download/videos-2026-11-04-signup/FollowThrough-launch.mp4).
+- **Walkthrough** (48 s): the live demo on fictional data: Home, Review, the Library, one ask with the client's quote, a client page, Confirm shipped, Speed and Ask, ending on the free sign-up form. [Or download the MP4](https://github.com/avinashgaurav/followthrough/releases/download/videos-2026-11-04-signup/FollowThrough-walkthrough.mp4).
 
 ## Try it
 
-**Look around now:** the read-only demo at https://followthrough-demo-neon.vercel.app uses fictional meetings, needs no login, and saves nothing.
+**Start free:** https://followthrough-hosted.vercel.app. Sign up with an email and a password, name your company or product, and paste in a real call. Your first 5 meetings are free.
 
-**Start free (reopening soon):** sign-ups on the hosted app at https://followthrough-hosted.vercel.app are paused for a security update. Once they reopen, you sign up with an email and a password, name your company or product, and paste in a real call. Your first 5 meetings are free.
+**Or look around first:** the read-only demo at https://followthrough-demo-neon.vercel.app uses fictional meetings, needs no login, and saves nothing.
 
 1. **Home:** what needs you now, and the pipeline from found to client told.
 2. **Review:** the asks found in each call, with the client's exact quote behind every one.
@@ -42,8 +42,8 @@ Or [run your own](#run-your-own).
 
 ## Good to know
 
-- **Works today:** capture by pasting a transcript, AI extraction with quotes, Review, Library, Ask, Confirm shipped, client pages and share links.
-- **Hosted app (sign-ups paused for a security update):** every sign-up gets its own private workspace (a separate database schema), 5 free meetings and a daily AI spend cap.
+- **Works today:** sign up, capture by pasting a transcript, AI extraction with quotes, Review, Library, Ask, Confirm shipped, client pages and share links.
+- **Hosted app:** every sign-up gets its own private workspace (a separate database schema), 5 free meetings and a daily AI spend cap.
 - **Emails are not verified yet,** and there is no password reset, because no email sender is connected ([#24](https://github.com/avinashgaurav/followthrough/issues/24)). Use an email you own: whoever proves the inbox (emailed link or code) gets the account and its workspace, and the password stops working. Teammate invites need email sending first.
 - **Your data:** transcripts go to the AI provider to find the asks; everything else stays in the app's database and file storage. Run your own copy to keep it all on your servers.
 - **Needs setup when you run your own:** an AI key, a first admin (`bun run seed` prints a one-time login code), audio transcription (a Deepgram key) and GitHub release matching (GitHub tokens).
