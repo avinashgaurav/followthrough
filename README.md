@@ -27,7 +27,7 @@ Click a poster to play it on the site.
 
 ## Try it
 
-**Start free:** https://followthrough-hosted.vercel.app. Sign up with an email and a password, name your company or product, and paste in a real call. Your first 5 meetings are free.
+**Start free:** [followthrough-hosted.vercel.app](https://followthrough-hosted.vercel.app). Sign up with an email and a password, name your company or product, and paste in a real call. Your first 5 meetings are free.
 
 **Or look around first:** the read-only demo at https://followthrough-demo-neon.vercel.app uses fictional meetings, needs no login, and saves nothing.
 
