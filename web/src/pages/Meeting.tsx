@@ -312,7 +312,7 @@ export function Meeting() {
       }
     } catch (err) {
       if (aiUnavailable(err)) {
-        toast.push(`${(err as ApiError).message} The transcript is saved; press Extract insights again then.`, "warning");
+        toast.push(`${(err as ApiError).message} The transcript is saved: press Extract insights to try again later.`, "warning");
       } else {
         toast.push(
           err instanceof ApiError ? err.message : "Could not read this meeting. Try again.",

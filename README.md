@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Bun](https://img.shields.io/badge/Bun-1.3+-fbf0df?logo=bun&logoColor=black)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-486%20passing-brightgreen.svg)](docs/SETUP.md#development)
+[![Tests](https://img.shields.io/badge/tests-489%20passing-brightgreen.svg)](docs/SETUP.md#development)
 [![LLM: Gemini, Claude or OpenRouter](https://img.shields.io/badge/LLM-Gemini%20%7C%20Claude%20%7C%20OpenRouter-d97757.svg)](docs/SETUP.md)
 
 </div>

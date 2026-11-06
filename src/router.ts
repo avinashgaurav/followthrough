@@ -71,6 +71,10 @@ export async function dispatch(req: Request): Promise<Response | null> {
     return Promise.resolve(r.handler(req, user, params)).catch((err: unknown) => {
       // Plain words for people, never the provider's text. The client adds
       // what was kept (a pasted call stays saved; see Capture and Meeting).
+      if (err instanceof LLMBudgetError || err instanceof LLMRateLimitError) {
+        // The provider's detail stays in the logs for the operator.
+        console.warn(`${req.method} ${url.pathname}: ${err.message.slice(0, 300)}`);
+      }
       if (err instanceof LLMBudgetError) {
         return json({ error: "The AI has done all it can for today. Try again tomorrow.", kind: "budget" }, 503);
       }

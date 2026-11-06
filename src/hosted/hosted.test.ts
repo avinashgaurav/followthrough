@@ -712,6 +712,17 @@ describe("email + password sign-up", () => {
     expect((await loginFrom("198.51.100.9", { email: who, password: PW })).status).toBe(200);
   });
 
+  test("once locked out, more guesses add no rate-limit rows", async () => {
+    const who = email("pw-flood");
+    await signup({ email: who, password: PW, product_name: "F" });
+    for (let i = 0; i < 11; i++) await loginFrom("203.0.113.8", { email: who, password: `guess-${i}-xxxx` });
+    const rows = async () =>
+      ((await db.query("SELECT COUNT(*) AS n FROM control.rate_hits WHERE key LIKE ?").get(`login-fail:${who}%`)) as { n: number }).n;
+    const before = await rows();
+    for (let i = 0; i < 5; i++) expect((await loginFrom("203.0.113.8", { email: who, password: "more-guesses" })).status).toBe(429);
+    expect(await rows()).toBe(before);
+  });
+
   test("successful logins do not count toward a lockout", async () => {
     const who = email("pw-ok-many");
     await signup({ email: who, password: PW, product_name: "OK" });
