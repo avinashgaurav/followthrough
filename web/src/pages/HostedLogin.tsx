@@ -89,10 +89,13 @@ export function HostedLogin({ freeMeetings, resume }: { freeMeetings: number; re
               });
             }}
           >
+            <Alert severity="info" title="No password reset yet.">
+              Save your password in a password manager. If you lose it, there is no way to get back in for now.
+            </Alert>
             <Field label="Email" htmlFor="s-email" hint="Use an email you own: if its real owner signs in later, an account made with someone else's email is removed.">
               <input id="s-email" className="ctrl" type="email" autoComplete="email" required placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} />
             </Field>
-            <Field label="Password" htmlFor="s-password" hint="At least 10 characters. There is no password reset yet, so keep it safe.">
+            <Field label="Password" htmlFor="s-password" hint="At least 10 characters.">
               <input id="s-password" className="ctrl" type="password" autoComplete="new-password" required minLength={10} value={password} onChange={(e) => setPassword(e.target.value)} />
             </Field>
             <Field label="Confirm password" htmlFor="s-password2">
@@ -112,6 +115,12 @@ export function HostedLogin({ freeMeetings, resume }: { freeMeetings: number; re
                 I have an account
               </Btn>
             </div>
+            <p className="muted small" style={{ margin: 0 }}>
+              Your calls are read by Google Gemini to find the asks.{" "}
+              <a href="https://followthrough-eight.vercel.app/privacy.html" target="_blank" rel="noreferrer">
+                Where your data goes
+              </a>
+            </p>
           </form>
         )}
 
@@ -129,7 +138,7 @@ export function HostedLogin({ freeMeetings, resume }: { freeMeetings: number; re
             <Field label="Email" htmlFor="i-email">
               <input id="i-email" className="ctrl" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
             </Field>
-            <Field label="Password" htmlFor="i-password">
+            <Field label="Password" htmlFor="i-password" hint="Forgot it? There is no password reset yet, so you can't get back into this account for now.">
               <input id="i-password" className="ctrl" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
             </Field>
             <div className="form-actions" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>

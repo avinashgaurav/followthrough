@@ -15,6 +15,16 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * The AI could not run (busy, or done for the day), so nothing was lost: what
+ * the person saved stays saved and the same action works later.
+ */
+export function aiUnavailable(err: unknown): boolean {
+  if (!(err instanceof ApiError) || err.status !== 503) return false;
+  const kind = (err.data as { kind?: unknown } | null)?.kind;
+  return kind === "rate_limit" || kind === "budget";
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   // Static read-only demo build (bun run build:demo): answer from recorded
   // fixtures, refuse every write. Compiled out of the normal build.

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api, ApiError, asArray, STATES, TRACKS } from "../api";
+import { aiUnavailable, api, ApiError, asArray, STATES, TRACKS } from "../api";
 import type { Client, Insight, Meeting as MeetingRow, User } from "../api";
 import { useAuth } from "../auth";
 import {
@@ -311,10 +311,14 @@ export function Meeting() {
           .catch(() => undefined);
       }
     } catch (err) {
-      toast.push(
-        err instanceof ApiError ? err.message : "Could not read this meeting. Try again.",
-        "critical",
-      );
+      if (aiUnavailable(err)) {
+        toast.push(`${(err as ApiError).message} The transcript is saved: press Extract insights to try again later.`, "warning");
+      } else {
+        toast.push(
+          err instanceof ApiError ? err.message : "Could not read this meeting. Try again.",
+          "critical",
+        );
+      }
     } finally {
       setExtracting(false);
     }

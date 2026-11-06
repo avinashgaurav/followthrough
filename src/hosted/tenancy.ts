@@ -320,8 +320,11 @@ export async function refundMeeting(db: Database, workspaceId: string): Promise<
 
 /** Simple sliding-window throttle shared by every instance (sign-in codes). */
 export async function controlRateLimited(db: Database, key: string, limit: number, windowMs: number): Promise<boolean> {
-  // Record the hit first, then count: parallel requests cannot all pass a
-  // check that ran before any of their inserts landed.
+  // Already over the limit: refuse without adding a row, so a flood of
+  // refused requests cannot keep growing control.rate_hits (issue #22).
+  if ((await controlHitCount(db, key, windowMs)) >= limit) return true;
+  // Under it: record the hit first, then count, so parallel requests cannot
+  // all pass a check that ran before any of their inserts landed.
   const now = Date.now();
   await db.query("INSERT INTO control.rate_hits (key, at) VALUES (?, ?)").run(key, now);
   const { n } = (await db
