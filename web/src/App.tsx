@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/react";
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { AuthProvider, RequireAdmin, RequireAuth } from "./auth";
 import { Shell } from "./components/Shell";
@@ -86,6 +87,7 @@ export default function App() {
           </Routes>
         </ToastProvider>
       </AuthProvider>
+      <Analytics />
     </BrowserRouter>
   );
 }
