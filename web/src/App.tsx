@@ -1,5 +1,6 @@
 import { Analytics } from "@vercel/analytics/react";
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { scrubPageView } from "./analytics";
 import { AuthProvider, RequireAdmin, RequireAuth } from "./auth";
 import { Shell } from "./components/Shell";
 import { EmptyState, ToastProvider } from "./components/ui";
@@ -87,7 +88,7 @@ export default function App() {
           </Routes>
         </ToastProvider>
       </AuthProvider>
-      <Analytics />
+      <Analytics beforeSend={scrubPageView} />
     </BrowserRouter>
   );
 }

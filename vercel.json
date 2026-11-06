@@ -10,7 +10,7 @@
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/server?__path=/api/:path*" },
     { "source": "/share/:path*", "destination": "/api/server?__path=/share/:path*" },
-    { "source": "/((?!api/|share/|assets/).*)", "destination": "/index.html" }
+    { "source": "/((?!api/|share/|assets/|_vercel/).*)", "destination": "/index.html" }
   ],
   "crons": [{ "path": "/api/cron/daily", "schedule": "30 3 * * *" }],
   "headers": [
