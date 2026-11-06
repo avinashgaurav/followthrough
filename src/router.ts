@@ -69,7 +69,11 @@ export async function dispatch(req: Request): Promise<Response | null> {
       if (r.auth === "admin" && user.role !== "admin") return json({ error: "admin only" }, 403);
     }
     return Promise.resolve(r.handler(req, user, params)).catch((err: unknown) => {
-      if (err instanceof LLMBudgetError) return json({ error: err.message, kind: "budget" }, 503);
+      // Plain words for people, never the provider's text. The client adds
+      // what was kept (a pasted call stays saved; see Capture and Meeting).
+      if (err instanceof LLMBudgetError) {
+        return json({ error: "The AI has done all it can for today. Try again tomorrow.", kind: "budget" }, 503);
+      }
       if (isAIConfigError(err)) {
         // Status and the message's first part only ("Gemini 400"): never the upstream body.
         const e = err as { status?: unknown; message?: unknown };
@@ -84,7 +88,9 @@ export async function dispatch(req: Request): Promise<Response | null> {
         );
       }
       if (err instanceof LLMRateLimitError) {
-        return json({ error: "The AI provider is rate limited right now. Try again in a minute.", kind: "rate_limit" }, 503);
+        return err.daily
+          ? json({ error: "The AI has done all it can for today. Try again tomorrow.", kind: "budget" }, 503)
+          : json({ error: "The AI is busy right now. Try again in a few minutes.", kind: "rate_limit" }, 503);
       }
       // Never answer with a stack trace or a server error page.
       console.error(`${req.method} ${url.pathname} failed:`, err);

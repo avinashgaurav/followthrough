@@ -438,6 +438,16 @@ describe("review fixes", () => {
     expect(results.filter((limited) => !limited).length).toBeLessThanOrEqual(5);
   });
 
+  test("refused requests add no rows once a limit is reached", async () => {
+    const key = `flood-${Date.now()}`;
+    for (let i = 0; i < 3; i++) await controlRateLimited(db, key, 3, 60_000);
+    const rows = async () =>
+      ((await db.query("SELECT COUNT(*) AS n FROM control.rate_hits WHERE key = ?").get(key)) as { n: number }).n;
+    const before = await rows();
+    for (let i = 0; i < 10; i++) expect(await controlRateLimited(db, key, 3, 60_000)).toBe(true);
+    expect(await rows()).toBe(before);
+  });
+
   test("each workspace has its own daily AI cap inside the global one", async () => {
     const a = await signedIn("cap-a");
     const b = await signedIn("cap-b");

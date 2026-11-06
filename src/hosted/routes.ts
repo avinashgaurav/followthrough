@@ -532,14 +532,14 @@ route("POST", "/api/hosted/password-login", "public", async (req) => {
   // recorded BEFORE the password check (parallel guesses all count) and
   // withdrawn if it succeeds.
   const failKey = `login-fail:${email}:${ip.key}`;
+  const lockedOut = async () =>
+    (await controlHitCount(db, failKey, 15 * 60_000)) > 10 ||
+    (await controlHitCount(db, `login-fail:${email}`, 24 * HOUR)) > 300;
+  // Already locked: refuse without recording more rows (issue #22).
+  if (await lockedOut()) return json({ error: "Too many attempts. Wait 15 minutes and try again." }, 429);
   const failAt = await recordControlHit(db, failKey);
   const emailFailAt = await recordControlHit(db, `login-fail:${email}`);
-  if (
-    (await controlHitCount(db, failKey, 15 * 60_000)) > 10 ||
-    (await controlHitCount(db, `login-fail:${email}`, 24 * HOUR)) > 300
-  ) {
-    return json({ error: "Too many attempts. Wait 15 minutes and try again." }, 429);
-  }
+  if (await lockedOut()) return json({ error: "Too many attempts. Wait 15 minutes and try again." }, 429);
   const cred = (await db
     .query("SELECT password_hash, workspace_id, user_id FROM control.credentials WHERE email = ?")
     .get(email)) as { password_hash: string; workspace_id: string; user_id: string } | null;

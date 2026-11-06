@@ -90,8 +90,18 @@ export class LLMOutputError extends Error {}
 /** Thrown before any provider call once the daily LLM_DAILY_BUDGET_USD is spent. */
 export class LLMBudgetError extends Error {}
 
-/** The provider kept answering 429 (rate limit or quota) after every retry. */
-export class LLMRateLimitError extends Error {}
+/**
+ * The provider kept answering 429 (rate limit or quota) after every retry.
+ * `daily`: every configured model has spent its quota for the day, so a retry
+ * in a few minutes will not help.
+ */
+export class LLMRateLimitError extends Error {
+  readonly daily: boolean;
+  constructor(message: string, opts: { daily?: boolean } = {}) {
+    super(message);
+    this.daily = opts.daily ?? false;
+  }
+}
 
 /** The provider refused the request (4xx) before generating anything: nothing was billed. */
 export class LLMRequestError extends Error {
@@ -674,7 +684,10 @@ export class GeminiLLM implements LLM {
         await this.store?.mark(model, day).catch((e) => console.warn("could not record exhausted Gemini model:", e));
       }
     }
-    throw new LLMRateLimitError("Every configured Gemini model has used its daily quota. Try again tomorrow, or add billing to the Google project.");
+    throw new LLMRateLimitError(
+      "Every configured Gemini model has used its daily quota. Try again tomorrow, or add billing to the Google project.",
+      { daily: true },
+    );
   }
 
   /** One model, with retries for brief rate limits and server errors. */

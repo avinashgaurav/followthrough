@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   api,
   ApiError,
+  aiUnavailable,
   attachAudio,
   MEETING_SOURCES,
   MEETING_TYPES,
@@ -117,6 +118,8 @@ export function Capture() {
     dropped?: number;
     analysisMd?: string;
   } | null>(null);
+  // The AI was busy or done for the day: the meeting and transcript are saved.
+  const [aiWait, setAiWait] = useState<string | null>(null);
   const [transcribing, setTranscribing] = useState(false);
   const [hadAudioOnly, setHadAudioOnly] = useState(false);
 
@@ -232,6 +235,7 @@ export function Capture() {
     setDuplicate(false);
     setCreateError(null);
     setExtractSummary(null);
+    setAiWait(null);
     setHadAudioOnly(false);
   }, []);
 
@@ -310,6 +314,7 @@ export function Capture() {
   const onExtract = useCallback(async () => {
     if (!createdMeeting?.id) return;
     setExtracting(true);
+    setAiWait(null);
     try {
       const res = await api.extract(createdMeeting.id);
       const created = typeof res?.created === "number" ? res.created : undefined;
@@ -332,10 +337,14 @@ export function Capture() {
         "success",
       );
     } catch (err) {
-      toast.push(
-        err instanceof ApiError ? err.message : "Could not read this meeting. Try again.",
-        "critical",
-      );
+      if (aiUnavailable(err)) {
+        setAiWait((err as ApiError).message);
+      } else {
+        toast.push(
+          err instanceof ApiError ? err.message : "Could not read this meeting. Try again.",
+          "critical",
+        );
+      }
     } finally {
       setExtracting(false);
     }
@@ -472,6 +481,18 @@ export function Capture() {
                   Reading the conversation. This can take a moment.
                 </p>
                 <Skeleton rows={3} />
+              </div>
+            )}
+
+            {aiWait && createdMeeting && (
+              <div className="mt-16">
+                <Alert severity="warning" title="Your call is saved.">
+                  <p style={{ margin: 0 }}>
+                    {aiWait} Nothing is lost: open{" "}
+                    <Link to={`/meetings/${encodeURIComponent(createdMeeting.id)}`}>this meeting</Link> later
+                    and press Extract insights.
+                  </p>
+                </Alert>
               </div>
             )}
 

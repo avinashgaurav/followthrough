@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark" />
+<title>Privacy: Followthrough</title>
+<meta name="description" content="Where your call transcripts go when you use the hosted Followthrough app, and how to keep everything on your own servers." />
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --canvas: #0A0B0D; --line: #24272C; --ink: #F6F7F8; --ink-muted: #8A8F98; --signal: #F4A521; --signal-hi: #FFC24A;
+    --serif: "Newsreader", Georgia, serif; --font: "Inter", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--canvas); color: var(--ink); font: 400 16px/1.6 var(--font); -webkit-font-smoothing: antialiased; }
+  a { color: var(--signal); }
+  a:focus-visible { outline: 2px solid var(--signal-hi); outline-offset: 2px; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+  nav { border-bottom: 1px solid var(--line); }
+  nav .wrap { display: flex; align-items: center; height: 60px; }
+  nav a { color: var(--ink); font-weight: 600; text-decoration: none; }
+  main { padding: 48px 0 72px; }
+  h1 { font: 500 clamp(32px, 6vw, 44px)/1.1 var(--serif); margin: 0 0 8px; }
+  h2 { font: 600 18px/1.3 var(--font); margin: 36px 0 8px; }
+  p, li { color: #D5D8DD; }
+  .muted { color: var(--ink-muted); font-size: 14px; }
+  ul { padding-left: 20px; }
+  li { margin: 6px 0; }
+  footer { border-top: 1px solid var(--line); padding: 24px 0; color: var(--ink-muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<nav><div class="wrap"><a href="./">Followthrough</a></div></nav>
+<main class="wrap">
+  <h1>Privacy</h1>
+  <p class="muted">Last updated 6 November 2026. This covers the hosted app at followthrough-hosted.vercel.app. If you run your own copy, your data goes only where you send it.</p>
+
+  <h2>What you give us</h2>
+  <ul>
+    <li>Your email and a password (stored only as a one-way hash).</li>
+    <li>Your company or product name, and the calls you paste or upload: transcripts, and audio if you upload it.</li>
+    <li>What you do in the app: clients, asks, edits, and approvals.</li>
+  </ul>
+
+  <h2>Where your transcripts go</h2>
+  <ul>
+    <li><b>Google Gemini</b> reads each transcript to find the asks, and reads your questions in Ask. The hosted app uses Gemini's free tier. On the free tier, Google may use what it receives to improve its products, and people at Google may review it. Don't paste calls you aren't allowed to share with a third party.</li>
+    <li><b>Deepgram</b> turns uploaded audio into text, when audio transcription is switched on.</li>
+    <li><b>Supabase</b> stores everything else: your workspace in its own private database schema, and uploaded files.</li>
+    <li><b>Vercel</b> runs the app. Vercel Web Analytics counts page views, with record ids and sign-in links stripped from the addresses.</li>
+  </ul>
+  <p>We don't sell your data, show ads, or share it with anyone else.</p>
+
+  <h2>Who can see it</h2>
+  <p>Only people signed in to your workspace, plus anyone you send a client share link to. The operator of the hosted app can reach the database for support and security.</p>
+
+  <h2>Deleting your data</h2>
+  <p>To delete your workspace and everything in it, open an issue on <a href="https://github.com/avinashgaurav/followthrough/issues">GitHub</a> with your workspace name only. Never post your email, a transcript, or a password there. We'll confirm with you before deleting anything.</p>
+
+  <h2>Keep everything on your own servers</h2>
+  <p>Followthrough is open source under the MIT license. <a href="https://github.com/avinashgaurav/followthrough#run-your-own">Run your own copy</a> with your own AI key and database, and nothing goes through the hosted app.</p>
+
+  <h2>Changes</h2>
+  <p>If this page changes, the date at the top changes too. The history is in the <a href="https://github.com/avinashgaurav/followthrough/commits/main/site/privacy.html">repo</a>.</p>
+</main>
+<footer><div class="wrap">Followthrough &middot; MIT &middot; <a href="./">Home</a></div></footer>
+<script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+<script defer src="/_vercel/insights/script.js"></script>
+</body>
+</html>
