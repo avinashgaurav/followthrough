@@ -94,4 +94,4 @@ Recordings, sign-in details and meeting details go only to the Followthrough ser
 
 **Privacy policy URL**
 
-Required because the extension handles user data. To do: publish a short policy page that restates "Where the data goes" above and link it here.
+https://followthrough-eight.vercel.app/privacy.html (required because the extension handles user data).
