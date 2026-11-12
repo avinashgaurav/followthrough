@@ -51,13 +51,53 @@ export async function userForBearer(db: Database, req: Request): Promise<AuthedU
     .query(
       `SELECT u.id, u.email, u.name, u.role, t.id AS token_id, t.last_used_at FROM api_tokens t
        JOIN users u ON u.id = t.user_id
-       WHERE t.token_hash = ? AND t.revoked_at IS NULL AND u.disabled_at IS NULL`,
+       WHERE t.token_hash = ? AND t.revoked_at IS NULL AND u.disabled_at IS NULL AND u.id <> 'open-access-guest'`,
     )
     .get(hash)) as (AuthedUser & { token_id: string; last_used_at: string | null }) | null;
   if (!row) return null;
-  // Record use at most every five minutes, so busy clients do not write on every call.
+  // Record use at most every five minutes; the database decides, so parallel
+  // calls do not all write.
   if (!row.last_used_at || Date.parse(row.last_used_at) < Date.now() - 5 * 60_000) {
-    await db.query("UPDATE api_tokens SET last_used_at = ? WHERE id = ?").run(nowIso(), row.token_id);
+    await db
+      .query("UPDATE api_tokens SET last_used_at = ? WHERE id = ? AND (last_used_at IS NULL OR last_used_at < ?)")
+      .run(nowIso(), row.token_id, new Date(Date.now() - 5 * 60_000).toISOString());
   }
   return { id: row.id, email: row.email, name: row.name, role: row.role };
+}
+
+/**
+ * What a token may call: the MCP endpoint and exactly the routes its tools
+ * use. Everything else (admin settings, users, invites, share links, exports,
+ * downloads, uploads, tokens themselves) needs a signed-in browser, so a
+ * leaked token cannot mint access that outlives it or bulk-export data.
+ */
+const BEARER_ROUTES: Array<[string, RegExp]> = [
+  ["POST", /^\/api\/mcp$/],
+  ["GET", /^\/api\/me$/],
+  ["GET", /^\/api\/hosted\/workspace$/],
+  ["GET", /^\/api\/search$/],
+  ["POST", /^\/api\/ask$/],
+  ["GET", /^\/api\/clients$/],
+  ["POST", /^\/api\/clients$/],
+  ["GET", /^\/api\/clients\/[^/]+$/],
+  ["GET", /^\/api\/clients\/[^/]+\/brief$/],
+  ["GET", /^\/api\/meetings$/],
+  ["POST", /^\/api\/meetings$/],
+  ["GET", /^\/api\/meetings\/[^/]+$/],
+  ["POST", /^\/api\/meetings\/[^/]+\/extract$/],
+  ["GET", /^\/api\/insights$/],
+  ["POST", /^\/api\/insights\/manual$/],
+  ["GET", /^\/api\/insights\/[^/]+$/],
+  ["POST", /^\/api\/insights\/[^/]+\/(triage|finalize|reject|close|email-drafts)$/],
+  ["GET", /^\/api\/queue$/],
+  ["GET", /^\/api\/matches$/],
+  ["POST", /^\/api\/matches\/[^/]+\/(confirm|reject)$/],
+  ["GET", /^\/api\/releases$/],
+  ["POST", /^\/api\/releases\/manual$/],
+  ["GET", /^\/api\/metrics\/overview$/],
+  ["POST", /^\/api\/emails\/[^/]+\/sent-confirm$/],
+];
+
+export function bearerAllowed(method: string, pathname: string): boolean {
+  return BEARER_ROUTES.some(([m, re]) => m === method && re.test(pathname));
 }

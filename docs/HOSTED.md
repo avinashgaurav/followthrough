@@ -38,7 +38,7 @@ from this deployment's AI key.
 | `WORKSPACE_DAILY_BUDGET_USD` | 1 | Each workspace's own daily AI cap inside the one above, so one workspace cannot spend everyone's budget |
 | `DEEPGRAM_API_KEY` | unset | Optional: turns uploaded audio into text. Without it, people paste transcripts |
 | `MAX_MEMBERS_PER_WORKSPACE` | 10 | Teammates a workspace admin can invite |
-| (fixed) | 1,200 an hour | Requests per personal API token (MCP clients); made-up tokens are refused before they count |
+| (fixed) | 1,200 an hour | MCP calls per user across all their API tokens; unknown tokens are refused, and capped at 60 an hour per IP |
 
 Single-tenant features that would act with this deployment's credentials are
 off: GitHub issue creation, the release poller, the digest webhook, the watch

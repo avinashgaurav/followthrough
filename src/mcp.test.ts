@@ -176,3 +176,50 @@ describe("MCP endpoint", () => {
     }
   });
 });
+
+describe("token hardening", () => {
+  test("a token only reaches the MCP tool routes", async () => {
+    const u = await signedInUser();
+    const { token } = await makeToken(u.cookie);
+    expect((await api("GET", "/api/clients", { bearer: token })).status).toBe(200);
+    expect((await api("POST", "/api/users", { bearer: token, body: { email: "x@tallyhall.com", name: "X" } })).status).toBe(403);
+    expect((await api("GET", "/api/tokens", { bearer: token })).status).toBe(403);
+    expect((await api("POST", "/api/exports/csv", { bearer: token, body: {} })).status).toBe(403);
+    expect((await api("POST", "/api/settings/access", { bearer: token, body: { require_login: false } })).status).toBe(403);
+  });
+
+  test("removing a user revokes their tokens for good, even if re-enabled", async () => {
+    const admin = await signedInUser();
+    const member = await signedInUser("member");
+    const { token } = await makeToken(member.cookie);
+    expect((await api("GET", "/api/me", { bearer: token })).status).toBe(200);
+    expect((await api("POST", `/api/users/${member.id}/revoke`, { cookie: admin.cookie })).status).toBe(200);
+    expect((await api("GET", "/api/me", { bearer: token })).status).toBe(401);
+    expect((await api("POST", `/api/users/${member.id}/rotate-code`, { cookie: admin.cookie })).status).toBe(200);
+    expect((await api("GET", "/api/me", { bearer: token })).status).toBe(401);
+  });
+
+  test("ids that could steer the path are refused before any call", async () => {
+    const u = await signedInUser();
+    const { token } = await makeToken(u.cookie);
+    for (const bad of ["../triage", "a/b", "x?y=1", "%2e%2e"]) {
+      const r = await callTool(token, "get_ask", { ask_id: bad });
+      expect(r.isError).toBe(true);
+      expect(r.content[0]!.text).toContain("ask_id");
+    }
+  });
+});
+
+describe("open-access guest", () => {
+  test("cannot make a token, and a guest token is never accepted", async () => {
+    delete process.env.REQUIRE_LOGIN;
+    const r = await api("POST", "/api/tokens", { body: { name: "x" } });
+    expect(r.status).toBe(400);
+    // Even one written straight to the table does not authenticate.
+    const { tokenHash } = await import("./tokens.ts");
+    const t = `ftk_local_${"B".repeat(43)}`;
+    await db.query("INSERT INTO api_tokens (id, user_id, name, token_hash, prefix, created_at) VALUES (?, 'open-access-guest', 'g', ?, 'p', ?)").run(ulid(), tokenHash(t), nowIso());
+    process.env.REQUIRE_LOGIN = "true";
+    expect((await api("GET", "/api/me", { bearer: t })).status).toBe(401);
+  });
+});

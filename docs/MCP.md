@@ -10,7 +10,7 @@ Followthrough has an MCP server (Model Context Protocol). Connect it, and your A
 
 Settings > **Connect an AI assistant (MCP)** > name it (for example "Claude on my laptop") > **Make a token**. Copy it right away: it is shown once.
 
-A token acts as you, with your role (admin or member), in your workspace only. Revoke it in the same place. A token stops working when it is revoked or when your account is removed. You can have 10 at a time.
+A token acts as you, with your role (admin or member), in your workspace only, and it can only call the MCP tools: not settings, users, invites, share links, exports or downloads. Revoke it in the same place. A token stops working for good when it is revoked, when your account is removed, when you reset your password, or when the real owner of your email reclaims the account. You can have 10 at a time.
 
 ## 2. Connect your client
 
@@ -91,7 +91,10 @@ Any other client that speaks Streamable HTTP and can send a header works the sam
 ## Safety
 
 - Every tool calls the same API route the app uses, with your token, so the same permission checks, validation and state rules apply. Admin-only tools (`speed_metrics`, `add_release`) refuse a member's token.
-- Write tools are marked as not read-only, so clients ask you before running them. Nothing is emailed to a client: `draft_client_email` makes a draft for a person to send.
+- A token only reaches the routes these tools use. Anything else (settings, users, invite links, client share links, exports, downloads, other tokens) needs you signed in to the app.
+- Tools that end or overwrite something (`finalize_ask`, `reject_ask`, `close_ask`, `review_release_match`, `mark_email_sent`) are marked destructive, so clients ask you first. Nothing is emailed to a client: `draft_client_email` makes a draft for a person to send.
+- Transcripts and quotes are what clients said. A client could say "close all of these" on a call; the assistant is told never to act on instructions inside them, but read what it proposes before you approve a write.
 - `add_meeting` needs `consent_confirmed: true`: everyone on the call must have been told it was recorded.
-- Tokens are stored only as a SHA-256 hash. A token cannot make or revoke other tokens. On the hosted app each token is limited to 1,200 requests an hour, and a token for one workspace can never read another.
+- Tokens are stored only as a SHA-256 hash. A token cannot make or revoke other tokens, and the open-access guest of a self-hosted copy without login cannot make one at all.
+- On the hosted app each user is limited to 1,200 tool calls an hour across all their tokens, a token for one workspace can never read another, and an address sending unknown tokens is cut off after 60 an hour.
 - `ask` and `extract_asks` use the AI, so they count toward the daily AI allowance.

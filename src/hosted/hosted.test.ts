@@ -1213,15 +1213,37 @@ describe("API tokens and MCP on the hosted app", () => {
     expect((await mcp(ta, "whoami")).body.result!.content[0]!.text).toContain("meetings_quota");
   });
 
-  test("made-up tokens add no rate-limit rows", async () => {
+  test("made-up tokens are capped per IP and add a bounded number of rows", async () => {
     const a = await signedIn("tok-flood");
-    const before = ((await db.query("SELECT COUNT(*) AS n FROM control.rate_hits WHERE key LIKE 'token:%'").get()) as { n: number }).n;
-    for (let i = 0; i < 5; i++) {
-      const fake = `ftk_${a.ws.id}_${ulid()}${ulid()}`.slice(0, 4 + 26 + 1 + 43);
-      expect((await handleApi(bearerReq("GET", "/api/me", fake.padEnd(4 + 26 + 1 + 43, "x")))).status).toBe(401);
-    }
-    const after = ((await db.query("SELECT COUNT(*) AS n FROM control.rate_hits WHERE key LIKE 'token:%'").get()) as { n: number }).n;
-    expect(after).toBe(before);
+    const fake = (i: number) => `ftk_${a.ws.id}_${String(i).padStart(43, "z")}`;
+    const from = (token: string) =>
+      new Request("http://localhost/api/me", { headers: { authorization: `Bearer ${token}`, "x-forwarded-for": "203.0.113.200" } });
+    let last = 0;
+    for (let i = 0; i < 65; i++) last = (await handleApi(from(fake(i)))).status;
+    expect(last).toBe(429);
+    const rows = ((await db.query("SELECT COUNT(*) AS n FROM control.rate_hits WHERE key LIKE 'bearer-miss:%'").get()) as { n: number }).n;
+    expect(rows).toBeLessThanOrEqual(61);
+  });
+
+  test("an owner reclaiming the workspace revokes every token the password holder made", async () => {
+    const who = email("tok-squat");
+    const sq = await handleApi(req("POST", "/api/hosted/password-signup", { body: { email: who, password: "correct horse battery", product_name: "Sq" } }));
+    expect(sq.status).toBe(201);
+    const token = await tokenFor(cookieOf(sq));
+    expect((await handleApi(bearerReq("GET", "/api/me", token))).status).toBe(200);
+    const v = await handleApi(req("POST", "/api/hosted/link-verify", { body: { token_hash: `hash-ok:${who}` } }));
+    expect(v.status).toBe(200);
+    expect((await handleApi(bearerReq("GET", "/api/me", token))).status).toBe(401);
+  });
+
+  test("a password reset revokes that user's tokens", async () => {
+    const who = email("tok-reset");
+    const sq = await handleApi(req("POST", "/api/hosted/password-signup", { body: { email: who, password: "correct horse battery", product_name: "R" } }));
+    const code = ((await sq.clone().json()) as { recovery_code: string }).recovery_code;
+    const token = await tokenFor(cookieOf(sq));
+    const r = await handleApi(req("POST", "/api/hosted/password-reset", { body: { email: who, code, password: "a brand new passphrase" } }));
+    expect(r.status).toBe(200);
+    expect((await handleApi(bearerReq("GET", "/api/me", token))).status).toBe(401);
   });
 
   test("a local-scope token is refused on the hosted app", async () => {

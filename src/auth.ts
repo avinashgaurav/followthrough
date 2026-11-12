@@ -227,6 +227,8 @@ export async function revokeCode(db: Database, userId: string): Promise<void> {
     userId,
   );
   await db.query("DELETE FROM sessions WHERE user_id = ?").run(userId);
+  // API tokens die with the account, and never come back if it is re-enabled.
+  await db.query("UPDATE api_tokens SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL").run(nowIso(), userId);
 }
 
 export function sessionCookie(sessionId: string, secure: boolean): string {

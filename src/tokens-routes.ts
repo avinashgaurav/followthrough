@@ -26,6 +26,9 @@ route("GET", "/api/tokens", "user", async (_req, user) => {
 route("POST", "/api/tokens", "user", async (req, user) => {
   const refused = fromBrowserOnly(req);
   if (refused) return refused;
+  if (user!.id === "open-access-guest") {
+    return json({ error: "Turn on Require login and sign in to make a token: an open-access guest token would let anyone in." }, 400);
+  }
   const body = CreateSchema.safeParse(await req.json().catch(() => null));
   if (!body.success) return json({ error: "Name the token (up to 60 characters), for example \"Claude on my laptop\"." }, 400);
   const scope = currentScope();
