@@ -41,9 +41,15 @@ from this deployment's AI key.
 
 Single-tenant features that would act with this deployment's credentials are
 off: GitHub issue creation, the release poller, the digest webhook, the watch
-folder, team-password / admin-code sign-in, the release poll, iCal calendar
-feeds (server-side fetches), the evidence-link liveness check, and the
-operator's chat webhook.
+folder, team-password / admin-code sign-in, the release poll, the
+evidence-link liveness check, and the operator's chat webhook.
+
+iCal calendar import is on. Each workspace admin sets their own feed link, and
+the server fetches it with a fetch-time guard: http(s) on the standard ports
+only, every address the host resolves to must be public (no loopback, private,
+link-local, CGNAT, metadata or multicast addresses, IPv6 included), at most 3
+redirects with each hop checked again, a 5 MB body cap and a 10 second
+timeout. Parsed feeds are cached for 5 minutes per workspace, never shared.
 
 Invites are pending until the invitee signs in with their own email code and
 chooses to join; they can create their own workspace instead.

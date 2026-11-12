@@ -1,7 +1,8 @@
 import type { Database } from "../db.ts";
-import { nowIso } from "../db.ts";
+import { currentTenant, nowIso } from "../db.ts";
 import { appendEvent } from "../events.ts";
 import { parseIcs, type IcsEvent } from "./ics.ts";
+import { FeedTooLargeError, safeFetchText, systemResolver, UnsafeUrlError, type Resolver } from "./safe-fetch.ts";
 
 export const CALENDAR_SETTINGS_KEY = "calendar_ics_url";
 
@@ -10,6 +11,7 @@ const WINDOW_PAST_MS = 14 * 86_400_000;
 const WINDOW_FUTURE_MS = 7 * 86_400_000;
 const CACHE_TTL_MS = 5 * 60_000;
 const FETCH_TIMEOUT_MS = 10_000;
+const CACHE_MAX_ENTRIES = 500;
 
 export class CalendarConfigError extends Error {}
 export class CalendarFetchError extends Error {}
@@ -48,6 +50,9 @@ export async function setFeedUrl(db: Database, url: string, userId: string): Pro
   if (parsed.protocol !== "https:") {
     throw new CalendarConfigError("Calendar feed URL must use https.");
   }
+  if (parsed.port !== "") {
+    throw new CalendarConfigError("Calendar feed URL must use the standard https port (443).");
+  }
   assertPublicHost(parsed.hostname);
   const tx = () => db.transaction(async () => {
     await db.query(
@@ -64,7 +69,7 @@ export async function setFeedUrl(db: Database, url: string, userId: string): Pro
     });
   });
   await tx();
-  clearCalendarCache();
+  clearCalendarCache(currentTenant());
 }
 
 export async function clearFeedUrl(db: Database, userId: string): Promise<void> {
@@ -81,18 +86,43 @@ export async function clearFeedUrl(db: Database, userId: string): Promise<void> 
     }
   });
   await tx();
-  clearCalendarCache();
+  clearCalendarCache(currentTenant());
 }
 
-// In-process cache of the parsed feed (per the configured URL), 5 minute TTL.
-let cache: { url: string; fetchedAt: number; events: IcsEvent[] } | null = null;
+// In-process cache of parsed feeds, 5 minute TTL. Keyed on workspace and URL,
+// so in hosted mode one workspace can never be served another's cached events.
+const cache = new Map<string, { fetchedAt: number; events: IcsEvent[] }>();
+const LOCAL_SCOPE = "-"; // single-tenant (no workspace)
 
-/** Test hook + invalidation on settings changes. */
-export function clearCalendarCache(): void {
-  cache = null;
+const scopeOf = (tenant: string | null) => tenant ?? LOCAL_SCOPE;
+const cacheKey = (tenant: string | null, url: string) => `${scopeOf(tenant)}\n${url}`;
+
+/**
+ * Drops cached feeds: one workspace's when given a tenant (null is the
+ * single-tenant scope), everything when called with no argument (tests).
+ */
+export function clearCalendarCache(tenant?: string | null): void {
+  if (tenant === undefined) {
+    cache.clear();
+    return;
+  }
+  const prefix = `${scopeOf(tenant)}\n`;
+  for (const key of cache.keys()) if (key.startsWith(prefix)) cache.delete(key);
 }
 
-/** SSRF guard: refuse loopback, private, link-local, and cloud-metadata hosts. */
+function remember(key: string, events: IcsEvent[], now: number): void {
+  for (const [k, v] of cache) if (now - v.fetchedAt >= CACHE_TTL_MS) cache.delete(k);
+  cache.delete(key);
+  // Map keeps insertion order, so the first key is the oldest entry.
+  while (cache.size >= CACHE_MAX_ENTRIES) cache.delete(cache.keys().next().value!);
+  cache.set(key, { fetchedAt: now, events });
+}
+
+/**
+ * Save-time check for obviously internal hosts, so a bad link is refused when
+ * it is entered. The real guard runs at fetch time (safe-fetch.ts): it checks
+ * every resolved address and every redirect hop.
+ */
 export function assertPublicHost(hostname: string): void {
   const h = hostname.toLowerCase();
   const privatePatterns = [
@@ -105,24 +135,27 @@ export function assertPublicHost(hostname: string): void {
   }
 }
 
-async function fetchParsedFeed(url: string, fetchImpl: typeof fetch): Promise<IcsEvent[]> {
+async function fetchParsedFeed(url: string, fetchImpl: typeof fetch, resolve: Resolver): Promise<IcsEvent[]> {
   const now = Date.now();
-  if (cache && cache.url === url && now - cache.fetchedAt < CACHE_TTL_MS) {
-    return cache.events;
-  }
-  let res: Response;
+  const key = cacheKey(currentTenant(), url);
+  const hit = cache.get(key);
+  if (hit && now - hit.fetchedAt < CACHE_TTL_MS) return hit.events;
+
+  let res: { ok: boolean; status: number; text: string };
   try {
-    res = await fetchImpl(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+    res = await safeFetchText(url, { fetchImpl, resolve, timeoutMs: FETCH_TIMEOUT_MS });
   } catch (err) {
+    if (err instanceof UnsafeUrlError || err instanceof FeedTooLargeError) {
+      throw new CalendarFetchError(err.message);
+    }
     console.warn("calendar feed fetch failed:", err);
     throw new CalendarFetchError("Could not reach the calendar feed. Check the link and try again.");
   }
   if (!res.ok) {
     throw new CalendarFetchError(`Calendar feed responded with status ${res.status}.`);
   }
-  const text = await res.text();
-  const events = parseIcs(text);
-  cache = { url, fetchedAt: now, events };
+  const events = parseIcs(res.text);
+  remember(key, events, now);
   return events;
 }
 
@@ -166,7 +199,8 @@ export interface CalendarEventsResult {
 }
 
 /**
- * Fetch the configured ICS feed (10s timeout, 5 minute in-process cache),
+ * Fetch the configured ICS feed (10s timeout, 5 MB cap, at most 3 redirects,
+ * every hop checked for private addresses; 5 minute per-workspace cache),
  * filter to past 14 days .. future 7 days, sort by start desc, and map to the
  * UI contract with client suggestions. Unconfigured: {configured:false, events:[]}.
  * Throws CalendarFetchError when the feed cannot be fetched.
@@ -174,11 +208,12 @@ export interface CalendarEventsResult {
 export async function fetchEvents(
   db: Database,
   fetchImpl: typeof fetch = fetch,
+  resolve: Resolver = systemResolver,
 ): Promise<CalendarEventsResult> {
   const url = await getFeedUrl(db);
   if (!url) return { configured: false, events: [] };
 
-  const all = await fetchParsedFeed(url, fetchImpl);
+  const all = await fetchParsedFeed(url, fetchImpl, resolve);
   const now = Date.now();
   const min = now - WINDOW_PAST_MS;
   const max = now + WINDOW_FUTURE_MS;

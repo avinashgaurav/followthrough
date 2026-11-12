@@ -13,6 +13,10 @@ import {
   setFeedUrl,
   suggestClient,
 } from "./service.ts";
+import type { Resolver } from "./safe-fetch.ts";
+
+// Every hostname resolves to a public address, so tests need no real DNS.
+const publicDns: Resolver = async () => ["93.184.216.34"];
 
 const FEED_URL = "https://calendar.example.com/feed.ics";
 
@@ -99,6 +103,9 @@ describe("feed url settings", () => {
       CalendarConfigError,
     );
     await expect(setFeedUrl(db, "not a url", userId)).rejects.toThrow(CalendarConfigError);
+    await expect(setFeedUrl(db, "https://calendar.example.com:8443/cal.ics", userId)).rejects.toThrow(
+      CalendarConfigError,
+    );
     expect(await getFeedUrl(db)).toBeNull();
   });
 
@@ -115,7 +122,7 @@ describe("fetchEvents", () => {
   test("unconfigured: {configured:false, events:[]} and no fetch attempted", async () => {
     const db = await openTestDb();
     const { impl, calls } = stubFetch("should not be fetched");
-    const result = await fetchEvents(db, impl);
+    const result = await fetchEvents(db, impl, publicDns);
     expect(result).toEqual({ configured: false, events: [] });
     expect(calls()).toBe(0);
   });
@@ -132,7 +139,7 @@ describe("fetchEvents", () => {
       ["UID:too-far", "SUMMARY:Twenty days out", `DTSTART:${icsAt(20 * DAY)}`],
     ]);
     const { impl } = stubFetch(body);
-    const result = await fetchEvents(db, impl);
+    const result = await fetchEvents(db, impl, publicDns);
     expect(result.configured).toBe(true);
     expect(result.events.map((e) => e.uid)).toEqual(["upcoming", "recent"]);
   });
@@ -157,7 +164,7 @@ describe("fetchEvents", () => {
       ],
     ]);
     const { impl } = stubFetch(body);
-    const result = await fetchEvents(db, impl);
+    const result = await fetchEvents(db, impl, publicDns);
     expect(result.events).toHaveLength(1);
     const ev = result.events[0]!;
     expect(ev.title).toBe("Sync call");
@@ -180,7 +187,7 @@ describe("fetchEvents", () => {
       ["UID:no-match", "SUMMARY:Internal planning", `DTSTART:${icsAt(2 * DAY)}`],
     ]);
     const { impl } = stubFetch(body);
-    const { events } = await fetchEvents(db, impl);
+    const { events } = await fetchEvents(db, impl, publicDns);
     const byUid = new Map(events.map((e) => [e.uid, e]));
     expect(byUid.get("title-match")?.suggested_client_id).toBe(globexId);
     expect(byUid.get("title-match")?.suggested_client_name).toBe("Globex");
@@ -195,13 +202,13 @@ describe("fetchEvents", () => {
     const body = feed([["UID:c1", "SUMMARY:Cached", `DTSTART:${icsAt(1 * DAY)}`]]);
     const { impl, calls } = stubFetch(body);
 
-    await fetchEvents(db, impl);
-    await fetchEvents(db, impl);
+    await fetchEvents(db, impl, publicDns);
+    await fetchEvents(db, impl, publicDns);
     expect(calls()).toBe(1);
 
     // Changing the feed URL invalidates the cache.
     await setFeedUrl(db, "https://other.example.com/cal.ics", userId);
-    await fetchEvents(db, impl);
+    await fetchEvents(db, impl, publicDns);
     expect(calls()).toBe(2);
   });
 
@@ -210,7 +217,17 @@ describe("fetchEvents", () => {
     const userId = await seedUser(db);
     await setFeedUrl(db, FEED_URL, userId);
     const { impl } = stubFetch("nope", 500);
-    expect(fetchEvents(db, impl)).rejects.toThrow(CalendarFetchError);
+    expect(fetchEvents(db, impl, publicDns)).rejects.toThrow(CalendarFetchError);
+  });
+
+  test("a feed host that resolves to a private address is refused at fetch time", async () => {
+    const db = await openTestDb();
+    const userId = await seedUser(db);
+    await setFeedUrl(db, FEED_URL, userId); // looks public when saved
+    const { impl, calls } = stubFetch("never");
+    const rebound: Resolver = async () => ["10.0.0.7"];
+    await expect(fetchEvents(db, impl, rebound)).rejects.toThrow(/private or internal/);
+    expect(calls()).toBe(0);
   });
 
   test("network failure throws CalendarFetchError", async () => {
@@ -220,7 +237,7 @@ describe("fetchEvents", () => {
     const impl = (async () => {
       throw new Error("connection refused");
     }) as unknown as typeof fetch;
-    expect(fetchEvents(db, impl)).rejects.toThrow(CalendarFetchError);
+    expect(fetchEvents(db, impl, publicDns)).rejects.toThrow(CalendarFetchError);
   });
 });
 

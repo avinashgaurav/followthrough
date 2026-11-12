@@ -7,6 +7,8 @@ import type { FetchLike } from "./supabase-auth.ts";
 import { blobKeyAllowed, newBlobKey } from "../ingest/media.ts";
 import { hostedSpendLedger } from "../llm/provider.ts";
 import { localStore, sweepOrphanUploads } from "../storage.ts";
+import { clearCalendarCache, fetchEvents, setFeedUrl } from "../calendar/service.ts";
+import type { Resolver } from "../calendar/safe-fetch.ts";
 import { ulid } from "../ids.ts";
 import { CONTROL_MIGRATIONS } from "../migrations.generated.ts";
 import { mkdtempSync } from "node:fs";
@@ -471,8 +473,60 @@ describe("review fixes", () => {
   test("operator-credential routes are blocked and bad share URLs are a 404", async () => {
     const a = await signedIn("block2");
     expect((await handleApi(req("POST", "/api/releases/poll", { cookie: a.cookie }))).status).toBe(404);
-    expect((await handleApi(req("GET", "/api/calendar/events", { cookie: a.cookie }))).status).toBe(404);
     expect((await handleApi(req("GET", "/share/%E0%A4%A"))).status).toBe(404);
+  });
+});
+
+describe("calendar import", () => {
+  const FEED = "https://calendar.example.com/team.ics";
+  const publicDns: Resolver = async () => ["93.184.216.34"];
+  const at = (offsetMs: number) =>
+    new Date(Date.now() + offsetMs).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  const feedWith = (uid: string) =>
+    ["BEGIN:VCALENDAR", "BEGIN:VEVENT", `UID:${uid}`, `SUMMARY:${uid}`, `DTSTART:${at(86_400_000)}`, "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+  const stub = (body: string) => {
+    let n = 0;
+    const impl = (async () => {
+      n++;
+      return new Response(body, { status: 200 });
+    }) as unknown as typeof fetch;
+    return { impl, calls: () => n };
+  };
+
+  test("is on in hosted mode; a private feed link is refused when saved", async () => {
+    const a = await signedIn("cal-on");
+    const status = await handleApi(req("GET", "/api/calendar/status", { cookie: a.cookie }));
+    expect(status.status).toBe(200);
+    expect(await status.json()).toEqual({ configured: false });
+    const bad = await handleApi(
+      req("POST", "/api/admin/calendar", { cookie: a.cookie, body: { ics_url: "https://169.254.169.254/latest" } }),
+    );
+    expect(bad.status).toBe(400);
+  });
+
+  test("two workspaces with the same feed URL never share cached events", async () => {
+    clearCalendarCache();
+    const a = await createWorkspace(db, { email: email("cal-a"), productName: "Cal A" });
+    const b = await createWorkspace(db, { email: email("cal-b"), productName: "Cal B" });
+    const fa = stub(feedWith("only-in-a"));
+    const fb = stub(feedWith("only-in-b"));
+
+    const inA = await withTenant(a.workspace.schema_name, async () => {
+      await setFeedUrl(db, FEED, a.userId);
+      return fetchEvents(db, fa.impl, publicDns);
+    });
+    const inB = await withTenant(b.workspace.schema_name, async () => {
+      await setFeedUrl(db, FEED, b.userId);
+      return fetchEvents(db, fb.impl, publicDns);
+    });
+    expect(inA.events.map((e) => e.uid)).toEqual(["only-in-a"]);
+    expect(inB.events.map((e) => e.uid)).toEqual(["only-in-b"]); // B fetched its own feed, not A's cache
+    expect(fb.calls()).toBe(1);
+
+    // Each workspace still hits its own cache, and B saving its URL left A's alone.
+    const againA = await withTenant(a.workspace.schema_name, () => fetchEvents(db, fa.impl, publicDns));
+    expect(againA.events.map((e) => e.uid)).toEqual(["only-in-a"]);
+    expect(fa.calls()).toBe(1);
   });
 });
 
