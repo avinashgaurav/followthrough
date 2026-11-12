@@ -436,6 +436,10 @@ route("POST", "/api/mcp", "user", async (req) => {
   // The router already authenticated this request (token, or the open-access
   // guest on a self-hosted copy without login); tools reuse the same header.
   const auth = req.headers.get("authorization") ?? "";
+  // One identity per call: the tools run with the bearer, so a session cookie alongside it is refused.
+  if (req.headers.get("authorization") && (req.headers.get("cookie") ?? "").includes("ie_session=")) {
+    return rpcError(null, -32600, "Send either an API token or a session, not both.", 400);
+  }
   if (Number(req.headers.get("content-length") ?? 0) > 2_000_000) return rpcError(null, -32600, "Request too large.", 413);
   let msg: Json;
   try {

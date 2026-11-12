@@ -191,12 +191,11 @@ async function workspaceForBearer(req: Request): Promise<Workspace | "limited" |
   const bearer = bearerToken(req);
   if (!bearer || bearer.scope === "local") return null;
   const db = getDb();
-  const missIp = ipKey("bearer-miss", req);
-  if (missIp && (await controlHitCount(db, missIp, HOUR)) >= 60) return "limited";
-  const miss = async () => {
-    if (missIp) await controlRateLimited(db, missIp, 60, HOUR);
-    return null;
-  };
+  // Misses are capped per IP (a shared bucket with a higher cap when the IP is
+  // unknown). Only misses count, so a valid token behind a busy IP still works.
+  const missBucket = ipBucket("bearer-miss", req, 60);
+  const miss = async (): Promise<"limited" | null> =>
+    (await controlRateLimited(db, missBucket.key, missBucket.limit, HOUR)) ? "limited" : null;
   const ws = await getWorkspace(db, bearer.scope);
   if (!ws) return miss();
   const hash = tokenHash(bearer.token);

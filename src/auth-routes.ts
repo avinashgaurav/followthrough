@@ -189,12 +189,15 @@ route("POST", "/api/users/:id/rotate-code", "admin", async (_req, admin, params)
   const db = getDb();
   const code = generateLoginCode();
   // Issuing a fresh code also re-enables a previously-revoked account.
-  const res = await db
-    .query("UPDATE users SET code_hash = ?, code_rotated_at = ?, disabled_at = NULL WHERE id = ?")
-    .run(await hashCode(code), nowIso(), params.id!);
+  const codeHash = await hashCode(code);
+  // Re-enabling never revives old API tokens: revoke them in the same transaction, first.
+  const res = await db.transaction(async () => {
+    await db.query("UPDATE api_tokens SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL").run(nowIso(), params.id!);
+    return db
+      .query("UPDATE users SET code_hash = ?, code_rotated_at = ?, disabled_at = NULL WHERE id = ?")
+      .run(codeHash, nowIso(), params.id!);
+  });
   if (res.changes === 0) return json({ error: "user not found" }, 404);
-  // Re-enabling never revives old API tokens.
-  await db.query("UPDATE api_tokens SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL").run(nowIso(), params.id!);
   await appendEvent(db, { actorUserId: admin!.id, entityType: "user", entityId: params.id!, eventType: "user.code_rotated" });
   return json({ loginCode: code });
 });

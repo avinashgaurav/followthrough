@@ -1250,3 +1250,16 @@ describe("API tokens and MCP on the hosted app", () => {
     expect((await handleApi(bearerReq("GET", "/api/me", `ftk_local_${"A".repeat(43)}`))).status).toBe(401);
   });
 });
+
+describe("API token miss cap", () => {
+  test("a valid token from an IP that sent 60+ unknown tokens still works", async () => {
+    const a = await signedIn("tok-shared-ip");
+    const r = await handleApi(req("POST", "/api/tokens", { cookie: a.cookie, body: { name: "Claude" } }));
+    const token = ((await r.json()) as { token: string }).token;
+    const from = (t: string) =>
+      new Request("http://localhost/api/me", { headers: { authorization: `Bearer ${t}`, "x-forwarded-for": "198.51.100.77" } });
+    for (let i = 0; i < 65; i++) await handleApi(from(`ftk_${a.ws.id}_${String(i).padStart(43, "q")}`));
+    expect((await handleApi(from(`ftk_${a.ws.id}_${"q".repeat(43)}`))).status).toBe(429);
+    expect((await handleApi(from(token))).status).toBe(200);
+  });
+});
