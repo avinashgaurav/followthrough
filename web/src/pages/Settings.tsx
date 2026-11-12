@@ -432,7 +432,11 @@ function UsersSection() {
   return (
     <Panel
       title="Users"
-      desc="Who can sign in; come here to add a teammate, hand out a login code, or cut off access when someone leaves."
+      desc={
+        hosted
+          ? "Who is in this workspace. Revoke someone's access when they leave."
+          : "Who can sign in; come here to add a teammate, hand out a login code, or cut off access when someone leaves."
+      }
       actions={
         hosted ? undefined : (
           <Btn

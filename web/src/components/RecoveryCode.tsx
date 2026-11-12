@@ -40,7 +40,7 @@ export function RecoveryCodeCard({ code, email, onDone, doneLabel = "Continue" }
         If you forget your password, this code lets you set a new one. It is shown only now, so put it in a password
         manager or download it.
       </p>
-      <div className="row gap-8" style={{ flexWrap: "wrap", marginBottom: 10 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginBottom: 10 }}>
         <code
           className="mono"
           aria-label="Recovery code"
@@ -49,8 +49,9 @@ export function RecoveryCodeCard({ code, email, onDone, doneLabel = "Continue" }
             border: "1px solid var(--line)",
             borderRadius: "var(--r)",
             padding: "6px 10px",
-            fontSize: 16,
-            letterSpacing: "0.08em",
+            fontSize: 15,
+            letterSpacing: "0.06em",
+            color: "var(--ink)",
             userSelect: "all",
           }}
         >
