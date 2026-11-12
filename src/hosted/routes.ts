@@ -93,9 +93,9 @@ function blockedWhenHosted(method: string, path: string): boolean {
   if (path.startsWith("/api/watchfolder")) return true;
   // Would read the operator's RELEASE_REPO with the operator's GitHub token.
   if (path === "/api/releases/poll") return true;
-  // iCal feeds are fetched server-side; off until redirects and private
-  // addresses are checked at fetch time, not only when the URL is saved.
-  if (path.startsWith("/api/calendar")) return true;
+  // iCal feeds (/api/calendar) stay on: each fetch checks every resolved
+  // address and redirect hop (src/calendar/safe-fetch.ts), and the feed cache
+  // is per workspace.
   return false;
 }
 

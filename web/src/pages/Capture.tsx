@@ -26,7 +26,6 @@ import {
   Tooltip,
   useToast,
 } from "../components/ui";
-import { useAuth } from "../auth";
 import { ageOf, formatDate, formatDateTime, titleCase, meetingStatusLabel } from "../format";
 
 // ============================================================ helpers (local to this page)
@@ -69,7 +68,6 @@ type Path = "calendar" | "manual";
 
 export function Capture() {
   const navigate = useNavigate();
-  const { hosted } = useAuth();
   const toast = useToast();
   const [searchParams] = useSearchParams();
 
@@ -152,18 +150,15 @@ export function Capture() {
   useEffect(() => {
     void loadClients();
     void loadRecent();
-    // Calendar feeds are off on the hosted app (the route 404s there).
-    if (hosted) setCalConfigured(false);
-    else
-      api
-        .calendarStatus()
-        .then((r) => setCalConfigured(!!r?.configured))
-        .catch(() => setCalConfigured(false));
+    api
+      .calendarStatus()
+      .then((r) => setCalConfigured(!!r?.configured))
+      .catch(() => setCalConfigured(false));
     api
       .sttStatus()
       .then((r) => setSttOk(!!(r?.ok ?? r?.available ?? r?.enabled)))
       .catch(() => setSttOk(false));
-  }, [loadClients, loadRecent, hosted]);
+  }, [loadClients, loadRecent]);
 
   const clientMeetingCount = useCallback((c: Client): number | undefined => {
     const v = c.meetings_count ?? c.meeting_count;
