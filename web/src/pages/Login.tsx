@@ -18,11 +18,15 @@ export function Login() {
   const from = (location.state as { from?: string } | null)?.from ?? "/";
   // Hosted deployments sign in with an emailed code instead of a team password.
   const [hostedFree, setHostedFree] = useState<number | null>(null);
+  // Nothing is drawn until we know which sign-in this is, so the hosted app
+  // never flashes the team-password form first.
+  const [configKnown, setConfigKnown] = useState(false);
   useEffect(() => {
     api
       .hostedConfig()
       .then((c) => c.hosted && setHostedFree(c.free_meetings ?? 0))
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setConfigKnown(true));
   }, []);
 
   async function onSubmit(e: React.FormEvent) {
@@ -67,6 +71,7 @@ export function Login() {
     }
   }
 
+  if (!configKnown) return <div className="login-wrap" aria-busy="true" />;
   if (hostedFree !== null) return <HostedLogin freeMeetings={hostedFree} />;
 
   return (
