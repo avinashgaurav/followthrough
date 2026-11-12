@@ -36,6 +36,7 @@ from this deployment's AI key.
 | `MAX_WORKSPACES` | 300 | Sign-ups stop here |
 | `LLM_DAILY_BUDGET_USD` | 5 | One daily AI cap across every workspace; over it, AI calls return 503 until the next UTC day |
 | `WORKSPACE_DAILY_BUDGET_USD` | 1 | Each workspace's own daily AI cap inside the one above, so one workspace cannot spend everyone's budget |
+| `DEEPGRAM_API_KEY` | unset | Optional: turns uploaded audio into text. Without it, people paste transcripts |
 | `MAX_MEMBERS_PER_WORKSPACE` | 10 | Teammates a workspace admin can invite |
 
 Single-tenant features that would act with this deployment's credentials are
