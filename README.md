@@ -10,7 +10,9 @@
 
 </div>
 
-A client asks for a feature on a call, it ships weeks later, and nobody tells the client; Followthrough tracks each ask from the client's exact words to "shipped" to "client told".
+**Turn client calls into promises you actually keep.**
+
+The feature a client asked for shipped last month. Did anyone tell them? Followthrough pulls every ask from your calls with the client's exact quote, then tracks it to shipped and told, so no promise slips. Open source and free to start.
 
 ## Watch
 
