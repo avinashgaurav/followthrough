@@ -28,7 +28,7 @@ import {
  * db-injected so routes.ts stays a pure registration file.
  */
 
-const MEETING_TYPES = ["discovery", "demo", "qbr", "support", "other"] as const;
+export const MEETING_TYPES = ["discovery", "demo", "qbr", "support", "other"] as const;
 const MEETING_SOURCES = ["extension", "meet", "zoom", "fireflies", "manual", "watch_folder", "drive"] as const;
 
 // states that no longer count as open work for a client

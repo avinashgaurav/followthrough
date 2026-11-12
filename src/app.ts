@@ -20,6 +20,8 @@ import "./retention/routes.ts";
 import "./share/routes.ts";
 import "./cron.ts";
 import "./hosted/routes.ts";
+import "./tokens-routes.ts";
+import "./mcp.ts";
 import { hostedDispatch } from "./hosted/routes.ts";
 import { hostedMode } from "./config.ts";
 

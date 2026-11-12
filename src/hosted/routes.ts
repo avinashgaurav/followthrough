@@ -15,6 +15,7 @@ import {
   type LinkProof,
 } from "./supabase-auth.ts";
 import { COMMON_PASSWORDS } from "./common-passwords.ts";
+import { bearerToken, tokenHash } from "../tokens.ts";
 import {
   AlreadyMemberError,
   SignupsFullError,
@@ -173,9 +174,32 @@ export async function hostedDispatch(
     return inWorkspace(ws, () => dispatch(req));
   }
 
-  const ws = await workspaceForSession(db, readSessionCookie(req));
+  const ws = (await workspaceForSession(db, readSessionCookie(req))) ?? (await workspaceForBearer(req));
+  if (ws === "limited") return json({ error: "Too many requests with this token. Try again in an hour." }, 429);
   if (!ws) return json({ error: "unauthorized" }, 401);
   return inWorkspace(ws, () => dispatch(req));
+}
+
+/**
+ * A personal API token names its workspace ("ftk_<workspaceId>_..."), so the
+ * request can be pinned to that schema; the token itself is then checked
+ * inside it (userForBearer). Calls per token are capped to keep a runaway
+ * client from flooding the shared database.
+ */
+async function workspaceForBearer(req: Request): Promise<Workspace | "limited" | null> {
+  const bearer = bearerToken(req);
+  if (!bearer || bearer.scope === "local") return null;
+  const db = getDb();
+  const ws = await getWorkspace(db, bearer.scope);
+  if (!ws) return null;
+  // Only a live token counts toward the cap: made-up tokens add no rows.
+  const hash = tokenHash(bearer.token);
+  const live = await withTenant(ws.schema_name, () =>
+    db.query("SELECT 1 AS x FROM api_tokens WHERE token_hash = ? AND revoked_at IS NULL").get(hash),
+  );
+  if (!live) return null;
+  if (await controlRateLimited(db, `token:${hash.slice(0, 24)}`, 1200, HOUR)) return "limited";
+  return ws;
 }
 
 // ---------------------------------------------------------------- routes

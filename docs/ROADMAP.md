@@ -13,6 +13,7 @@ These features exist in the code and work once the keys are set (when you run yo
 
 ## Accounts and email
 
+- **MCP sign-in with OAuth,** so Followthrough can be added as a connector in the claude.ai web app without pasting a token. The MCP server itself works today with a personal token ([MCP.md](MCP.md)).
 - **Sign in with Google** on the hosted app: no password to forget, and Google proves the email, so it also verifies accounts and lets an admin invite a teammate by email address. Needs a Google OAuth client in Supabase (no domain needed).
 - **Connect an email sender** for the hosted app. Emails aren't verified yet because no sender is connected. Recovery codes and invite links work without one today; with one (for example Resend), confirmation emails, emailed password reset and email invites follow. [#24](https://github.com/avinashgaurav/followthrough/issues/24), [#12](https://github.com/avinashgaurav/followthrough/issues/12)
 - **Sign-up protection:** CAPTCHA and a minimum password length of 8, set in Supabase > Authentication > Attack Protection.

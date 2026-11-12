@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api, ApiError, domainRule, emailAllowed, type InviteLink, type SttStatus, type User } from "../api";
+import { api, ApiError, domainRule, emailAllowed, type ApiToken, type InviteLink, type SttStatus, type User } from "../api";
 import { formatDate, releaseCheckWords } from "../format";
 import {
   Alert,
@@ -30,7 +30,7 @@ function readCode(r: { loginCode?: string; login_code?: string } | undefined | n
 }
 
 export function Settings() {
-  const { hosted } = useAuth();
+  const { hosted, demo } = useAuth();
   return (
     <>
       <SectionHead
@@ -42,6 +42,7 @@ export function Settings() {
         {hosted && <RecoverySection />}
         {hosted && <InviteLinksSection />}
         <UsersSection />
+        {!demo && <McpSection />}
         <CalendarSection />
         <ReleasesSection />
         {!hosted && <DigestSection />}
@@ -306,6 +307,144 @@ function InviteLinksSection() {
                     <td>{formatDate(l.expires_at)}</td>
                     <td style={{ textAlign: "right" }}>
                       <Btn size="sm" variant="danger" onClick={() => void revoke(l.id)}>
+                        Revoke
+                      </Btn>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+// ================================================================ MCP (API tokens)
+
+function McpSection() {
+  const toast = useToast();
+  const [tokens, setTokens] = useState<ApiToken[] | null>(null);
+  const [error, setError] = useState<unknown>(null);
+  const [name, setName] = useState("");
+  const [made, setMade] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const endpoint = `${window.location.origin}/api/mcp`;
+
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      setTokens((await api.listTokens()).tokens);
+    } catch (e) {
+      setError(e);
+      setTokens([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function make(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      const r = await api.createToken(name.trim() || "MCP client");
+      setMade(r.token);
+      setName("");
+      void load();
+    } catch (err) {
+      toast.push(err instanceof ApiError ? err.message : "Could not make a token. Try again.", "critical");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function revoke(id: string) {
+    try {
+      await api.revokeToken(id);
+      toast.push("Token revoked. It no longer works.", "info");
+      void load();
+    } catch (err) {
+      toast.push(err instanceof ApiError ? err.message : "Could not revoke the token.", "critical");
+    }
+  }
+
+  function copy(text: string, what: string) {
+    void navigator.clipboard
+      ?.writeText(text)
+      .then(() => toast.push(`${what} copied.`, "success"))
+      .catch(() => toast.push("Copy failed. Select it and copy by hand.", "warning"));
+  }
+
+  const claudeCmd = (t: string) => `claude mcp add --transport http followthrough ${endpoint} --header "Authorization: Bearer ${t}"`;
+  const mono = { wordBreak: "break-all" as const, fontSize: 12, userSelect: "all" as const };
+
+  return (
+    <Panel
+      title="Connect an AI assistant (MCP)"
+      desc="Let Claude, Cursor or another MCP client search your asks, read meetings and update the pipeline as you. Make a token for each app; it acts as you, with your role, until you revoke it."
+    >
+      <p className="small" style={{ margin: "0 0 12px" }}>
+        Server URL: <code className="mono">{endpoint}</code>
+      </p>
+      {made && (
+        <div className="mb-14">
+          <Alert severity="success" title="Your new token" onDismiss={() => setMade(null)}>
+            <p style={{ margin: "0 0 8px" }}>Copy it now: it is shown only once. Anyone with it can act as you.</p>
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <code className="mono" style={mono}>{made}</code>
+              <Btn size="sm" onClick={() => copy(made, "Token")}>
+                Copy
+              </Btn>
+            </div>
+            <p className="small" style={{ margin: "0 0 6px" }}>Claude Code: run this in a terminal.</p>
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+              <code className="mono" style={mono}>{claudeCmd(made)}</code>
+              <Btn size="sm" onClick={() => copy(claudeCmd(made), "Command")}>
+                Copy
+              </Btn>
+            </div>
+          </Alert>
+        </div>
+      )}
+      <form onSubmit={make} className="row gap-8" style={{ flexWrap: "wrap", alignItems: "flex-end", marginBottom: 14 }}>
+        <Field label="Token name" htmlFor="tok-name">
+          <input id="tok-name" className="ctrl" maxLength={60} placeholder="Claude on my laptop" value={name} onChange={(e) => setName(e.target.value)} />
+        </Field>
+        <Btn variant="primary" type="submit" disabled={busy}>
+          {busy ? "Making" : "Make a token"}
+        </Btn>
+      </form>
+      {error ? (
+        <ErrorAlert error={error} onRetry={() => void load()} />
+      ) : tokens === null ? (
+        <Skeleton rows={2} />
+      ) : tokens.length === 0 ? (
+        <p className="muted small" style={{ margin: 0 }}>No tokens yet.</p>
+      ) : (
+        <div className="card p-0">
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Token</th>
+                  <th>Made</th>
+                  <th>Last used</th>
+                  <th style={{ textAlign: "right" }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tokens.map((t) => (
+                  <tr key={t.id}>
+                    <td>{t.name}</td>
+                    <td className="mono" style={{ fontSize: 12 }}>{t.prefix}…</td>
+                    <td>{formatDate(t.created_at)}</td>
+                    <td>{t.last_used_at ? formatDate(t.last_used_at) : "Never"}</td>
+                    <td style={{ textAlign: "right" }}>
+                      <Btn size="sm" variant="danger" onClick={() => void revoke(t.id)}>
                         Revoke
                       </Btn>
                     </td>

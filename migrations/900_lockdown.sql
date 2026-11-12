@@ -14,7 +14,7 @@ DECLARE
     'transcripts', 'extraction_runs', 'insights', 'insight_mentions', 'insight_requesters', 'action_items',
     'tags', 'insight_tags', 'tickets', 'releases', 'release_entries', 'release_matches', 'completion_evidence',
     'email_drafts', 'csv_exports', 'events', 'fts_transcripts', 'fts_insights', 'meeting_analyses',
-    'app_settings', 'llm_spend', 'rate_hits'
+    'app_settings', 'llm_spend', 'rate_hits', 'api_tokens'
   ];
   t text;
   r text;

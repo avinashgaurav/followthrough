@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Bun](https://img.shields.io/badge/Bun-1.3+-fbf0df?logo=bun&logoColor=black)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-584%20passing-brightgreen.svg)](docs/SETUP.md#development)
+[![Tests](https://img.shields.io/badge/tests-598%20passing-brightgreen.svg)](docs/SETUP.md#development)
 [![LLM: Gemini, Claude or OpenRouter](https://img.shields.io/badge/LLM-Gemini%20%7C%20Claude%20%7C%20OpenRouter-d97757.svg)](docs/SETUP.md)
 
 </div>
@@ -44,7 +44,7 @@ Or [run your own](#run-your-own).
 
 ## Good to know
 
-- **Works today:** sign up, capture by pasting a transcript or uploading audio, AI extraction with quotes, Review, Library, Ask, Confirm shipped, client pages and share links.
+- **Works today:** sign up, capture by pasting a transcript or uploading audio, AI extraction with quotes, Review, Library, Ask, Confirm shipped, client pages and share links, and an MCP server for Claude and Cursor.
 - **Hosted app:** every sign-up gets its own private workspace (a separate database schema), 5 free meetings and a daily AI spend cap.
 - **Forgot your password?** Sign-up shows a one-time recovery code: save it, and use it on the sign-in page to set a new password. Admins can make a new code in Settings.
 - **Teammates:** an admin makes an invite link in Settings and sends it over Slack or chat. It works once, for 48 hours, and the teammate sets their own email and password.
@@ -71,6 +71,16 @@ Or [run your own](#run-your-own).
 >
 > Limits: the data is made up. The tests ran through the Claude Code command-line tool, not the way the live app calls the AI. The v5 and v6 columns use the 4 calls the prompt was tuned on. The correct answers for the new calls were written by the author. How it was tested, and every miss: [EVALS.md](EVALS.md).
 
+## Use it from Claude or Cursor (MCP)
+
+Followthrough has an MCP server with 26 tools: search asks, ask questions, get a pre-call brief, add meetings, route and finalize asks, confirm what shipped and draft the client email. Make a token in Settings, then:
+
+```bash
+claude mcp add --transport http followthrough https://followthrough-hosted.vercel.app/api/mcp --header "Authorization: Bearer ftk_..."
+```
+
+Cursor, Claude Desktop and every tool: [docs/MCP.md](docs/MCP.md).
+
 ## Why AI here, why code there
 
 | Step | Done by | Why |
@@ -96,6 +106,7 @@ bun run build:web && bun run start   # http://localhost:4500, open by default: t
 ## More
 
 - **Sister project:** [ClientLens](https://github.com/avinashgaurav/clientlens), a Chrome sidebar that drafts pitches from your own docs and coaches you live in Google Meet. ClientLens helps during the call; Followthrough tracks what the client asked for after it.
+- [docs/MCP.md](docs/MCP.md): connect Claude, Cursor or another MCP client; all 26 tools.
 - [Roadmap](docs/ROADMAP.md): what comes next, and which built features need keys to switch on
 - [docs/PRD.md](docs/PRD.md): product brief: user, problem, metrics, cost per meeting.
 - [EVALS.md](EVALS.md): how the tests were run, the results and every miss.

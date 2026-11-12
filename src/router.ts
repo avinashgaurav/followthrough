@@ -3,6 +3,7 @@ import { userForSession, readSessionCookie, guestUser, type AuthedUser } from ".
 import { authRequired } from "./settings.ts";
 import { demoBlocks, DEMO_BLOCKED_MESSAGE } from "./demo.ts";
 import { isAIConfigError, LLMBudgetError, LLMRateLimitError } from "./llm/provider.ts";
+import { userForBearer } from "./tokens.ts";
 
 export type Handler = (
   req: Request,
@@ -61,6 +62,8 @@ export async function dispatch(req: Request): Promise<Response | null> {
     if (r.auth !== "public") {
       const db = getDb();
       user = await userForSession(db, readSessionCookie(req));
+      // A personal API token (MCP clients, scripts) when there is no session.
+      if (!user) user = await userForBearer(db, req);
       // Open mode (login not required): fall back to a guest admin so the whole
       // app works with no sign-in. A real session always takes precedence, and
       // with login required no guest is ever created.
