@@ -47,9 +47,18 @@ evidence-link liveness check, and the operator's chat webhook.
 iCal calendar import is on. Each workspace admin sets their own feed link, and
 the server fetches it with a fetch-time guard: http(s) on the standard ports
 only, every address the host resolves to must be public (no loopback, private,
-link-local, CGNAT, metadata or multicast addresses, IPv6 included), at most 3
-redirects with each hop checked again, a 5 MB body cap and a 10 second
-timeout. Parsed feeds are cached for 5 minutes per workspace, never shared.
+link-local, CGNAT, metadata or multicast addresses; for IPv6, only global
+unicast, with IPv4 carried inside transition forms judged as IPv4), at most 3
+redirects with each hop checked again, a 5 MB body cap (after decompression)
+and a 10 second timeout. Saving a link runs the same check. Parsed feeds are
+cached per workspace, never shared: only the events in the picker's window
+(at most 5,000 per feed), for 5 minutes, or 45 seconds for a failed fetch.
+Each workspace gets 30 feed fetches an hour (cache hits are free; past that
+the API answers 429), and at most 20 feed fetches run at once across the app.
+
+The address check runs before fetch makes its own DNS lookup, so a hostile
+DNS server could still answer differently in between (DNS rebinding). The
+real fix is an egress deny-list on the host for private and metadata ranges.
 
 Invites are pending until the invitee signs in with their own email code and
 chooses to join; they can create their own workspace instead.

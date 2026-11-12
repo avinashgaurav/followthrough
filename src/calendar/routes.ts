@@ -4,6 +4,7 @@ import { getDb } from "../db.ts";
 import {
   CalendarConfigError,
   CalendarFetchError,
+  CalendarRateLimitError,
   clearFeedUrl,
   fetchEvents,
   getFeedUrl,
@@ -19,6 +20,7 @@ route("GET", "/api/calendar/events", "user", async () => {
     const result = await fetchEvents(getDb());
     return json(result); // {configured, events}; unconfigured = {configured:false, events:[]}
   } catch (err) {
+    if (err instanceof CalendarRateLimitError) return json({ error: err.message }, 429);
     if (err instanceof CalendarFetchError) {
       return json(
         { error: `Calendar feed unavailable. ${err.message} Check the ICS URL in admin settings or try again.` },

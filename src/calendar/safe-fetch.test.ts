@@ -47,12 +47,19 @@ describe("isBlockedAddress", () => {
     "100.64.0.1", "100.127.255.254", "0.0.0.0", "0.1.2.3", "224.0.0.1", "240.0.0.1", "255.255.255.255",
     "::", "::1", "fc00::1", "fd12:3456::1", "fe80::1", "fe80::1%en0", "ff02::1",
     "::ffff:127.0.0.1", "::ffff:10.0.0.1", "::ffff:a9fe:a9fe", "[::1]", "64:ff9b::a00:1", "2002:c0a8:101::1",
+    // IPv6 transition forms and everything outside 2000::/3
+    "::ffff:0:127.0.0.1", "::ffff:0:a00:1", "::ffff:0:169.254.169.254", "64:ff9b:1::8.8.8.8", "64:ff9b:1::a00:1",
+    "2001::1", "2001:0:4136:e378:8000:63bf:3fff:fdd2", "2001:2::1", "::8.8.8.8", "::127.0.0.1", "100::1",
+    "3fff::1", "4000::1", "1234::1",
     "not-an-ip",
   ])("blocks %s", (addr) => {
     expect(isBlockedAddress(addr)).toBe(true);
   });
 
-  test.each(["93.184.216.34", "8.8.8.8", "172.32.0.1", "100.128.0.1", "2606:4700::6810:84e5", "::ffff:8.8.8.8"])(
+  test.each([
+    "93.184.216.34", "8.8.8.8", "172.32.0.1", "100.128.0.1", "2606:4700::6810:84e5", "::ffff:8.8.8.8",
+    "64:ff9b::808:808", "2002:808:808::1", "2a00:1450:4001::200e",
+  ])(
     "allows %s",
     (addr) => {
       expect(isBlockedAddress(addr)).toBe(false);
@@ -217,5 +224,67 @@ describe("safeFetchText", () => {
     const impl = ((_u: string, init: RequestInit) =>
       new Promise((_, reject) => init.signal!.addEventListener("abort", () => reject(new Error("aborted"))))) as unknown as typeof fetch;
     await expect(safeFetchText("https://slow.example.com/a.ics", { fetchImpl: impl, resolve: r, timeoutMs: 50 })).rejects.toThrow();
+  });
+
+  test("a redirect to ftp: or file: is refused before it is requested", async () => {
+    const r = dns({ "cal.example.com": [PUBLIC] });
+    for (const to of ["ftp://cal.example.com/a.ics", "file:///etc/passwd"]) {
+      const { impl, requested } = routes({ "https://cal.example.com/a.ics": redirect(to) });
+      await expect(safeFetchText("https://cal.example.com/a.ics", opts(impl, r))).rejects.toThrow(UnsafeUrlError);
+      expect(requested).toEqual(["https://cal.example.com/a.ics"]);
+    }
+  });
+
+  test("a redirect with no Location is a failed answer, not followed", async () => {
+    const r = dns({ "cal.example.com": [PUBLIC] });
+    const { impl, requested } = routes({ "https://cal.example.com/a.ics": () => new Response(null, { status: 302 }) });
+    expect(await safeFetchText("https://cal.example.com/a.ics", opts(impl, r))).toEqual({ status: 302, ok: false, text: "" });
+    expect(requested).toHaveLength(1);
+  });
+
+  test("userinfo cannot disguise the host: the real host is the one checked", async () => {
+    const r = dns({ "cal.example.com": [PUBLIC], "evil.example.com": ["10.1.1.1"] });
+    const { impl, requested } = routes({});
+    for (const url of [
+      "https://cal.example.com@127.0.0.1/a.ics",
+      "https://cal.example.com:443@evil.example.com/a.ics",
+      "https://user:pw@[::1]/a.ics",
+    ]) {
+      await expect(safeFetchText(url, opts(impl, r))).rejects.toThrow(UnsafeUrlError);
+    }
+    expect(requested).toHaveLength(0);
+    // Credentials for a public host are fine.
+    const allowed = routes({ "https://user:pw@cal.example.com/a.ics": ok("x") });
+    expect((await safeFetchText("https://user:pw@cal.example.com/a.ics", opts(allowed.impl, r))).ok).toBe(true);
+  });
+
+  test("localhost names are refused whatever the resolver says", async () => {
+    // A resolver that would call them public: the name check must not depend on it.
+    const r: Resolver = async () => [PUBLIC];
+    const { impl, requested } = routes({});
+    for (const url of ["https://localhost./a.ics", "https://LOCALHOST/a.ics", "https://api.localhost/a.ics", "https://localhost../a.ics"]) {
+      await expect(safeFetchText(url, opts(impl, r))).rejects.toThrow(UnsafeUrlError);
+    }
+    expect(requested).toHaveLength(0);
+  });
+
+  test("a gzip bomb is cut off by decompressed size", async () => {
+    // 50 MB of zeros compresses to about 50 KB, well under the cap on the wire.
+    const bomb = Bun.gzipSync(new Uint8Array(50 * 1024 * 1024));
+    expect(bomb.byteLength).toBeLessThan(MAX_BODY_BYTES);
+    const server = Bun.serve({
+      port: 0,
+      fetch: () => new Response(bomb, { headers: { "content-encoding": "gzip", "content-type": "text/calendar" } }),
+    });
+    try {
+      // Real fetch (so real decompression), pointed at the local server; the
+      // guard still sees and checks the public-looking feed URL.
+      const realFetch = ((input: string | URL | Request, init?: RequestInit) =>
+        fetch(String(input).replace("https://bomb.example.com", `http://127.0.0.1:${server.port}`), init)) as typeof fetch;
+      const r = dns({ "bomb.example.com": [PUBLIC] });
+      await expect(safeFetchText("https://bomb.example.com/a.ics", opts(realFetch, r))).rejects.toThrow(FeedTooLargeError);
+    } finally {
+      server.stop(true);
+    }
   });
 });

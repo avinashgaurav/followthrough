@@ -7,7 +7,14 @@ import type { FetchLike } from "./supabase-auth.ts";
 import { blobKeyAllowed, newBlobKey } from "../ingest/media.ts";
 import { hostedSpendLedger } from "../llm/provider.ts";
 import { localStore, sweepOrphanUploads } from "../storage.ts";
-import { clearCalendarCache, fetchEvents, setFeedUrl } from "../calendar/service.ts";
+import {
+  CalendarRateLimitError,
+  HOSTED_FETCHES_PER_HOUR,
+  clearCalendarCache,
+  fetchEvents,
+  loadFeed,
+  setFeedUrl,
+} from "../calendar/service.ts";
 import type { Resolver } from "../calendar/safe-fetch.ts";
 import { ulid } from "../ids.ts";
 import { CONTROL_MIGRATIONS } from "../migrations.generated.ts";
@@ -512,11 +519,11 @@ describe("calendar import", () => {
     const fb = stub(feedWith("only-in-b"));
 
     const inA = await withTenant(a.workspace.schema_name, async () => {
-      await setFeedUrl(db, FEED, a.userId);
+      await setFeedUrl(db, FEED, a.userId, publicDns);
       return fetchEvents(db, fa.impl, publicDns);
     });
     const inB = await withTenant(b.workspace.schema_name, async () => {
-      await setFeedUrl(db, FEED, b.userId);
+      await setFeedUrl(db, FEED, b.userId, publicDns);
       return fetchEvents(db, fb.impl, publicDns);
     });
     expect(inA.events.map((e) => e.uid)).toEqual(["only-in-a"]);
@@ -527,6 +534,32 @@ describe("calendar import", () => {
     const againA = await withTenant(a.workspace.schema_name, () => fetchEvents(db, fa.impl, publicDns));
     expect(againA.events.map((e) => e.uid)).toEqual(["only-in-a"]);
     expect(fa.calls()).toBe(1);
+  });
+
+  test("feed fetches are rate limited per workspace; cache hits are free", async () => {
+    clearCalendarCache();
+    const a = await signedIn("cal-rl-a");
+    const b = await signedIn("cal-rl-b");
+    const f = stub(feedWith("e"));
+    const u = (n: number) => `${FEED}?x=${n}`;
+    await withTenant(a.ws.schema_name, async () => {
+      for (let i = 0; i < HOSTED_FETCHES_PER_HOUR; i++) await loadFeed(db, u(i), f.impl, publicDns);
+      await expect(loadFeed(db, u(999), f.impl, publicDns)).rejects.toThrow(CalendarRateLimitError);
+      expect(await loadFeed(db, u(0), f.impl, publicDns)).toHaveLength(1); // cached, not counted
+    });
+    expect(f.calls()).toBe(HOSTED_FETCHES_PER_HOUR);
+
+    // The route answers 429 for that workspace (refused before any fetch or DNS).
+    await withTenant(a.ws.schema_name, () =>
+      db
+        .query("INSERT INTO app_settings (key, value, updated_by, updated_at) VALUES ('calendar_ics_url', ?, NULL, ?)")
+        .run(u(1000), new Date().toISOString()),
+    );
+    expect((await handleApi(req("GET", "/api/calendar/events", { cookie: a.cookie }))).status).toBe(429);
+
+    // Another workspace has its own allowance.
+    await withTenant(b.ws.schema_name, () => loadFeed(db, u(999), f.impl, publicDns));
+    expect(f.calls()).toBe(HOSTED_FETCHES_PER_HOUR + 1);
   });
 });
 

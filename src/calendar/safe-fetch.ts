@@ -97,23 +97,26 @@ function v6Blocked(addr: string): boolean {
   const g = v6Groups(addr.split("%")[0]!);
   if (!g) return true; // unparseable: refuse rather than guess
   const [g0, g1, g2, g3, g4, g5, g6, g7] = g as [number, number, number, number, number, number, number, number];
-  const firstFiveZero = g0 === 0 && g1 === 0 && g2 === 0 && g3 === 0 && g4 === 0;
+  const firstFourZero = g0 === 0 && g1 === 0 && g2 === 0 && g3 === 0;
   // ::ffff:a.b.c.d (IPv4-mapped): judge the IPv4 address it carries.
-  if (firstFiveZero && g5 === 0xffff) return v4Blocked(embeddedV4(g6, g7));
-  // :: (unspecified), ::1 (loopback) and the deprecated ::a.b.c.d form.
-  if (firstFiveZero && g5 === 0) return true;
-  // 64:ff9b::/96 (NAT64) carries an IPv4 address in its last 32 bits.
+  if (firstFourZero && g4 === 0 && g5 === 0xffff) return v4Blocked(embeddedV4(g6, g7));
+  // ::ffff:0:a.b.c.d (IPv4-translated, SIIT): same.
+  if (firstFourZero && g4 === 0xffff && g5 === 0) return v4Blocked(embeddedV4(g6, g7));
+  // 64:ff9b::/96 (well-known NAT64 prefix) carries an IPv4 address in its last 32 bits.
   if (g0 === 0x64 && g1 === 0xff9b && g2 === 0 && g3 === 0 && g4 === 0 && g5 === 0) {
     return v4Blocked(embeddedV4(g6, g7));
   }
+  // Everything outside 2000::/3 (global unicast) is refused: ::, ::1, the
+  // deprecated ::a.b.c.d form, 64:ff9b:1::/48 local NAT64, 100::/64 discard,
+  // fc00::/7 unique local, fe80::/10 link-local, fec0::/10, ff00::/8 multicast.
+  if ((g0 & 0xe000) !== 0x2000) return true;
+  // 2001::/23 IETF special purpose, including Teredo (2001::/32), which can
+  // tunnel to an arbitrary IPv4 address.
+  if (g0 === 0x2001 && g1 < 0x0200) return true;
+  if (g0 === 0x2001 && g1 === 0x0db8) return true; // 2001:db8::/32 documentation
   // 2002::/16 (6to4) carries an IPv4 address in groups 1 and 2.
   if (g0 === 0x2002) return v4Blocked(embeddedV4(g1, g2));
-  if ((g0 & 0xfe00) === 0xfc00) return true; // fc00::/7 unique local
-  if ((g0 & 0xffc0) === 0xfe80) return true; // fe80::/10 link-local
-  if ((g0 & 0xffc0) === 0xfec0) return true; // fec0::/10 site-local (deprecated)
-  if ((g0 & 0xff00) === 0xff00) return true; // ff00::/8 multicast
-  if (g0 === 0x2001 && g1 === 0x0db8) return true; // 2001:db8::/32 documentation
-  if (g0 === 0x0100 && g1 === 0 && g2 === 0 && g3 === 0) return true; // 100::/64 discard
+  if (g0 === 0x3fff && g1 < 0x1000) return true; // 3fff::/20 documentation
   return false;
 }
 
@@ -137,6 +140,12 @@ export async function assertSafeUrl(url: URL, resolve: Resolver): Promise<void> 
   }
   const host = url.hostname.replace(/^\[|\]$/g, "");
   if (!host) throw new UnsafeUrlError("Feed link has no host.");
+  // "localhost" and its subdomains are loopback by definition (RFC 6761),
+  // whatever a resolver says; a trailing dot is the same name.
+  const bare = host.toLowerCase().replace(/\.+$/, "");
+  if (bare === "localhost" || bare.endsWith(".localhost")) {
+    throw new UnsafeUrlError("Feed link points at a private or internal address.");
+  }
   let addresses: string[];
   if (isIP(host)) {
     addresses = [host];
