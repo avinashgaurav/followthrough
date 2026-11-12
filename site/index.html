@@ -39,9 +39,7 @@
   nav { border-bottom: 1px solid var(--line); }
   nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; }
   .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; text-decoration: none; }
-  .mark { position: relative; width: 18px; height: 18px; }
-  .mark::before { content: ""; position: absolute; left: 8px; top: 0; width: 2px; height: 18px; background: var(--line); }
-  .mark::after { content: ""; position: absolute; left: 5px; top: 5px; width: 8px; height: 8px; border-radius: 50%; background: var(--signal); box-shadow: 0 0 10px var(--signal); }
+  .mark { width: 20px; height: 20px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23F4A521'/%3E%3Cg transform='translate(32 32) scale(.86) translate(-32 -32)'%3E%3Cpath d='M14 18h14v14l-6 14h-7l5-12h-6z' fill='%230A0B0D'/%3E%3Cpath d='M36 18h14v14l-6 14h-7l5-12h-6z' fill='%23FFFFFF'/%3E%3C/g%3E%3C/svg%3E") center / contain no-repeat; }
   nav .links { display: flex; gap: 22px; font-size: 14px; color: var(--ink-muted); }
   nav .links a { text-decoration: none; }
   nav .links a:hover { color: var(--ink); }
