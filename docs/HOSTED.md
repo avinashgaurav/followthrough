@@ -74,7 +74,18 @@ its workspace are created at once. The email is not verified, so:
 
 - anyone can register any address (each account is still its own isolated
   workspace with the free quota and AI caps);
-- there is no password reset yet (it needs email);
+- a forgotten password is reset with the **recovery code** shown once at
+  sign-up (stored as an argon2id hash, replaced on every use, and deleted with
+  the password). Signed-in admins can make a new one in Settings with their
+  current password. Guesses are limited to 5 an hour per email from one IP and
+  50 a day per email;
+- teammates join with an **invite link** an admin makes in Settings: single
+  use, 48 hours, revocable, at most 10 open per workspace. The token is only
+  in the URL fragment (`/join#...`) and stored as a SHA-256. The joiner sets
+  their own email and password and gets a recovery code. If someone later
+  proves the inbox of a teammate who joined by link, that seat is removed
+  (the link was handed to a person, not to the email), and nothing else in
+  the workspace changes;
 - password accounts never pass the invite path, and an email that already has
   an account or a pending invite cannot be registered by password;
 - a password belongs to one membership and is deleted with it;
@@ -103,9 +114,8 @@ flood the inbox instead. Each emailed link signs in once; a token-hash link
 whose sign-in then fails on our side cannot be reused (Supabase spent it), so
 the person requests a new one.
 
-Planned with #24: CAPTCHA on sign-up, removing never-used workspaces, and
-password reset (still not available: a forgotten password means signing in by
-emailed link or code, which turns the password off).
+Planned with #24: CAPTCHA on sign-up, removing never-used workspaces, and an
+emailed password reset (until then, the recovery code is the way back in).
 
 The emailed-link sign-in stays in the code and works for everyone once SMTP is
 connected.
@@ -115,5 +125,5 @@ connected.
 Email, then the emailed code, then (first time only) "Company or product" and
 "What you sell", which the AI uses to frame every ask. The header shows how many
 free meetings are left; past the quota, creating a meeting explains how to
-self-host. Admins can invite teammates from Settings; they sign in with their
-own email code. One email belongs to one workspace.
+self-host. Admins invite teammates from Settings with a one-time invite link
+(email invites need an email sender). One email belongs to one workspace.

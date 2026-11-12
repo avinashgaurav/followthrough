@@ -15,6 +15,7 @@
   "crons": [{ "path": "/api/cron/daily", "schedule": "30 3 * * *" }],
   "headers": [
     { "source": "/auth/callback", "headers": [{ "key": "Referrer-Policy", "value": "no-referrer" }] },
+    { "source": "/join", "headers": [{ "key": "Referrer-Policy", "value": "no-referrer" }] },
     { "source": "/assets/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }] }
   ]
 }

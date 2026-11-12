@@ -883,3 +883,168 @@ describe("email + password sign-up", () => {
     expect(r.status).toBe(403);
   });
 });
+
+describe("recovery codes", () => {
+  const PW = "correct horse battery";
+  const signup = async (who: string) => {
+    const r = await handleApi(req("POST", "/api/hosted/password-signup", { body: { email: who, password: PW, product_name: "RecCo" } }));
+    return { res: r, body: (await r.clone().json()) as { recovery_code: string | null } };
+  };
+  const reset = (body: Record<string, unknown>) => handleApi(req("POST", "/api/hosted/password-reset", { body }));
+  const login = (who: string, password: string) =>
+    handleApi(req("POST", "/api/hosted/password-login", { body: { email: who, password } }));
+
+  test("sign-up returns a code once; it resets the password, ends old sessions and is replaced", async () => {
+    const who = email("rc-reset");
+    const { res, body } = await signup(who);
+    expect(res.status).toBe(201);
+    expect(body.recovery_code).toMatch(/^[2-9A-HJKMNP-Z]{4}-[2-9A-HJKMNP-Z]{4}-[2-9A-HJKMNP-Z]{4}$/);
+    const oldCookie = cookieOf(res);
+
+    // Typed loosely: lower case, spaces instead of dashes.
+    const typed = body.recovery_code!.toLowerCase().replace(/-/g, " ");
+    const r = await reset({ email: who, code: typed, password: "a brand new passphrase" });
+    expect(r.status).toBe(200);
+    const next = ((await r.json()) as { recovery_code: string }).recovery_code;
+    expect(next).not.toBe(body.recovery_code);
+    expect(cookieOf(r)).not.toBe("");
+
+    expect((await handleApi(req("GET", "/api/me", { cookie: oldCookie }))).status).toBe(401);
+    expect((await login(who, PW)).status).toBe(401);
+    expect((await login(who, "a brand new passphrase")).status).toBe(200);
+    // The old code is spent; the new one works.
+    expect((await reset({ email: who, code: body.recovery_code!, password: "another fine passphrase" })).status).toBe(401);
+    expect((await reset({ email: who, code: next, password: "another fine passphrase" })).status).toBe(200);
+  });
+
+  test("a wrong code and an unknown email get the same answer", async () => {
+    const who = email("rc-wrong");
+    await signup(who);
+    const wrong = await reset({ email: who, code: "AAAA-BBBB-CCCC", password: "a brand new passphrase" });
+    const unknown = await reset({ email: email("rc-nobody"), code: "AAAA-BBBB-CCCC", password: "a brand new passphrase" });
+    expect(wrong.status).toBe(401);
+    expect(unknown.status).toBe(401);
+    expect(await wrong.text()).toBe(await unknown.text());
+  });
+
+  test("guessing is locked per email and IP", async () => {
+    const who = email("rc-guess");
+    await signup(who);
+    const from = (code: string) =>
+      handleApi(
+        new Request("http://localhost/api/hosted/password-reset", {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-forwarded-for": "203.0.113.90" },
+          body: JSON.stringify({ email: who, code, password: "a brand new passphrase" }),
+        }),
+      );
+    for (let i = 0; i < 5; i++) expect((await from(`AAAA-BBBB-CCC${i}`)).status).toBe(401);
+    expect((await from("AAAA-BBBB-CCCX")).status).toBe(429);
+  });
+
+  test("signed in, a new code needs the current password and replaces the old one", async () => {
+    const who = email("rc-new");
+    const { res, body } = await signup(who);
+    const cookie = cookieOf(res);
+    const make = (password: string) => handleApi(req("POST", "/api/hosted/recovery-code", { cookie, body: { password } }));
+    expect((await make("not my password")).status).toBe(401);
+    const r = await make(PW);
+    expect(r.status).toBe(200);
+    const fresh = ((await r.json()) as { recovery_code: string }).recovery_code;
+    expect((await reset({ email: who, code: body.recovery_code!, password: "a brand new passphrase" })).status).toBe(401);
+    expect((await reset({ email: who, code: fresh, password: "a brand new passphrase" })).status).toBe(200);
+  });
+
+  test("an account that signs in by email has no recovery code to make", async () => {
+    const a = await signedIn("rc-inbox");
+    const r = await handleApi(req("POST", "/api/hosted/recovery-code", { cookie: a.cookie, body: { password: "anything" } }));
+    expect(r.status).toBe(409);
+  });
+});
+
+describe("invite links", () => {
+  const PW = "correct horse battery";
+  const tokenOf = (url: string) => url.split("#")[1]!;
+  const makeLink = async (cookie: string, role = "member") => {
+    const r = await handleApi(req("POST", "/api/hosted/invite-links", { cookie, body: { role } }));
+    return { res: r, body: (await r.clone().json()) as { id: string; url: string } };
+  };
+  const join = (body: Record<string, unknown>) => handleApi(req("POST", "/api/hosted/join", { body }));
+
+  test("an admin makes a link; a teammate joins with it once and lands in the same workspace", async () => {
+    const a = await signedIn("il-admin");
+    await handleApi(req("POST", "/api/clients", { cookie: a.cookie, body: { name: "Shared Client" } }));
+    const { res, body } = await makeLink(a.cookie);
+    expect(res.status).toBe(201);
+    expect(body.url).toMatch(/^http:\/\/localhost\/join#[A-Za-z0-9_-]{43}$/);
+    const token = tokenOf(body.url);
+
+    const info = await handleApi(req("POST", "/api/hosted/join-info", { body: { token } }));
+    expect(info.status).toBe(200);
+    expect(((await info.json()) as { workspace: string }).workspace).toBe(a.ws.name);
+
+    const who = email("il-mate");
+    const j = await join({ token, email: who, name: "Mate", password: PW });
+    expect(j.status).toBe(201);
+    expect(((await j.clone().json()) as { recovery_code: string }).recovery_code).toMatch(/^.{4}-.{4}-.{4}$/);
+    const clients = (await (await handleApi(req("GET", "/api/clients", { cookie: cookieOf(j) }))).json()) as unknown;
+    expect(JSON.stringify(clients)).toContain("Shared Client");
+    const me = (await (await handleApi(req("GET", "/api/me", { cookie: cookieOf(j) }))).json()) as { user: { role: string } };
+    expect(me.user.role).toBe("member");
+
+    // Spent: a second person cannot use it.
+    expect((await join({ token, email: email("il-second"), name: "Second", password: PW })).status).toBe(410);
+    expect((await handleApi(req("POST", "/api/hosted/join-info", { body: { token } }))).status).toBe(404);
+  });
+
+  test("a revoked link and a member's attempt to make links are refused", async () => {
+    const a = await signedIn("il-revoke");
+    const { body } = await makeLink(a.cookie);
+    expect((await handleApi(req("POST", `/api/hosted/invite-links/${body.id}/revoke`, { cookie: a.cookie }))).status).toBe(200);
+    expect((await join({ token: tokenOf(body.url), email: email("il-late"), name: "Late", password: PW })).status).toBe(410);
+
+    const fresh = await makeLink(a.cookie);
+    const j = await join({ token: tokenOf(fresh.body.url), email: email("il-member"), name: "M", password: PW });
+    expect(j.status).toBe(201);
+    expect((await makeLink(cookieOf(j))).res.status).toBe(403);
+  });
+
+  test("an email that already has an account cannot join, and the link stays usable", async () => {
+    const a = await signedIn("il-taken");
+    const other = await signedIn("il-other");
+    const { body } = await makeLink(a.cookie);
+    const token = tokenOf(body.url);
+    expect((await join({ token, email: other.ws.owner_email, name: "X", password: PW })).status).toBe(409);
+    expect((await join({ token, email: email("il-ok"), name: "OK", password: PW })).status).toBe(201);
+  });
+
+  test("an expired link is refused", async () => {
+    const a = await signedIn("il-expired");
+    const { body } = await makeLink(a.cookie);
+    await db.query("UPDATE control.invite_links SET expires_at = ? WHERE id = ?").run("2000-01-01T00:00:00.000Z", body.id);
+    expect((await join({ token: tokenOf(body.url), email: email("il-x"), name: "X", password: PW })).status).toBe(410);
+  });
+
+  test("open links are capped per workspace", async () => {
+    const a = await signedIn("il-cap");
+    for (let i = 0; i < 10; i++) expect((await makeLink(a.cookie)).res.status).toBe(201);
+    expect((await makeLink(a.cookie)).res.status).toBe(409);
+    const list = (await (await handleApi(req("GET", "/api/hosted/invite-links", { cookie: a.cookie }))).json()) as { links: unknown[] };
+    expect(list.links).toHaveLength(10);
+    expect(JSON.stringify(list)).not.toContain("token");
+  });
+
+  test("proving the inbox of a joined teammate removes that seat; the workspace and its owner are untouched", async () => {
+    const a = await signedIn("il-promote");
+    const { body } = await makeLink(a.cookie);
+    const who = email("il-squat");
+    const j = await join({ token: tokenOf(body.url), email: who, name: "Squat", password: PW });
+    expect(j.status).toBe(201);
+    const v = await handleApi(req("POST", "/api/hosted/link-verify", { body: { token_hash: `hash-ok:${who}` } }));
+    expect(v.status).toBe(200);
+    // The inbox owner is asked to make their own workspace, not let into a's.
+    expect(((await v.json()) as { needs_workspace?: boolean }).needs_workspace).toBe(true);
+    expect((await handleApi(req("GET", "/api/me", { cookie: cookieOf(j) }))).status).toBe(401);
+    expect((await handleApi(req("GET", "/api/me", { cookie: a.cookie }))).status).toBe(200);
+  });
+});

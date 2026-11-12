@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api, ApiError, domainRule, emailAllowed, type SttStatus, type User } from "../api";
+import { api, ApiError, domainRule, emailAllowed, type InviteLink, type SttStatus, type User } from "../api";
 import { formatDate, releaseCheckWords } from "../format";
 import {
   Alert,
@@ -18,6 +18,7 @@ import {
   useToast,
 } from "../components/ui";
 import { useAuth } from "../auth";
+import { RecoveryCodeCard } from "../components/RecoveryCode";
 
 // Admin. Job: users, calendar feed, releases, digest, search.
 // Data: listUsers/createUser/rotateCode/revokeUser, calendarStatus/setCalendar/deleteCalendar,
@@ -38,6 +39,8 @@ export function Settings() {
       />
       <div className="page-body stack" style={{ display: "flex", flexDirection: "column", gap: 28, maxWidth: 860 }}>
         {hosted ? <WorkspaceSection /> : <AccessSection />}
+        {hosted && <RecoverySection />}
+        {hosted && <InviteLinksSection />}
         <UsersSection />
         <CalendarSection />
         <ReleasesSection />
@@ -137,10 +140,190 @@ function WorkspaceSection() {
   );
 }
 
+// ================================================================ Recovery code (hosted)
+
+function RecoverySection() {
+  const [password, setPassword] = useState("");
+  const [code, setCode] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function make(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setBusy(true);
+    try {
+      const r = await api.newRecoveryCode(password);
+      setCode(r.recovery_code);
+      setPassword("");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not make a new code. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Panel
+      title="Recovery code"
+      desc="If you forget your password, your recovery code sets a new one. Lost it? Make a new one here; the old code stops working."
+    >
+      {code ? (
+        <RecoveryCodeCard code={code} onDone={() => setCode(null)} doneLabel="Done" />
+      ) : (
+        <form onSubmit={make} className="stack" style={{ maxWidth: 520 }}>
+          {error && (
+            <Alert severity="warning" title="That didn't work." onDismiss={() => setError(null)}>
+              {error}
+            </Alert>
+          )}
+          <Field label="Current password" htmlFor="rc-password">
+            <input id="rc-password" className="ctrl" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+          </Field>
+          <div className="form-actions">
+            <Btn variant="primary" type="submit" disabled={busy || !password}>
+              {busy ? "Making" : "Make a new recovery code"}
+            </Btn>
+          </div>
+        </form>
+      )}
+    </Panel>
+  );
+}
+
+// ================================================================ Invite links (hosted)
+
+function InviteLinksSection() {
+  const toast = useToast();
+  const [links, setLinks] = useState<InviteLink[] | null>(null);
+  const [error, setError] = useState<unknown>(null);
+  const [role, setRole] = useState<"member" | "admin">("member");
+  const [made, setMade] = useState<{ url: string; role: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      setLinks((await api.inviteLinks()).links);
+    } catch (e) {
+      setError(e);
+      setLinks([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function make() {
+    setBusy(true);
+    try {
+      const r = await api.createInviteLink(role);
+      setMade({ url: r.url, role: r.role });
+      void load();
+    } catch (err) {
+      toast.push(err instanceof ApiError ? err.message : "Could not make a link. Try again.", "critical");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function revoke(id: string) {
+    try {
+      await api.revokeInviteLink(id);
+      toast.push("Link revoked. It no longer works.", "info");
+      void load();
+    } catch (err) {
+      toast.push(err instanceof ApiError ? err.message : "Could not revoke the link.", "critical");
+    }
+  }
+
+  function copy(url: string) {
+    void navigator.clipboard
+      ?.writeText(url)
+      .then(() => toast.push("Invite link copied.", "success"))
+      .catch(() => toast.push("Copy failed. Select the link and copy it by hand.", "warning"));
+  }
+
+  return (
+    <Panel
+      title="Invite a teammate"
+      desc="Make a link and send it over Slack, WhatsApp or chat. It works once, for 48 hours: the first person who opens it sets their own email and password and joins this workspace."
+      actions={
+        <>
+          <select className="ctrl" aria-label="Role for the invite" value={role} onChange={(e) => setRole(e.target.value as "member" | "admin")} style={{ width: "auto" }}>
+            <option value="member">Member</option>
+            <option value="admin">Admin</option>
+          </select>
+          <Btn variant="primary" size="sm" onClick={() => void make()} disabled={busy}>
+            {busy ? "Making" : "Make invite link"}
+          </Btn>
+        </>
+      }
+    >
+      {made && (
+        <div className="mb-14">
+          <Alert severity="success" title={`Invite link for a new ${made.role}`} onDismiss={() => setMade(null)}>
+            <p style={{ margin: "0 0 8px" }}>
+              Send it to one person only: anyone who opens it first gets in. It is shown only now.
+            </p>
+            <div className="row gap-8" style={{ flexWrap: "wrap" }}>
+              <code className="mono" style={{ wordBreak: "break-all", fontSize: 12, userSelect: "all" }}>
+                {made.url}
+              </code>
+              <Btn size="sm" onClick={() => copy(made.url)}>
+                Copy
+              </Btn>
+            </div>
+          </Alert>
+        </div>
+      )}
+      {error ? (
+        <ErrorAlert error={error} onRetry={() => void load()} />
+      ) : links === null ? (
+        <Skeleton rows={2} />
+      ) : links.length === 0 ? (
+        <p className="muted small" style={{ margin: 0 }}>No open invite links.</p>
+      ) : (
+        <div className="card p-0">
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Role</th>
+                  <th>Made</th>
+                  <th>Expires</th>
+                  <th style={{ textAlign: "right" }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {links.map((l) => (
+                  <tr key={l.id}>
+                    <td>
+                      <span className="pill">{l.role}</span>
+                    </td>
+                    <td>{formatDate(l.created_at)}</td>
+                    <td>{formatDate(l.expires_at)}</td>
+                    <td style={{ textAlign: "right" }}>
+                      <Btn size="sm" variant="danger" onClick={() => void revoke(l.id)}>
+                        Revoke
+                      </Btn>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 // ================================================================ Users
 
 function UsersSection() {
-  const { allowedDomains } = useAuth();
+  const { allowedDomains, hosted } = useAuth();
   const rule = domainRule(allowedDomains);
   const toast = useToast();
   const [users, setUsers] = useState<User[] | null>(null);
@@ -251,24 +434,26 @@ function UsersSection() {
       title="Users"
       desc="Who can sign in; come here to add a teammate, hand out a login code, or cut off access when someone leaves."
       actions={
-        <Btn
-          variant="primary"
-          size="sm"
-          onClick={() => {
-            setAddError(null);
-            setAddOpen(true);
-          }}
-          tooltip="Create a teammate and get a login code to hand them. The code shows only once."
-        >
-          Add user
-        </Btn>
+        hosted ? undefined : (
+          <Btn
+            variant="primary"
+            size="sm"
+            onClick={() => {
+              setAddError(null);
+              setAddOpen(true);
+            }}
+            tooltip="Create a teammate and get a login code to hand them. The code shows only once."
+          >
+            Add user
+          </Btn>
+        )
       }
     >
-      <p className="muted small" style={{ margin: "0 0 14px" }}>
+      {!hosted && <p className="muted small" style={{ margin: "0 0 14px" }}>
         If a shared team password (<code className="mono">ACCESS_PASSWORD</code>) is configured, anyone
         with {rule ? <>a <code className="mono">{rule}</code></> : <strong>any</strong>} email can sign in as a member without being added
         here. Admins always sign in with a personal login code.
-      </p>
+      </p>}
       {revealed && (
         <div className="mb-14">
           <Alert
@@ -307,7 +492,10 @@ function UsersSection() {
       ) : users === null ? (
         <Skeleton rows={4} />
       ) : users.length === 0 ? (
-        <EmptyState title="No users yet" body="Add the first teammate to let them sign in." />
+        <EmptyState
+          title="No users yet"
+          body={hosted ? "Make an invite link above and send it to a teammate." : "Add the first teammate to let them sign in."}
+        />
       ) : (
         <div className="card p-0">
           <div className="table-wrap">
@@ -339,14 +527,14 @@ function UsersSection() {
                             <span className="st red">Revoked</span>
                           </Tooltip>
                         ) : (
-                          <Tooltip title="Active" content="This person can sign in with their login code.">
+                          <Tooltip title="Active" content="This person can sign in.">
                             <span className="st green">Active</span>
                           </Tooltip>
                         )}
                       </td>
                       <td style={{ textAlign: "right" }}>
                         <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
-                          <Btn
+                          {!hosted && <Btn
                             size="sm"
                             variant="ghost"
                             disabled={rowBusy === u.id}
@@ -358,7 +546,7 @@ function UsersSection() {
                             }
                           >
                             {revoked ? "Re-enable" : "Rotate code"}
-                          </Btn>
+                          </Btn>}
                           <Btn
                             size="sm"
                             variant="danger"

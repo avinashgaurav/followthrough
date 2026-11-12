@@ -339,7 +339,16 @@ export async function pruneControl(db: Database, now = Date.now()): Promise<Reco
   const p = await db.query("DELETE FROM control.pending_signups WHERE expires_at <= ?").run(new Date(now).toISOString());
   const ws = await db.query("DELETE FROM control.llm_spend_ws WHERE day < ?").run(new Date(now - 7 * 86_400_000).toISOString().slice(0, 10));
   const l = await db.query("DELETE FROM control.used_links WHERE expires_at <= ?").run(new Date(now).toISOString());
-  return { sessions: s.changes, rate_hits: r.changes, pending_signups: p.changes, ws_spend_days: ws.changes, used_links: l.changes };
+  // Invite links a week past their expiry (used, revoked or not) are history.
+  const il = await db.query("DELETE FROM control.invite_links WHERE expires_at <= ?").run(new Date(now - 7 * 86_400_000).toISOString());
+  return {
+    sessions: s.changes,
+    rate_hits: r.changes,
+    pending_signups: p.changes,
+    ws_spend_days: ws.changes,
+    used_links: l.changes,
+    invite_links: il.changes,
+  };
 }
 
 export async function listWorkspaces(db: Database): Promise<Workspace[]> {
@@ -374,6 +383,24 @@ export async function promoteUnverifiedClaim(db: Database, email: string): Promi
   const schema = m.workspace.schema_name;
   // Named directly below: a transaction outside withTenant has no search_path pin.
   if (!WS_SCHEMA.test(schema)) throw new Error(`not a workspace schema: "${schema}"`);
+  // A teammate who joined by invite link is not the workspace's owner: the
+  // link was handed to a person, not to this email. Proving the inbox must not
+  // give the email's owner a seat in someone else's workspace, so that
+  // membership is removed instead (the email is then free for its own
+  // workspace). Nobody else in the workspace is touched.
+  if (m.workspace.owner_email.trim().toLowerCase() !== normalized) {
+    return db.transaction(async () => {
+      const gone = await db
+        .query("DELETE FROM control.members WHERE email = ? AND verified_at IS NULL RETURNING user_id, workspace_id")
+        .run(normalized);
+      if (gone.rows.length === 0) return false;
+      const row = gone.rows[0] as { user_id: string; workspace_id: string };
+      await db.query(`UPDATE ${schema}.users SET disabled_at = ? WHERE id = ? AND disabled_at IS NULL`).run(nowIso(), row.user_id);
+      await db.query(`DELETE FROM control.sessions WHERE id IN (SELECT id FROM ${schema}.sessions WHERE user_id = ?)`).run(row.user_id);
+      await db.query(`DELETE FROM ${schema}.sessions WHERE user_id = ?`).run(row.user_id);
+      return true;
+    });
+  }
   return db.transaction(async () => {
     const won = await db
       .query("UPDATE control.members SET verified_at = ? WHERE email = ? AND verified_at IS NULL RETURNING email")
@@ -431,4 +458,214 @@ export async function recordControlHit(db: Database, key: string): Promise<numbe
 
 export async function withdrawControlHit(db: Database, key: string, at: number): Promise<void> {
   await db.query("DELETE FROM control.rate_hits WHERE key = ? AND at = ?").run(key, at);
+}
+
+// ---------------------------------------------------------------- recovery codes
+
+/** No 0/O, 1/I/L: a code people copy by hand. 12 chars from 31 = about 59 bits. */
+const CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+
+export function newRecoveryCode(): string {
+  const bytes = new Uint8Array(12);
+  crypto.getRandomValues(bytes);
+  // 256 % 31 leaves a tiny bias; at 59 bits it does not matter.
+  const chars = Array.from(bytes, (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]!).join("");
+  return `${chars.slice(0, 4)}-${chars.slice(4, 8)}-${chars.slice(8, 12)}`;
+}
+
+/** What the person typed, in the stored form: upper case, no spaces or dashes. */
+export function normalizeRecoveryCode(code: string): string {
+  return code.toUpperCase().replace(/[^0-9A-Z]/g, "");
+}
+
+/** Stores (or replaces) the code hash for a password account. False if the email has no password. */
+export async function saveRecoveryCode(db: Database, email: string, codeHash: string): Promise<boolean> {
+  const r = await db
+    .query(
+      `INSERT INTO control.recovery_codes (email, code_hash, created_at)
+       SELECT email, ?, ? FROM control.credentials WHERE email = ?
+       ON CONFLICT (email) DO UPDATE SET code_hash = EXCLUDED.code_hash, created_at = EXCLUDED.created_at
+       RETURNING email`,
+    )
+    .run(codeHash, nowIso(), email.trim().toLowerCase());
+  return r.rows.length > 0;
+}
+
+export async function recoveryFor(
+  db: Database,
+  email: string,
+): Promise<{ code_hash: string; workspace_id: string; user_id: string } | null> {
+  return (await db
+    .query(
+      `SELECT r.code_hash, c.workspace_id, c.user_id FROM control.recovery_codes r
+       JOIN control.credentials c ON c.email = r.email WHERE r.email = ?`,
+    )
+    .get(email.trim().toLowerCase())) as { code_hash: string; workspace_id: string; user_id: string } | null;
+}
+
+/**
+ * New password and recovery code in one transaction, only if the code hash is
+ * still the one that was checked (a parallel reset cannot spend it twice).
+ * Every session of that user is ended. False if the code changed meanwhile.
+ */
+export async function resetPassword(
+  db: Database,
+  email: string,
+  checkedCodeHash: string,
+  passwordHash: string,
+  nextCodeHash: string,
+): Promise<boolean> {
+  const normalized = email.trim().toLowerCase();
+  const m = await membershipFor(db, normalized);
+  if (!m) return false;
+  const schema = m.workspace.schema_name;
+  if (!WS_SCHEMA.test(schema)) throw new Error(`not a workspace schema: "${schema}"`);
+  return db.transaction(async () => {
+    const spent = await db
+      .query("UPDATE control.recovery_codes SET code_hash = ?, created_at = ? WHERE email = ? AND code_hash = ? RETURNING email")
+      .run(nextCodeHash, nowIso(), normalized, checkedCodeHash);
+    if (spent.rows.length === 0) return false;
+    await db.query("UPDATE control.credentials SET password_hash = ? WHERE email = ?").run(passwordHash, normalized);
+    await db.query(`DELETE FROM control.sessions WHERE id IN (SELECT id FROM ${schema}.sessions WHERE user_id = ?)`).run(m.userId);
+    await db.query(`DELETE FROM ${schema}.sessions WHERE user_id = ?`).run(m.userId);
+    return true;
+  });
+}
+
+// ---------------------------------------------------------------- invite links
+
+export const INVITE_LINK_TTL_MS = 48 * 3_600_000;
+export const MAX_OPEN_INVITE_LINKS = 10;
+
+export class InviteLinkSpentError extends Error {}
+
+export function newInviteToken(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Buffer.from(bytes).toString("base64url");
+}
+
+export function inviteTokenHash(token: string): string {
+  return new Bun.CryptoHasher("sha256").update(token).digest("hex");
+}
+
+export interface InviteLinkRow {
+  id: string;
+  role: "admin" | "member";
+  created_by: string;
+  created_at: string;
+  expires_at: string;
+}
+
+export async function openInviteLinks(db: Database, workspaceId: string): Promise<InviteLinkRow[]> {
+  return (await db
+    .query(
+      `SELECT id, role, created_by, created_at, expires_at FROM control.invite_links
+       WHERE workspace_id = ? AND used_at IS NULL AND revoked_at IS NULL AND expires_at > ?
+       ORDER BY created_at DESC`,
+    )
+    .all(workspaceId, nowIso())) as InviteLinkRow[];
+}
+
+/** A new link, or null when the workspace already has the maximum of open links. */
+export async function createInviteLink(
+  db: Database,
+  workspaceId: string,
+  role: "admin" | "member",
+  createdBy: string,
+): Promise<{ id: string; token: string; expires_at: string } | null> {
+  const id = ulid();
+  const token = newInviteToken();
+  const expires = new Date(Date.now() + INVITE_LINK_TTL_MS).toISOString();
+  return db.transaction(async () => {
+    await db.query("SELECT pg_advisory_xact_lock(hashtext(?))").run(`followthrough:invite-links:${workspaceId}`);
+    if ((await openInviteLinks(db, workspaceId)).length >= MAX_OPEN_INVITE_LINKS) return null;
+    await db
+      .query(
+        `INSERT INTO control.invite_links (id, token_hash, workspace_id, role, created_by, created_at, expires_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(id, inviteTokenHash(token), workspaceId, role, createdBy, nowIso(), expires);
+    return { id, token, expires_at: expires };
+  });
+}
+
+export async function revokeInviteLink(db: Database, workspaceId: string, id: string): Promise<boolean> {
+  const r = await db
+    .query(
+      "UPDATE control.invite_links SET revoked_at = ? WHERE id = ? AND workspace_id = ? AND used_at IS NULL AND revoked_at IS NULL RETURNING id",
+    )
+    .run(nowIso(), id, workspaceId);
+  return r.rows.length > 0;
+}
+
+/** The workspace an open link leads to, for the join page. Null if spent, revoked, expired or unknown. */
+export async function inviteLinkInfo(
+  db: Database,
+  token: string,
+): Promise<{ workspace: Workspace; created_by: string; expires_at: string } | null> {
+  const row = (await db
+    .query(
+      `SELECT workspace_id, created_by, expires_at FROM control.invite_links
+       WHERE token_hash = ? AND used_at IS NULL AND revoked_at IS NULL AND expires_at > ?`,
+    )
+    .get(inviteTokenHash(token), nowIso())) as { workspace_id: string; created_by: string; expires_at: string } | null;
+  if (!row) return null;
+  const workspace = await getWorkspace(db, row.workspace_id);
+  return workspace ? { workspace, created_by: row.created_by, expires_at: row.expires_at } : null;
+}
+
+/**
+ * Spends the link and adds the person in one transaction: the workspace user,
+ * an active (unverified) membership, their password and recovery code. Any
+ * refusal (link spent, email taken, workspace full) rolls everything back, so
+ * a link is only used up by a join that worked.
+ */
+export async function joinWithInviteLink(
+  db: Database,
+  input: { token: string; email: string; name: string; passwordHash: string; recoveryCodeHash: string },
+): Promise<{ workspace: Workspace; userId: string }> {
+  const email = input.email.trim().toLowerCase();
+  const tokenHash = inviteTokenHash(input.token);
+  const userId = ulid();
+  const now = nowIso();
+  try {
+    const workspaceId = await db.transaction(async () => {
+      const link = (await db
+        .query(
+          `UPDATE control.invite_links SET used_at = ?, used_by_email = ?
+           WHERE token_hash = ? AND used_at IS NULL AND revoked_at IS NULL AND expires_at > ?
+           RETURNING workspace_id, role, created_by`,
+        )
+        .run(now, email, tokenHash, now)).rows[0] as { workspace_id: string; role: string; created_by: string } | undefined;
+      if (!link) throw new InviteLinkSpentError("That invite link has expired, was revoked, or was already used.");
+      const ws = await getWorkspace(db, link.workspace_id);
+      if (!ws || !WS_SCHEMA.test(ws.schema_name)) throw new InviteLinkSpentError("That workspace no longer exists.");
+      // Same lock as addMember, so links and email invites share one member cap.
+      await db.query("SELECT pg_advisory_xact_lock(hashtext(?))").run(`followthrough:members:${ws.id}`);
+      const { n } = (await db.query("SELECT COUNT(*) AS n FROM control.members WHERE workspace_id = ?").get(ws.id)) as { n: number };
+      if (n >= env.MAX_MEMBERS_PER_WORKSPACE) throw new TooManyMembersError("This workspace has reached its member limit.");
+      const inviter = (await db.query(`SELECT id, email FROM ${ws.schema_name}.users WHERE id = ?`).get(link.created_by)) as
+        | { id: string; email: string }
+        | null;
+      await db
+        .query(`INSERT INTO ${ws.schema_name}.users (id, email, name, role, invited_by, created_at) VALUES (?, ?, ?, ?, ?, ?)`)
+        .run(userId, email, input.name.trim(), link.role, inviter?.id ?? null, now);
+      await db
+        .query("INSERT INTO control.members (email, workspace_id, user_id, status, invited_by, created_at) VALUES (?, ?, ?, 'active', ?, ?)")
+        .run(email, ws.id, userId, inviter?.email ?? null, now);
+      await db
+        .query(
+          "INSERT INTO control.credentials (email, workspace_id, user_id, password_hash, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?)",
+        )
+        .run(email, ws.id, userId, input.passwordHash, now, now);
+      await db.query("INSERT INTO control.recovery_codes (email, code_hash, created_at) VALUES (?, ?, ?)").run(email, input.recoveryCodeHash, now);
+      return ws.id;
+    });
+    return { workspace: (await getWorkspace(db, workspaceId))!, userId };
+  } catch (err) {
+    const message = String((err as Error)?.message ?? err);
+    if (/duplicate key|unique/i.test(message)) throw new AlreadyMemberError(email);
+    throw err;
+  }
 }
