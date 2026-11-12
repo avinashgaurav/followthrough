@@ -167,7 +167,8 @@
     <div class="links">
       <a href="#try">Try it</a>
       <a class="hide-sm" href="#how">How it works</a>
-      <a class="hide-sm" href="#self-host">Self-host</a>
+      <a class="hide-sm" href="#mcp">MCP</a>
+    <a class="hide-sm" href="#self-host">Self-host</a>
       <a href="https://github.com/avinashgaurav/followthrough">GitHub</a>
     </div>
   </div>
@@ -329,6 +330,22 @@
   </div>
 </section>
 
+<section id="mcp">
+  <div class="wrap">
+    <div class="eyebrow">Use it from Claude or Cursor</div>
+    <h2>Ask your AI assistant what you promised.</h2>
+    <p class="sub">Followthrough is an MCP server with 26 tools. Make a token in Settings, paste one command, then ask Claude Code, Cursor or Claude Desktop: &ldquo;What did we promise Acme?&rdquo; or &ldquo;Brief me for the Globex call.&rdquo; Tokens only reach the tools, and you can revoke them any time.</p>
+<pre><span class="c"># Settings &rarr; Connect an AI assistant (MCP) &rarr; Make a token</span>
+claude mcp add --transport http followthrough \
+  https://followthrough-hosted.vercel.app/api/mcp \
+  --header "Authorization: Bearer ftk_..."</pre>
+    <div class="facts"><span>14 read tools</span><span>12 write tools</span><span>A person still signs off every ask</span><span>Revocable tokens</span></div>
+    <div class="ctas" style="margin-top:30px">
+      <a class="btn" href="https://github.com/avinashgaurav/followthrough/blob/main/docs/MCP.md">MCP setup guide</a>
+    </div>
+  </div>
+</section>
+
 <section id="self-host">
   <div class="wrap">
     <div class="eyebrow">Run your own</div>
@@ -340,7 +357,7 @@ cd followthrough && bun install
 echo 'DATABASE_URL=postgres://...' >> .env
 echo 'GEMINI_API_KEY=...' >> .env
 bun run build:web && bun run start   <span class="c"># http://localhost:4500</span></pre>
-    <div class="facts"><span>MIT license</span><span>Bun + TypeScript</span><span>Postgres, append-only events</span><span>Gemini, Anthropic or OpenRouter</span><span>Chrome recorder extension</span></div>
+    <div class="facts"><span>MIT license</span><span>Bun + TypeScript</span><span>Postgres, append-only events</span><span>Gemini, Anthropic or OpenRouter</span><span>Chrome recorder extension</span><span>MCP server</span></div>
     <div class="ctas" style="margin-top:30px">
       <a class="btn primary" href="https://github.com/avinashgaurav/followthrough">Get it on GitHub</a>
       <a class="btn" href="https://followthrough-demo-neon.vercel.app/">Try the demo</a>
