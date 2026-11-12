@@ -3,11 +3,14 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { api, ApiError } from "../api";
 import { useAuth } from "../auth";
 import { Alert, Btn, Field } from "../components/ui";
+import { RecoveryCodeCard } from "../components/RecoveryCode";
 
 // "signup" / "signin": email + password (open sign-up while no email sender is
-// connected, issue #24). "email" / "code" / "invite" / "workspace": the emailed
-// link flow, reached from /auth/callback.
-type Step = "signup" | "signin" | "email" | "code" | "invite" | "workspace";
+// connected, issue #24). "recover": a new password with the recovery code.
+// "saved": the recovery code, shown once after sign-up or a reset.
+// "email" / "code" / "invite" / "workspace": the emailed link flow, reached
+// from /auth/callback.
+type Step = "signup" | "signin" | "recover" | "saved" | "email" | "code" | "invite" | "workspace";
 
 /**
  * Hosted sign-in: email, then the code Supabase emails, then (first time
@@ -35,6 +38,8 @@ export function HostedLogin({ freeMeetings, resume }: { freeMeetings: number; re
   const [product, setProduct] = useState("");
   const [what, setWhat] = useState("");
   const [invite, setInvite] = useState<{ workspace: string; invited_by: string | null } | null>(resume?.invite ?? null);
+  const [recovery, setRecovery] = useState("");
+  const [shownCode, setShownCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -66,7 +71,11 @@ export function HostedLogin({ freeMeetings, resume }: { freeMeetings: number; re
               ? "One last thing: who does the AI work for?"
               : step === "signin"
                 ? "Welcome back."
-                : `Start free. Your first ${freeMeetings} meetings are on us.`}
+                : step === "recover"
+                  ? "Set a new password with your recovery code."
+                  : step === "saved"
+                    ? "You're in. One more thing before you start."
+                    : `Start free. Your first ${freeMeetings} meetings are on us.`}
           </p>
         </div>
         {error && (
@@ -84,13 +93,18 @@ export function HostedLogin({ freeMeetings, resume }: { freeMeetings: number; re
               e.preventDefault();
               void run(async () => {
                 if (password !== password2) throw new Error("The two passwords don't match.");
-                await api.passwordSignup(email.trim(), password, product.trim(), what.trim() || undefined);
-                await done();
+                const r = await api.passwordSignup(email.trim(), password, product.trim(), what.trim() || undefined);
+                if (r.recovery_code) {
+                  setShownCode(r.recovery_code);
+                  setStep("saved");
+                } else {
+                  await done();
+                }
               });
             }}
           >
-            <Alert severity="info" title="No password reset yet.">
-              Save your password in a password manager. If you lose it, there is no way to get back in for now.
+            <Alert severity="info" title="You'll get a recovery code.">
+              After you sign up, save the code we show you. If you forget your password, it's how you set a new one.
             </Alert>
             <Field label="Email" htmlFor="s-email" hint="Use an email you own: if its real owner signs in later, they get this account and its workspace, and the password stops working.">
               <input id="s-email" className="ctrl" type="email" autoComplete="email" required placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -138,7 +152,7 @@ export function HostedLogin({ freeMeetings, resume }: { freeMeetings: number; re
             <Field label="Email" htmlFor="i-email">
               <input id="i-email" className="ctrl" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
             </Field>
-            <Field label="Password" htmlFor="i-password" hint="Forgot it? There is no password reset yet, so you can't get back into this account for now.">
+            <Field label="Password" htmlFor="i-password">
               <input id="i-password" className="ctrl" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
             </Field>
             <div className="form-actions" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -149,7 +163,56 @@ export function HostedLogin({ freeMeetings, resume }: { freeMeetings: number; re
                 Create an account
               </Btn>
             </div>
+            <p className="small" style={{ margin: 0 }}>
+              <button type="button" className="linklike" onClick={() => { setError(null); setPassword(""); setStep("recover"); }}>
+                Forgot your password?
+              </button>
+            </p>
           </form>
+        )}
+
+        {step === "recover" && (
+          <form
+            className="stack"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void run(async () => {
+                if (password !== password2) throw new Error("The two passwords don't match.");
+                const r = await api.passwordReset(email.trim(), recovery.trim(), password);
+                setShownCode(r.recovery_code);
+                setRecovery("");
+                setStep("saved");
+              });
+            }}
+          >
+            <Field label="Email" htmlFor="r-email">
+              <input id="r-email" className="ctrl" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+            </Field>
+            <Field label="Recovery code" htmlFor="r-code" hint="The code you saved when you signed up, like K7QX-29MF-H3TD.">
+              <input id="r-code" className="ctrl mono" autoComplete="off" spellCheck={false} required placeholder="XXXX-XXXX-XXXX" value={recovery} onChange={(e) => setRecovery(e.target.value)} />
+            </Field>
+            <Field label="New password" htmlFor="r-password" hint="At least 10 characters.">
+              <input id="r-password" className="ctrl" type="password" autoComplete="new-password" required minLength={10} value={password} onChange={(e) => setPassword(e.target.value)} />
+            </Field>
+            <Field label="Confirm new password" htmlFor="r-password2">
+              <input id="r-password2" className="ctrl" type="password" autoComplete="new-password" required minLength={10} value={password2} onChange={(e) => setPassword2(e.target.value)} />
+            </Field>
+            <div className="form-actions" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <Btn variant="primary" type="submit" disabled={busy}>
+                {busy ? "Saving" : "Set new password"}
+              </Btn>
+              <Btn variant="ghost" type="button" disabled={busy} onClick={() => { setError(null); setStep("signin"); }}>
+                Back to sign in
+              </Btn>
+            </div>
+            <p className="muted small" style={{ margin: 0 }}>
+              No recovery code? Admins can make a new one in Settings while signed in. Without one, a lost password can't be reset yet.
+            </p>
+          </form>
+        )}
+
+        {step === "saved" && shownCode && (
+          <RecoveryCodeCard code={shownCode} email={email.trim()} onDone={() => void done()} doneLabel="Start using Followthrough" />
         )}
 
         {step === "email" && (

@@ -15,6 +15,14 @@ export class ApiError extends Error {
   }
 }
 
+/** An open invite link (hosted). The URL itself is shown only when it is made. */
+export interface InviteLink {
+  id: string;
+  role: "admin" | "member";
+  created_at: string;
+  expires_at: string;
+}
+
 /**
  * The AI could not run (busy, or done for the day), so nothing was lost: what
  * the person saved stays saved and the same action works later.
@@ -541,7 +549,23 @@ export const api = {
       invite?: { workspace: string; invited_by: string | null };
     }>("/api/hosted/link-verify", link),
   passwordSignup: (email: string, password: string, product_name: string, product_description?: string) =>
-    post<{ ok: true }>("/api/hosted/password-signup", { email, password, product_name, product_description }),
+    post<{ ok: true; recovery_code: string | null }>("/api/hosted/password-signup", {
+      email,
+      password,
+      product_name,
+      product_description,
+    }),
+  passwordReset: (email: string, code: string, password: string) =>
+    post<{ ok: true; recovery_code: string }>("/api/hosted/password-reset", { email, code, password }),
+  newRecoveryCode: (password: string) => post<{ recovery_code: string }>("/api/hosted/recovery-code", { password }),
+  inviteLinks: () =>
+    get<{ links: InviteLink[]; max_open: number }>("/api/hosted/invite-links"),
+  createInviteLink: (role: "admin" | "member") =>
+    post<{ id: string; url: string; role: string; expires_at: string }>("/api/hosted/invite-links", { role }),
+  revokeInviteLink: (id: string) => post<{ ok: true }>(`/api/hosted/invite-links/${encodeURIComponent(id)}/revoke`),
+  joinInfo: (token: string) => post<{ workspace: string; expires_at: string }>("/api/hosted/join-info", { token }),
+  join: (body: { token: string; email: string; name: string; password: string }) =>
+    post<{ ok: true; recovery_code: string }>("/api/hosted/join", body),
   passwordLogin: (email: string, password: string) => post<{ ok: true }>("/api/hosted/password-login", { email, password }),
   acceptInvite: (signup_token: string) => post<{ ok: true }>("/api/hosted/accept-invite", { signup_token }),
   createWorkspace: (signup_token: string, product_name: string, product_description?: string) =>

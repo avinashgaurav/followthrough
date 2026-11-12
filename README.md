@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Bun](https://img.shields.io/badge/Bun-1.3+-fbf0df?logo=bun&logoColor=black)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-489%20passing-brightgreen.svg)](docs/SETUP.md#development)
+[![Tests](https://img.shields.io/badge/tests-504%20passing-brightgreen.svg)](docs/SETUP.md#development)
 [![LLM: Gemini, Claude or OpenRouter](https://img.shields.io/badge/LLM-Gemini%20%7C%20Claude%20%7C%20OpenRouter-d97757.svg)](docs/SETUP.md)
 
 </div>
@@ -44,7 +44,9 @@ Or [run your own](#run-your-own).
 
 - **Works today:** sign up, capture by pasting a transcript or uploading audio, AI extraction with quotes, Review, Library, Ask, Confirm shipped, client pages and share links.
 - **Hosted app:** every sign-up gets its own private workspace (a separate database schema), 5 free meetings and a daily AI spend cap.
-- **Emails are not verified yet,** and there is no password reset, because no email sender is connected ([#24](https://github.com/avinashgaurav/followthrough/issues/24)). Use an email you own: whoever proves the inbox (emailed link or code) gets the account and its workspace, and the password stops working. Teammate invites need email sending first.
+- **Forgot your password?** Sign-up shows a one-time recovery code: save it, and use it on the sign-in page to set a new password. Admins can make a new code in Settings.
+- **Teammates:** an admin makes an invite link in Settings and sends it over Slack or chat. It works once, for 48 hours, and the teammate sets their own email and password.
+- **Emails are not verified yet,** because no email sender is connected ([#24](https://github.com/avinashgaurav/followthrough/issues/24)). Use an email you own: whoever proves the inbox (emailed link or code) gets the account and its workspace, and the password stops working.
 - **Your data:** transcripts go to the AI provider to find the asks (on the hosted app, Google Gemini's free tier, so Google may use and review them), and uploaded audio goes to Deepgram; everything else stays in the app's database and file storage. Details: [Privacy](https://followthrough-eight.vercel.app/privacy.html). Run your own copy to keep it all on your servers.
 - **Needs setup when you run your own:** an AI key, a first admin (`bun run seed` prints a one-time login code), audio transcription (a Deepgram key) and GitHub release matching (GitHub tokens).
 
@@ -91,6 +93,7 @@ bun run build:web && bun run start   # http://localhost:4500, open by default: t
 
 ## More
 
+- **Sister project:** [ClientLens](https://github.com/avinashgaurav/clientlens), a Chrome sidebar that drafts pitches from your own docs and coaches you live in Google Meet. ClientLens helps during the call; Followthrough tracks what the client asked for after it.
 - [Roadmap](docs/ROADMAP.md): what comes next, and which built features need keys to switch on
 - [docs/PRD.md](docs/PRD.md): product brief: user, problem, metrics, cost per meeting.
 - [EVALS.md](EVALS.md): how the tests were run, the results and every miss.

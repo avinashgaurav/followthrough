@@ -30,7 +30,20 @@ import {
   removeMember,
   type Membership,
   controlRateLimited,
+  createInviteLink,
   createWorkspace,
+  inviteLinkInfo,
+  InviteLinkSpentError,
+  joinWithInviteLink,
+  MAX_OPEN_INVITE_LINKS,
+  newRecoveryCode,
+  normalizeRecoveryCode,
+  openInviteLinks,
+  recoveryFor,
+  resetPassword,
+  revokeInviteLink,
+  saveRecoveryCode,
+  TooManyMembersError,
   currentWorkspaceId,
   getWorkspace,
   membershipFor,
@@ -69,6 +82,9 @@ const OUTSIDE_WORKSPACE = new Set([
   "/api/hosted/link-verify",
   "/api/hosted/password-signup",
   "/api/hosted/password-login",
+  "/api/hosted/password-reset",
+  "/api/hosted/join-info",
+  "/api/hosted/join",
 ]);
 
 /** Single-tenant features that would act with this deployment's credentials or files. */
@@ -450,6 +466,7 @@ const PasswordLoginSchema = z.object({
 /** OWASP argon2id baseline: 19 MiB, 2 passes. Fixed so cost does not drift with Bun's defaults. */
 const ARGON = { algorithm: "argon2id", memoryCost: 19_456, timeCost: 2 } as const;
 const hashPassword = (pw: string) => Bun.password.hash(pw, ARGON);
+const hashRecovery = (code: string) => Bun.password.hash(normalizeRecoveryCode(code), ARGON);
 
 // Computed at load, not on the first miss, so a cold instance does not time an
 // unknown email differently. If hashing ever failed, "" makes verify throw,
@@ -502,8 +519,21 @@ route("POST", "/api/hosted/password-signup", "public", async (req) => {
       productDescription: body.data.product_description ?? null,
       passwordHash: await hashPassword(password),
     });
+    // Shown once, so a forgotten password is not the end of the account. If
+    // saving it fails the account still works; Settings can make a new one.
+    const recovery = newRecoveryCode();
+    const saved = await hashRecovery(recovery)
+      .then((h) => saveRecoveryCode(db, email, h))
+      .catch((err) => {
+        console.warn("hosted: could not save a recovery code at sign-up:", err);
+        return false;
+      });
     const sid = await openSession(db, workspace, userId, { ip: clientIp(req), userAgent: req.headers.get("user-agent") });
-    return json({ ok: true }, 201, { "set-cookie": sessionCookie(sid, secure(req)) });
+    return json(
+      { ok: true, recovery_code: saved ? recovery : null },
+      201,
+      { "set-cookie": sessionCookie(sid, secure(req)), "cache-control": "no-store" },
+    );
   } catch (err) {
     if (err instanceof SignupsFullError) {
       return json({ error: "Sign-ups are full for now. Star the repo on GitHub and self-host it today." }, 403);
@@ -560,4 +590,207 @@ route("POST", "/api/hosted/password-login", "public", async (req) => {
   // The email's owner proved the inbox while this login was checking: the password is gone.
   if (!sid) return json({ error: "That email and password don't match." }, 401);
   return json({ ok: true }, 200, { "set-cookie": sessionCookie(sid, secure(req)) });
+});
+
+// ---------------------------------------------------------------- recovery codes (password reset without email)
+
+const ResetSchema = z.object({
+  email: z.string().trim().toLowerCase().email().max(254),
+  code: z.string().trim().min(12).max(40),
+  password: z.string().min(10).max(200),
+});
+
+const TOO_MANY_RESETS = "Too many attempts. Wait an hour and try again.";
+
+route("POST", "/api/hosted/password-reset", "public", async (req) => {
+  const off = hostedOnly();
+  if (off) return off;
+  const refused = crossSiteRefusal(req);
+  if (refused) return refused;
+  const body = ResetSchema.safeParse(await readJson(req));
+  if (!body.success) {
+    const field = (name: string) => body.error.issues.some((i) => i.path[0] === name);
+    const error = field("password")
+      ? "Use a new password of at least 10 characters."
+      : "Enter your email and the recovery code you saved.";
+    return json({ error }, 400);
+  }
+  const { email, code, password } = body.data;
+  if (weakPassword(password, email)) {
+    return json({ error: "That password is too easy to guess. Pick something longer or less common." }, 400);
+  }
+  const db = getDb();
+  const ip = ipBucket("reset-ip", req, 20);
+  if (await controlRateLimited(db, ip.key, ip.limit, HOUR)) return json({ error: TOO_MANY_RESETS }, 429);
+  // Failures only, as for login: per email + IP (10 an hour) and a loose per
+  // email ceiling (200 a day), checked before recording so a flood adds no
+  // rows. A 59-bit code cannot be guessed at these rates, so the ceiling is
+  // kept loose: a low one would only let a stranger lock the owner out.
+  const failKey = `reset-fail:${email}:${ip.key}`;
+  const lockedOut = async () =>
+    (await controlHitCount(db, failKey, HOUR)) > 10 || (await controlHitCount(db, `reset-fail:${email}`, 24 * HOUR)) > 200;
+  if (await lockedOut()) return json({ error: TOO_MANY_RESETS }, 429);
+  const failAt = await recordControlHit(db, failKey);
+  const emailFailAt = await recordControlHit(db, `reset-fail:${email}`);
+  if (await lockedOut()) return json({ error: TOO_MANY_RESETS }, 429);
+
+  const rec = await recoveryFor(db, email);
+  const ok = await Bun.password.verify(normalizeRecoveryCode(code), rec?.code_hash || (await decoyHash)).catch(() => false);
+  const member = rec && ok ? await membershipFor(db, email) : null;
+  const matches =
+    !!member && member.status === "active" && member.workspace.id === rec!.workspace_id && member.userId === rec!.user_id;
+  if (!matches) return json({ error: "That email and recovery code don't match." }, 401);
+
+  const next = newRecoveryCode();
+  const changed = await resetPassword(db, email, rec!.code_hash, await hashPassword(password), await hashRecovery(next));
+  if (!changed) return json({ error: "That email and recovery code don't match." }, 401);
+  await withdrawControlHit(db, failKey, failAt);
+  await withdrawControlHit(db, `reset-fail:${email}`, emailFailAt);
+  const sid = await openPasswordSession(db, member!.workspace, member!.userId, email, {
+    ip: clientIp(req),
+    userAgent: req.headers.get("user-agent"),
+  });
+  if (!sid) return json({ error: "That email and recovery code don't match." }, 401);
+  return json({ ok: true, recovery_code: next }, 200, { "set-cookie": sessionCookie(sid, secure(req)), "cache-control": "no-store" });
+});
+
+/** Signed in: replace the recovery code (lost it, or the account predates codes). Needs the current password. */
+route("POST", "/api/hosted/recovery-code", "user", async (req, user) => {
+  const off = hostedOnly();
+  if (off) return off;
+  const body = z.object({ password: z.string().min(1).max(200) }).safeParse(await readJson(req));
+  if (!body.success) return json({ error: "Enter your current password." }, 400);
+  const db = getDb();
+  const email = user!.email.trim().toLowerCase();
+  const ip = ipBucket("recovery-new", req, 10);
+  if (await controlRateLimited(db, `${ip.key}:${email}`, ip.limit, HOUR)) {
+    return json({ error: "Too many attempts. Wait an hour and try again." }, 429);
+  }
+  const cred = (await db
+    .query("SELECT password_hash, workspace_id, user_id FROM control.credentials WHERE email = ?")
+    .get(email)) as { password_hash: string; workspace_id: string; user_id: string } | null;
+  if (!cred || cred.workspace_id !== currentWorkspaceId() || cred.user_id !== user!.id) {
+    return json({ error: "This account signs in by email, so it has no password to recover.", kind: "no_password" }, 409);
+  }
+  const ok = await Bun.password.verify(body.data.password, cred.password_hash).catch(() => false);
+  if (!ok) return json({ error: "That password isn't right." }, 401);
+  const code = newRecoveryCode();
+  if (!(await saveRecoveryCode(db, email, await hashRecovery(code)))) {
+    return json({ error: "This account has no password to recover." }, 409);
+  }
+  return json({ recovery_code: code }, 200, { "cache-control": "no-store" });
+});
+
+// ---------------------------------------------------------------- invite links (teammates without email)
+
+function inviteUrl(token: string): string | null {
+  const origin = appOrigin();
+  // The token rides in the fragment: browsers never send it to a server, a
+  // Referer header or analytics.
+  return origin ? `${origin}/join#${token}` : null;
+}
+
+route("GET", "/api/hosted/invite-links", "admin", async () => {
+  const off = hostedOnly();
+  if (off) return off;
+  const links = await openInviteLinks(getDb(), currentWorkspaceId() ?? "");
+  return json({ links, max_open: MAX_OPEN_INVITE_LINKS });
+});
+
+route("POST", "/api/hosted/invite-links", "admin", async (req, admin) => {
+  const off = hostedOnly();
+  if (off) return off;
+  const body = z.object({ role: z.enum(["admin", "member"]).default("member") }).safeParse((await readJson(req)) ?? {});
+  if (!body.success) return json({ error: "Pick a role: admin or member." }, 400);
+  const ws = currentWorkspaceId() ?? "";
+  const db = getDb();
+  if (await controlRateLimited(db, `invite-links:${ws}`, 30, 24 * HOUR)) {
+    return json({ error: "Too many invite links today. Try again tomorrow." }, 429);
+  }
+  const link = await createInviteLink(db, ws, body.data.role, admin!.id);
+  if (!link) return json({ error: `You already have ${MAX_OPEN_INVITE_LINKS} open invite links. Revoke one first.` }, 409);
+  const url = inviteUrl(link.token);
+  if (!url) return json({ error: "Invite links are not configured (APP_URL)." }, 503);
+  return json({ id: link.id, url, role: body.data.role, expires_at: link.expires_at }, 201, { "cache-control": "no-store" });
+});
+
+route("POST", "/api/hosted/invite-links/:id/revoke", "admin", async (_req, _admin, params) => {
+  const off = hostedOnly();
+  if (off) return off;
+  const ok = await revokeInviteLink(getDb(), currentWorkspaceId() ?? "", params.id ?? "");
+  return ok ? json({ ok: true }) : json({ error: "That link is already used, revoked or gone." }, 404);
+});
+
+const TokenSchema = z.object({ token: z.string().regex(/^[A-Za-z0-9_-]{40,60}$/) });
+const LINK_GONE = "That invite link has expired, was revoked, or was already used. Ask for a new one.";
+
+route("POST", "/api/hosted/join-info", "public", async (req) => {
+  const off = hostedOnly();
+  if (off) return off;
+  const refused = crossSiteRefusal(req);
+  if (refused) return refused;
+  const body = TokenSchema.safeParse(await readJson(req));
+  if (!body.success) return json({ error: LINK_GONE }, 404);
+  const db = getDb();
+  const ip = ipBucket("join-info-ip", req, 60);
+  if (await controlRateLimited(db, ip.key, ip.limit, HOUR)) return json({ error: "Too many attempts. Try again in an hour." }, 429);
+  const info = await inviteLinkInfo(db, body.data.token);
+  if (!info) return json({ error: LINK_GONE }, 404);
+  return json({ workspace: info.workspace.name, expires_at: info.expires_at });
+});
+
+const JoinSchema = TokenSchema.extend({
+  email: z.string().trim().toLowerCase().email().max(254),
+  name: z.string().trim().min(1).max(80),
+  password: z.string().min(10).max(200),
+});
+
+route("POST", "/api/hosted/join", "public", async (req) => {
+  const off = hostedOnly();
+  if (off) return off;
+  const refused = crossSiteRefusal(req);
+  if (refused) return refused;
+  const body = JoinSchema.safeParse(await readJson(req));
+  if (!body.success) {
+    const field = (name: string) => body.error.issues.some((i) => i.path[0] === name);
+    const error = field("token")
+      ? LINK_GONE
+      : field("email")
+        ? "Enter a valid email address."
+        : field("password")
+          ? "Use a password of at least 10 characters."
+          : "Enter your name.";
+    return json({ error }, 400);
+  }
+  const { token, email, name, password } = body.data;
+  if (weakPassword(password, email)) {
+    return json({ error: "That password is too easy to guess. Pick something longer or less common." }, 400);
+  }
+  const db = getDb();
+  const ip = ipBucket("join-ip", req, 10);
+  if (await controlRateLimited(db, ip.key, ip.limit, HOUR)) return json({ error: "Too many attempts. Try again in an hour." }, 429);
+  // The link first, so this cannot be used to ask whether an email has an account.
+  if (!(await inviteLinkInfo(db, token))) return json({ error: LINK_GONE }, 410);
+  if ((await membershipFor(db, email)) || (await isUnverifiedClaim(db, email))) {
+    return json({ error: "That email already has an account. Use another email, or sign in instead." }, 409);
+  }
+  const recovery = newRecoveryCode();
+  try {
+    const { workspace, userId } = await joinWithInviteLink(db, {
+      token,
+      email,
+      name,
+      passwordHash: await hashPassword(password),
+      recoveryCodeHash: await hashRecovery(recovery),
+    });
+    const sid = await openSession(db, workspace, userId, { ip: clientIp(req), userAgent: req.headers.get("user-agent") });
+    return json({ ok: true, recovery_code: recovery }, 201, { "set-cookie": sessionCookie(sid, secure(req)), "cache-control": "no-store" });
+  } catch (err) {
+    if (err instanceof InviteLinkSpentError) return json({ error: LINK_GONE }, 410);
+    if (err instanceof TooManyMembersError) return json({ error: "This workspace is full. Ask its admin to remove someone first." }, 409);
+    if (err instanceof AlreadyMemberError) {
+      return json({ error: "That email already has an account. Use another email, or sign in instead." }, 409);
+    }
+    throw err;
+  }
 });
