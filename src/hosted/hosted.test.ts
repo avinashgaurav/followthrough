@@ -938,7 +938,7 @@ describe("recovery codes", () => {
           body: JSON.stringify({ email: who, code, password: "a brand new passphrase" }),
         }),
       );
-    for (let i = 0; i < 5; i++) expect((await from(`AAAA-BBBB-CCC${i}`)).status).toBe(401);
+    for (let i = 0; i < 10; i++) expect((await from(`AAAA-BBBB-CC${String(i).padStart(2, "Q")}`)).status).toBe(401);
     expect((await from("AAAA-BBBB-CCCX")).status).toBe(429);
   });
 
@@ -1032,6 +1032,48 @@ describe("invite links", () => {
     const list = (await (await handleApi(req("GET", "/api/hosted/invite-links", { cookie: a.cookie }))).json()) as { links: unknown[] };
     expect(list.links).toHaveLength(10);
     expect(JSON.stringify(list)).not.toContain("token");
+  });
+
+  test("an owner reclaiming a workspace from a password holder revokes every open link", async () => {
+    const who = email("il-squatter-owner");
+    const sq = await handleApi(req("POST", "/api/hosted/password-signup", { body: { email: who, password: PW, product_name: "Squatted" } }));
+    expect(sq.status).toBe(201);
+    const { body } = await makeLink(cookieOf(sq), "admin");
+    const v = await handleApi(req("POST", "/api/hosted/link-verify", { body: { token_hash: `hash-ok:${who}` } }));
+    expect(v.status).toBe(200);
+    expect((await join({ token: tokenOf(body.url), email: email("il-back-in"), name: "Back", password: PW })).status).toBe(410);
+  });
+
+  test("links stop working once the admin who made them is removed", async () => {
+    const a = await signedIn("il-inviter");
+    const adminLink = await makeLink(a.cookie, "admin");
+    const b = await join({ token: tokenOf(adminLink.body.url), email: email("il-admin2"), name: "B", password: PW });
+    expect(b.status).toBe(201);
+    const bLink = await makeLink(cookieOf(b));
+    expect(bLink.res.status).toBe(201);
+    const me = (await (await handleApi(req("GET", "/api/me", { cookie: cookieOf(b) }))).json()) as { user: { id: string } };
+    expect((await handleApi(req("POST", `/api/users/${me.user.id}/revoke`, { cookie: a.cookie }))).status).toBe(200);
+    expect((await join({ token: tokenOf(bLink.body.url), email: email("il-via-b"), name: "C", password: PW })).status).toBe(410);
+  });
+
+  test("a removed teammate can join again with the same email", async () => {
+    const a = await signedIn("il-rejoin");
+    const first = await makeLink(a.cookie);
+    const who = email("il-again");
+    const j = await join({ token: tokenOf(first.body.url), email: who, name: "Again", password: PW });
+    expect(j.status).toBe(201);
+    const me = (await (await handleApi(req("GET", "/api/me", { cookie: cookieOf(j) }))).json()) as { user: { id: string } };
+    expect((await handleApi(req("POST", `/api/users/${me.user.id}/revoke`, { cookie: a.cookie }))).status).toBe(200);
+    const second = await makeLink(a.cookie);
+    const back = await join({ token: tokenOf(second.body.url), email: who, name: "Again", password: "a different passphrase" });
+    expect(back.status).toBe(201);
+    expect((await handleApi(req("GET", "/api/me", { cookie: cookieOf(back) }))).status).toBe(200);
+  });
+
+  test("a garbage token says the link is gone, never whether the email has an account", async () => {
+    const other = await signedIn("il-oracle");
+    const r = await join({ token: "x".repeat(43), email: other.ws.owner_email, name: "X", password: PW });
+    expect(r.status).toBe(410);
   });
 
   test("proving the inbox of a joined teammate removes that seat; the workspace and its owner are untouched", async () => {

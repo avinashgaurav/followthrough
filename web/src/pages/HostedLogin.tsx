@@ -206,7 +206,7 @@ export function HostedLogin({ freeMeetings, resume }: { freeMeetings: number; re
               </Btn>
             </div>
             <p className="muted small" style={{ margin: 0 }}>
-              No recovery code? Signed-in users can make one in Settings. Without one, a lost password can't be reset yet.
+              No recovery code? Admins can make a new one in Settings while signed in. Without one, a lost password can't be reset yet.
             </p>
           </form>
         )}

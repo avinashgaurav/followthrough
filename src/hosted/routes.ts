@@ -529,7 +529,11 @@ route("POST", "/api/hosted/password-signup", "public", async (req) => {
         return false;
       });
     const sid = await openSession(db, workspace, userId, { ip: clientIp(req), userAgent: req.headers.get("user-agent") });
-    return json({ ok: true, recovery_code: saved ? recovery : null }, 201, { "set-cookie": sessionCookie(sid, secure(req)) });
+    return json(
+      { ok: true, recovery_code: saved ? recovery : null },
+      201,
+      { "set-cookie": sessionCookie(sid, secure(req)), "cache-control": "no-store" },
+    );
   } catch (err) {
     if (err instanceof SignupsFullError) {
       return json({ error: "Sign-ups are full for now. Star the repo on GitHub and self-host it today." }, 403);
@@ -618,11 +622,13 @@ route("POST", "/api/hosted/password-reset", "public", async (req) => {
   const db = getDb();
   const ip = ipBucket("reset-ip", req, 20);
   if (await controlRateLimited(db, ip.key, ip.limit, HOUR)) return json({ error: TOO_MANY_RESETS }, 429);
-  // Failures only, as for login: per email + IP (5 an hour) and per email
-  // (50 a day), checked before recording so a flood adds no rows.
+  // Failures only, as for login: per email + IP (10 an hour) and a loose per
+  // email ceiling (200 a day), checked before recording so a flood adds no
+  // rows. A 59-bit code cannot be guessed at these rates, so the ceiling is
+  // kept loose: a low one would only let a stranger lock the owner out.
   const failKey = `reset-fail:${email}:${ip.key}`;
   const lockedOut = async () =>
-    (await controlHitCount(db, failKey, HOUR)) > 5 || (await controlHitCount(db, `reset-fail:${email}`, 24 * HOUR)) > 50;
+    (await controlHitCount(db, failKey, HOUR)) > 10 || (await controlHitCount(db, `reset-fail:${email}`, 24 * HOUR)) > 200;
   if (await lockedOut()) return json({ error: TOO_MANY_RESETS }, 429);
   const failAt = await recordControlHit(db, failKey);
   const emailFailAt = await recordControlHit(db, `reset-fail:${email}`);
@@ -645,7 +651,7 @@ route("POST", "/api/hosted/password-reset", "public", async (req) => {
     userAgent: req.headers.get("user-agent"),
   });
   if (!sid) return json({ error: "That email and recovery code don't match." }, 401);
-  return json({ ok: true, recovery_code: next }, 200, { "set-cookie": sessionCookie(sid, secure(req)) });
+  return json({ ok: true, recovery_code: next }, 200, { "set-cookie": sessionCookie(sid, secure(req)), "cache-control": "no-store" });
 });
 
 /** Signed in: replace the recovery code (lost it, or the account predates codes). Needs the current password. */
@@ -672,7 +678,7 @@ route("POST", "/api/hosted/recovery-code", "user", async (req, user) => {
   if (!(await saveRecoveryCode(db, email, await hashRecovery(code)))) {
     return json({ error: "This account has no password to recover." }, 409);
   }
-  return json({ recovery_code: code });
+  return json({ recovery_code: code }, 200, { "cache-control": "no-store" });
 });
 
 // ---------------------------------------------------------------- invite links (teammates without email)
@@ -705,7 +711,7 @@ route("POST", "/api/hosted/invite-links", "admin", async (req, admin) => {
   if (!link) return json({ error: `You already have ${MAX_OPEN_INVITE_LINKS} open invite links. Revoke one first.` }, 409);
   const url = inviteUrl(link.token);
   if (!url) return json({ error: "Invite links are not configured (APP_URL)." }, 503);
-  return json({ id: link.id, url, role: body.data.role, expires_at: link.expires_at }, 201);
+  return json({ id: link.id, url, role: body.data.role, expires_at: link.expires_at }, 201, { "cache-control": "no-store" });
 });
 
 route("POST", "/api/hosted/invite-links/:id/revoke", "admin", async (_req, _admin, params) => {
@@ -763,6 +769,8 @@ route("POST", "/api/hosted/join", "public", async (req) => {
   const db = getDb();
   const ip = ipBucket("join-ip", req, 10);
   if (await controlRateLimited(db, ip.key, ip.limit, HOUR)) return json({ error: "Too many attempts. Try again in an hour." }, 429);
+  // The link first, so this cannot be used to ask whether an email has an account.
+  if (!(await inviteLinkInfo(db, token))) return json({ error: LINK_GONE }, 410);
   if ((await membershipFor(db, email)) || (await isUnverifiedClaim(db, email))) {
     return json({ error: "That email already has an account. Use another email, or sign in instead." }, 409);
   }
@@ -776,7 +784,7 @@ route("POST", "/api/hosted/join", "public", async (req) => {
       recoveryCodeHash: await hashRecovery(recovery),
     });
     const sid = await openSession(db, workspace, userId, { ip: clientIp(req), userAgent: req.headers.get("user-agent") });
-    return json({ ok: true, recovery_code: recovery }, 201, { "set-cookie": sessionCookie(sid, secure(req)) });
+    return json({ ok: true, recovery_code: recovery }, 201, { "set-cookie": sessionCookie(sid, secure(req)), "cache-control": "no-store" });
   } catch (err) {
     if (err instanceof InviteLinkSpentError) return json({ error: LINK_GONE }, 410);
     if (err instanceof TooManyMembersError) return json({ error: "This workspace is full. Ask its admin to remove someone first." }, 409);

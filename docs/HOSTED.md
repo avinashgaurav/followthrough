@@ -77,15 +77,18 @@ its workspace are created at once. The email is not verified, so:
 - a forgotten password is reset with the **recovery code** shown once at
   sign-up (stored as an argon2id hash, replaced on every use, and deleted with
   the password). Signed-in admins can make a new one in Settings with their
-  current password. Guesses are limited to 5 an hour per email from one IP and
-  50 a day per email;
+  current password. Guesses are limited to 10 an hour per email from one IP and
+  200 a day per email (a 59-bit code cannot be guessed at that rate; a low
+  ceiling would only let a stranger lock the owner out);
 - teammates join with an **invite link** an admin makes in Settings: single
   use, 48 hours, revocable, at most 10 open per workspace. The token is only
   in the URL fragment (`/join#...`) and stored as a SHA-256. The joiner sets
   their own email and password and gets a recovery code. If someone later
   proves the inbox of a teammate who joined by link, that seat is removed
   (the link was handed to a person, not to the email), and nothing else in
-  the workspace changes;
+  the workspace changes. Links stop working when the admin who made them is
+  removed or demoted, and every open link is revoked when an inbox owner
+  reclaims a workspace from a password holder;
 - password accounts never pass the invite path, and an email that already has
   an account or a pending invite cannot be registered by password;
 - a password belongs to one membership and is deleted with it;

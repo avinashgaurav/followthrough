@@ -391,7 +391,11 @@ export async function promoteUnverifiedClaim(db: Database, email: string): Promi
   if (m.workspace.owner_email.trim().toLowerCase() !== normalized) {
     return db.transaction(async () => {
       const gone = await db
-        .query("DELETE FROM control.members WHERE email = ? AND verified_at IS NULL RETURNING user_id, workspace_id")
+        .query(
+          `DELETE FROM control.members m WHERE m.email = ? AND m.verified_at IS NULL
+           AND EXISTS (SELECT 1 FROM control.credentials c WHERE c.email = m.email)
+           RETURNING m.user_id, m.workspace_id`,
+        )
         .run(normalized);
       if (gone.rows.length === 0) return false;
       const row = gone.rows[0] as { user_id: string; workspace_id: string };
@@ -418,6 +422,11 @@ export async function promoteUnverifiedClaim(db: Database, email: string): Promi
       .get(normalized)) as { user_id: string; workspace_id: string; schema_name: string };
     if (cur.schema_name !== schema) throw new Error("membership changed during promotion");
     await db.query("DELETE FROM control.members WHERE workspace_id = ? AND email <> ?").run(cur.workspace_id, normalized);
+    // Links made while the password holder had the workspace would let them
+    // (or anyone they gave one to) straight back in.
+    await db
+      .query("UPDATE control.invite_links SET revoked_at = ? WHERE workspace_id = ? AND used_at IS NULL AND revoked_at IS NULL")
+      .run(nowIso(), cur.workspace_id);
     await db.query(`UPDATE ${schema}.users SET disabled_at = ? WHERE id <> ? AND disabled_at IS NULL`).run(nowIso(), cur.user_id);
     // Whoever held the password knows the client share links: turn them off
     // (the owner makes new ones from the client page).
@@ -627,7 +636,7 @@ export async function joinWithInviteLink(
 ): Promise<{ workspace: Workspace; userId: string }> {
   const email = input.email.trim().toLowerCase();
   const tokenHash = inviteTokenHash(input.token);
-  const userId = ulid();
+  let userId = ulid();
   const now = nowIso();
   try {
     const workspaceId = await db.transaction(async () => {
@@ -645,15 +654,35 @@ export async function joinWithInviteLink(
       await db.query("SELECT pg_advisory_xact_lock(hashtext(?))").run(`followthrough:members:${ws.id}`);
       const { n } = (await db.query("SELECT COUNT(*) AS n FROM control.members WHERE workspace_id = ?").get(ws.id)) as { n: number };
       if (n >= env.MAX_MEMBERS_PER_WORKSPACE) throw new TooManyMembersError("This workspace has reached its member limit.");
-      const inviter = (await db.query(`SELECT id, email FROM ${ws.schema_name}.users WHERE id = ?`).get(link.created_by)) as
-        | { id: string; email: string }
-        | null;
-      await db
-        .query(`INSERT INTO ${ws.schema_name}.users (id, email, name, role, invited_by, created_at) VALUES (?, ?, ?, ?, ?, ?)`)
-        .run(userId, email, input.name.trim(), link.role, inviter?.id ?? null, now);
+      // A link is only as good as the admin who made it: once they are removed,
+      // disabled or no longer an admin, their open links stop working.
+      const inviter = (await db
+        .query(
+          `SELECT u.id, u.email FROM ${ws.schema_name}.users u
+           JOIN control.members m ON m.user_id = u.id AND m.workspace_id = ? AND m.status = 'active'
+           WHERE u.id = ? AND u.role = 'admin' AND u.disabled_at IS NULL`,
+        )
+        .get(ws.id, link.created_by)) as { id: string; email: string } | null;
+      if (!inviter) throw new InviteLinkSpentError("The admin who made that invite link no longer has access.");
+      // Someone who was removed from this workspace before keeps a disabled
+      // user row (their history stays attributed); joining again re-enables it.
+      const prior = (await db
+        .query(`SELECT id, disabled_at FROM ${ws.schema_name}.users WHERE email = ?`)
+        .get(email)) as { id: string; disabled_at: string | null } | null;
+      if (prior && !prior.disabled_at) throw new AlreadyMemberError(email);
+      if (prior) {
+        userId = prior.id;
+        await db
+          .query(`UPDATE ${ws.schema_name}.users SET disabled_at = NULL, code_hash = NULL, role = ?, name = ?, invited_by = ? WHERE id = ?`)
+          .run(link.role, input.name.trim(), inviter.id, prior.id);
+      } else {
+        await db
+          .query(`INSERT INTO ${ws.schema_name}.users (id, email, name, role, invited_by, created_at) VALUES (?, ?, ?, ?, ?, ?)`)
+          .run(userId, email, input.name.trim(), link.role, inviter.id, now);
+      }
       await db
         .query("INSERT INTO control.members (email, workspace_id, user_id, status, invited_by, created_at) VALUES (?, ?, ?, 'active', ?, ?)")
-        .run(email, ws.id, userId, inviter?.email ?? null, now);
+        .run(email, ws.id, userId, inviter.email, now);
       await db
         .query(
           "INSERT INTO control.credentials (email, workspace_id, user_id, password_hash, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?)",
