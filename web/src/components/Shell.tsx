@@ -141,7 +141,7 @@ export function Shell() {
     <div className="app">
       <aside className={sidebarOpen ? "side open" : "side"}>
         <div className="brand">
-          <span className="sq" />
+          <span className="logo-mark" aria-hidden="true" />
           <b>Followthrough</b>
         </div>
         <NavRow entry={HOME} onNavigate={() => setSidebarOpen(false)} />

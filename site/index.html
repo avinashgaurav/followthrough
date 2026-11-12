@@ -39,9 +39,7 @@
   nav { border-bottom: 1px solid var(--line); }
   nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; }
   .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; text-decoration: none; }
-  .mark { position: relative; width: 18px; height: 18px; }
-  .mark::before { content: ""; position: absolute; left: 8px; top: 0; width: 2px; height: 18px; background: var(--line); }
-  .mark::after { content: ""; position: absolute; left: 5px; top: 5px; width: 8px; height: 8px; border-radius: 50%; background: var(--signal); box-shadow: 0 0 10px var(--signal); }
+  .mark { width: 20px; height: 20px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23F4A521'/%3E%3Cg transform='translate(32 32) scale(.86) translate(-32 -32)'%3E%3Cpath d='M14 18h14v14l-6 14h-7l5-12h-6z' fill='%230A0B0D'/%3E%3Cpath d='M36 18h14v14l-6 14h-7l5-12h-6z' fill='%23FFFFFF'/%3E%3C/g%3E%3C/svg%3E") center / contain no-repeat; }
   nav .links { display: flex; gap: 22px; font-size: 14px; color: var(--ink-muted); }
   nav .links a { text-decoration: none; }
   nav .links a:hover { color: var(--ink); }
@@ -167,6 +165,7 @@
     <div class="links">
       <a href="#try">Try it</a>
       <a class="hide-sm" href="#how">How it works</a>
+      <a class="hide-sm" href="#mcp">MCP</a>
       <a class="hide-sm" href="#self-host">Self-host</a>
       <a href="https://github.com/avinashgaurav/followthrough">GitHub</a>
     </div>
@@ -214,16 +213,16 @@
     <h2>Watch it work.</h2>
     <div class="films">
       <figure>
-        <video controls muted playsinline preload="metadata" width="1280" height="800" poster="media/launch.png" aria-label="Launch video, 34 seconds">
-          <source src="https://github.com/avinashgaurav/followthrough/releases/download/videos-2026-11-12-teams/Followthrough-launch.mp4" type="video/mp4" />
+        <video controls muted playsinline preload="metadata" width="1280" height="800" poster="media/launch.png" aria-label="Launch video, 38 seconds">
+          <source src="https://github.com/avinashgaurav/followthrough/releases/download/videos-2026-11-12-mcp/Followthrough-launch.mp4" type="video/mp4" />
         </video>
-        <figcaption><b>Launch video</b> &middot; 34 s<span class="sum">The problem in three lines, every ask cited to the client's exact words, a person confirming it shipped, how fast the loop closes, then what's new for teams: invite links, recovery codes, calendar and audio capture. <a href="https://github.com/avinashgaurav/followthrough/releases/download/videos-2026-11-12-teams/Followthrough-launch.mp4">Download the MP4</a></span></figcaption>
+        <figcaption><b>Launch video</b> &middot; 38 s<span class="sum">The problem in three lines, every ask cited to the client's exact words, a person confirming it shipped, how fast the loop closes, then what's new for teams: invite links, recovery codes, calendar and audio capture, and asking Claude through MCP. <a href="https://github.com/avinashgaurav/followthrough/releases/download/videos-2026-11-12-mcp/Followthrough-launch.mp4">Download the MP4</a></span></figcaption>
       </figure>
       <figure>
-        <video controls muted playsinline preload="metadata" width="1280" height="800" poster="media/walkthrough.png" aria-label="Walkthrough video, 54 seconds">
-          <source src="https://github.com/avinashgaurav/followthrough/releases/download/videos-2026-11-12-teams/Followthrough-walkthrough.mp4" type="video/mp4" />
+        <video controls muted playsinline preload="metadata" width="1280" height="800" poster="media/walkthrough.png" aria-label="Walkthrough video, 57 seconds">
+          <source src="https://github.com/avinashgaurav/followthrough/releases/download/videos-2026-11-12-mcp/Followthrough-walkthrough.mp4" type="video/mp4" />
         </video>
-        <figcaption><b>Walkthrough</b> &middot; 54 s<span class="sum">The live demo on fictional data: Home, Capture from your calendar or audio, Review, one ask with the client's quote, the Library, Ask, a client page, Confirm shipped and Speed, then the free sign-up with a recovery code and a teammate joining by invite link. <a href="https://github.com/avinashgaurav/followthrough/releases/download/videos-2026-11-12-teams/Followthrough-walkthrough.mp4">Download the MP4</a></span></figcaption>
+        <figcaption><b>Walkthrough</b> &middot; 57 s<span class="sum">The live demo on fictional data: Home, Capture from your calendar or audio, Review, one ask with the client's quote, the Library, Ask, a client page, Confirm shipped and Speed, then the free sign-up with a recovery code a teammate joining by invite link, and the MCP server. <a href="https://github.com/avinashgaurav/followthrough/releases/download/videos-2026-11-12-mcp/Followthrough-walkthrough.mp4">Download the MP4</a></span></figcaption>
       </figure>
     </div>
   </div>
@@ -329,6 +328,22 @@
   </div>
 </section>
 
+<section id="mcp">
+  <div class="wrap">
+    <div class="eyebrow">Use it from Claude or Cursor</div>
+    <h2>Ask your AI assistant what you promised.</h2>
+    <p class="sub">Followthrough is an MCP server with 26 tools. Make a token in Settings and connect Claude Code with one command (Cursor and Claude Desktop are in the setup guide), then ask: &ldquo;What did we promise Acme?&rdquo; or &ldquo;Brief me for the Globex call.&rdquo; Tokens only reach the tools, and you can revoke them any time.</p>
+<pre><span class="c"># Settings &rarr; Connect an AI assistant (MCP) &rarr; Make a token</span>
+claude mcp add --transport http followthrough \
+  https://followthrough-hosted.vercel.app/api/mcp \
+  --header "Authorization: Bearer ftk_..."</pre>
+    <div class="facts"><span>14 read tools</span><span>12 write tools</span><span>Writes run as you, with your role</span><span>Revocable tokens</span></div>
+    <div class="ctas" style="margin-top:30px">
+      <a class="btn" href="https://github.com/avinashgaurav/followthrough/blob/main/docs/MCP.md">MCP setup guide</a>
+    </div>
+  </div>
+</section>
+
 <section id="self-host">
   <div class="wrap">
     <div class="eyebrow">Run your own</div>
@@ -340,7 +355,7 @@ cd followthrough && bun install
 echo 'DATABASE_URL=postgres://...' >> .env
 echo 'GEMINI_API_KEY=...' >> .env
 bun run build:web && bun run start   <span class="c"># http://localhost:4500</span></pre>
-    <div class="facts"><span>MIT license</span><span>Bun + TypeScript</span><span>Postgres, append-only events</span><span>Gemini, Anthropic or OpenRouter</span><span>Chrome recorder extension</span></div>
+    <div class="facts"><span>MIT license</span><span>Bun + TypeScript</span><span>Postgres, append-only events</span><span>Gemini, Anthropic or OpenRouter</span><span>Chrome recorder extension</span><span>MCP server</span></div>
     <div class="ctas" style="margin-top:30px">
       <a class="btn primary" href="https://github.com/avinashgaurav/followthrough">Get it on GitHub</a>
       <a class="btn" href="https://followthrough-demo-neon.vercel.app/">Try the demo</a>

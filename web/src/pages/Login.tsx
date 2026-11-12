@@ -121,16 +121,7 @@ export function Login() {
             padding: "10px 0 28px",
           }}
         >
-          <span
-            aria-hidden
-            style={{
-              width: 22,
-              height: 22,
-              background: "var(--accent)",
-              borderRadius: 1,
-              marginBottom: 14,
-            }}
-          />
+          <span aria-hidden className="logo-mark" style={{ width: 28, height: 28, marginBottom: 14 }} />
           <h1>Followthrough</h1>
           <p className="muted small" style={{ margin: "8px 0 0" }}>
             Client meetings in. Tracked commitments out.

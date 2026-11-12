@@ -17,15 +17,15 @@ The feature a client asked for shipped last month. Did anyone tell them? Followt
 ## Watch
 
 <p>
-  <a href="https://followthrough-eight.vercel.app/#watch"><img src="docs/media/launch.png" height="230" alt="Launch video, 34 seconds"></a>
+  <a href="https://followthrough-eight.vercel.app/#watch"><img src="docs/media/launch.png" height="230" alt="Launch video, 38 seconds"></a>
   &nbsp;
-  <a href="https://followthrough-eight.vercel.app/#watch"><img src="docs/media/walkthrough.png" height="230" alt="Walkthrough video, 54 seconds"></a>
+  <a href="https://followthrough-eight.vercel.app/#watch"><img src="docs/media/walkthrough.png" height="230" alt="Walkthrough video, 57 seconds"></a>
 </p>
 
 Click a poster to play it on the site.
 
-- **Launch video** (34 s): the problem in three lines, every ask cited to the client's exact words, a person confirming it shipped, how fast the loop closes, then what's new for teams: invite links, recovery codes, calendar and audio capture. [Or download the MP4](https://github.com/avinashgaurav/followthrough/releases/download/videos-2026-11-12-teams/Followthrough-launch.mp4).
-- **Walkthrough** (54 s): the live demo on fictional data: Home, Capture from your calendar or audio, Review, one ask with the client's quote, the Library, Ask, a client page, Confirm shipped and Speed, then the free sign-up with a recovery code and a teammate joining by invite link. [Or download the MP4](https://github.com/avinashgaurav/followthrough/releases/download/videos-2026-11-12-teams/Followthrough-walkthrough.mp4).
+- **Launch video** (38 s): the problem in three lines, every ask cited to the client's exact words, a person confirming it shipped, how fast the loop closes, then what's new for teams: invite links, recovery codes, calendar and audio capture, and asking Claude through MCP. [Or download the MP4](https://github.com/avinashgaurav/followthrough/releases/download/videos-2026-11-12-mcp/Followthrough-launch.mp4).
+- **Walkthrough** (57 s): the live demo on fictional data: Home, Capture from your calendar or audio, Review, one ask with the client's quote, the Library, Ask, a client page, Confirm shipped and Speed, then the free sign-up with a recovery code a teammate joining by invite link, and the MCP server. [Or download the MP4](https://github.com/avinashgaurav/followthrough/releases/download/videos-2026-11-12-mcp/Followthrough-walkthrough.mp4).
 
 ## Try it
 
