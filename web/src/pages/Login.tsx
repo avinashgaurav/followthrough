@@ -21,13 +21,29 @@ export function Login() {
   // Nothing is drawn until we know which sign-in this is, so the hosted app
   // never flashes the team-password form first.
   const [configKnown, setConfigKnown] = useState(false);
+  const [configStuck, setConfigStuck] = useState(false);
+  const [configTry, setConfigTry] = useState(0);
   useEffect(() => {
+    let live = true;
+    setConfigStuck(false);
+    // A stalled request must not leave a blank page: after 4s, offer a retry.
+    const timer = setTimeout(() => live && setConfigStuck(true), 4000);
     api
       .hostedConfig()
-      .then((c) => c.hosted && setHostedFree(c.free_meetings ?? 0))
+      .then((c) => live && c.hosted && setHostedFree(c.free_meetings ?? 0))
       .catch(() => {})
-      .finally(() => setConfigKnown(true));
-  }, []);
+      .finally(() => {
+        clearTimeout(timer);
+        if (live) {
+          setConfigStuck(false);
+          setConfigKnown(true);
+        }
+      });
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [configTry]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -71,7 +87,26 @@ export function Login() {
     }
   }
 
-  if (!configKnown) return <div className="login-wrap" aria-busy="true" />;
+  if (!configKnown) {
+    return (
+      <div className="login-wrap" aria-busy={!configStuck}>
+        <div className="login-card corner" role="status">
+          {configStuck ? (
+            <>
+              <p style={{ margin: "0 0 12px" }}>Couldn't reach the server.</p>
+              <Btn variant="primary" onClick={() => setConfigTry((n) => n + 1)}>
+                Retry
+              </Btn>
+            </>
+          ) : (
+            <p className="muted small" style={{ margin: 0 }}>
+              Loading sign-in
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
   if (hostedFree !== null) return <HostedLogin freeMeetings={hostedFree} />;
 
   return (

@@ -50,7 +50,7 @@ export function RecoveryCodeCard({ code, email, onDone, doneLabel = "Continue" }
             borderRadius: "var(--r)",
             padding: "6px 10px",
             fontSize: 15,
-            letterSpacing: "0.04em",
+            letterSpacing: "0.06em",
             color: "var(--ink)",
             userSelect: "all",
           }}
