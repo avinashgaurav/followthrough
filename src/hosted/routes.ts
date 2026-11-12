@@ -15,6 +15,7 @@ import {
   type LinkProof,
 } from "./supabase-auth.ts";
 import { COMMON_PASSWORDS } from "./common-passwords.ts";
+import { bearerToken, tokenHash } from "../tokens.ts";
 import {
   AlreadyMemberError,
   SignupsFullError,
@@ -173,9 +174,42 @@ export async function hostedDispatch(
     return inWorkspace(ws, () => dispatch(req));
   }
 
-  const ws = await workspaceForSession(db, readSessionCookie(req));
+  const ws = (await workspaceForSession(db, readSessionCookie(req))) ?? (await workspaceForBearer(req));
+  if (ws === "limited") return json({ error: "Too many requests with this token. Try again in an hour." }, 429);
   if (!ws) return json({ error: "unauthorized" }, 401);
   return inWorkspace(ws, () => dispatch(req));
+}
+
+/**
+ * A personal API token names its workspace ("ftk_<workspaceId>_..."), so the
+ * request can be pinned to that schema; the token is then checked inside it
+ * (userForBearer). A live token's user is capped at 1,200 calls an hour across
+ * all their tokens. Unknown tokens are refused, and an IP sending them is
+ * capped (60 an hour) so they cannot be used to load the shared database.
+ */
+async function workspaceForBearer(req: Request): Promise<Workspace | "limited" | null> {
+  const bearer = bearerToken(req);
+  if (!bearer || bearer.scope === "local") return null;
+  const db = getDb();
+  // Misses are capped per IP (a shared bucket with a higher cap when the IP is
+  // unknown). Only misses count, so a valid token behind a busy IP still works.
+  const missBucket = ipBucket("bearer-miss", req, 60);
+  const miss = async (): Promise<"limited" | null> =>
+    (await controlRateLimited(db, missBucket.key, missBucket.limit, HOUR)) ? "limited" : null;
+  const ws = await getWorkspace(db, bearer.scope);
+  if (!ws) return miss();
+  const hash = tokenHash(bearer.token);
+  const live = (await withTenant(ws.schema_name, () =>
+    db
+      .query(
+        `SELECT t.user_id FROM api_tokens t JOIN users u ON u.id = t.user_id
+         WHERE t.token_hash = ? AND t.revoked_at IS NULL AND u.disabled_at IS NULL`,
+      )
+      .get(hash),
+  )) as { user_id: string } | null;
+  if (!live) return miss();
+  if (await controlRateLimited(db, `token-user:${ws.id}:${live.user_id}`, 1200, HOUR)) return "limited";
+  return ws;
 }
 
 // ---------------------------------------------------------------- routes
@@ -385,7 +419,10 @@ async function declineInvite(m: Membership, email: string): Promise<void> {
   const db = getDb();
   await removeMember(db, email);
   await withTenant(m.workspace.schema_name, () =>
-    db.query("UPDATE users SET disabled_at = ? WHERE id = ? AND disabled_at IS NULL").run(nowIso(), m.userId),
+    db.transaction(async () => {
+      await db.query("UPDATE users SET disabled_at = ? WHERE id = ? AND disabled_at IS NULL").run(nowIso(), m.userId);
+      await db.query("UPDATE api_tokens SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL").run(nowIso(), m.userId);
+    }),
   );
 }
 

@@ -400,6 +400,7 @@ export async function promoteUnverifiedClaim(db: Database, email: string): Promi
       if (gone.rows.length === 0) return false;
       const row = gone.rows[0] as { user_id: string; workspace_id: string };
       await db.query(`UPDATE ${schema}.users SET disabled_at = ? WHERE id = ? AND disabled_at IS NULL`).run(nowIso(), row.user_id);
+      await db.query(`UPDATE ${schema}.api_tokens SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL`).run(nowIso(), row.user_id);
       await db.query(`DELETE FROM control.sessions WHERE id IN (SELECT id FROM ${schema}.sessions WHERE user_id = ?)`).run(row.user_id);
       await db.query(`DELETE FROM ${schema}.sessions WHERE user_id = ?`).run(row.user_id);
       return true;
@@ -428,6 +429,9 @@ export async function promoteUnverifiedClaim(db: Database, email: string): Promi
       .query("UPDATE control.invite_links SET revoked_at = ? WHERE workspace_id = ? AND used_at IS NULL AND revoked_at IS NULL")
       .run(nowIso(), cur.workspace_id);
     await db.query(`UPDATE ${schema}.users SET disabled_at = ? WHERE id <> ? AND disabled_at IS NULL`).run(nowIso(), cur.user_id);
+    // Every API token was made while the password holder had the workspace,
+    // including the owner account's own: none of them survive the takeover.
+    await db.query(`UPDATE ${schema}.api_tokens SET revoked_at = ? WHERE revoked_at IS NULL`).run(nowIso());
     // Whoever held the password knows the client share links: turn them off
     // (the owner makes new ones from the client page).
     await db.query(`UPDATE ${schema}.clients SET share_token = NULL WHERE share_token IS NOT NULL`).run();
@@ -537,6 +541,8 @@ export async function resetPassword(
     await db.query("UPDATE control.credentials SET password_hash = ? WHERE email = ?").run(passwordHash, normalized);
     await db.query(`DELETE FROM control.sessions WHERE id IN (SELECT id FROM ${schema}.sessions WHERE user_id = ?)`).run(m.userId);
     await db.query(`DELETE FROM ${schema}.sessions WHERE user_id = ?`).run(m.userId);
+    // A reset suggests the password leaked: tokens made with it go too.
+    await db.query(`UPDATE ${schema}.api_tokens SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL`).run(nowIso(), m.userId);
     return true;
   });
 }
@@ -672,6 +678,10 @@ export async function joinWithInviteLink(
       if (prior && !prior.disabled_at) throw new AlreadyMemberError(email);
       if (prior) {
         userId = prior.id;
+        // Re-joining never revives tokens from the earlier membership.
+        await db
+          .query(`UPDATE ${ws.schema_name}.api_tokens SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL`)
+          .run(now, prior.id);
         await db
           .query(`UPDATE ${ws.schema_name}.users SET disabled_at = NULL, code_hash = NULL, role = ?, name = ?, invited_by = ? WHERE id = ?`)
           .run(link.role, input.name.trim(), inviter.id, prior.id);

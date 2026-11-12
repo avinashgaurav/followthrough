@@ -15,6 +15,15 @@ export class ApiError extends Error {
   }
 }
 
+/** A personal API token (for MCP clients). The secret itself is shown only when made. */
+export interface ApiToken {
+  id: string;
+  name: string;
+  prefix: string;
+  created_at: string;
+  last_used_at: string | null;
+}
+
 /** An open invite link (hosted). The URL itself is shown only when it is made. */
 export interface InviteLink {
   id: string;
@@ -558,6 +567,9 @@ export const api = {
   passwordReset: (email: string, code: string, password: string) =>
     post<{ ok: true; recovery_code: string }>("/api/hosted/password-reset", { email, code, password }),
   newRecoveryCode: (password: string) => post<{ recovery_code: string }>("/api/hosted/recovery-code", { password }),
+  listTokens: () => get<{ tokens: ApiToken[]; max: number }>("/api/tokens"),
+  createToken: (name: string) => post<{ id: string; name: string; token: string }>("/api/tokens", { name }),
+  revokeToken: (id: string) => post<{ ok: true }>(`/api/tokens/${encodeURIComponent(id)}/revoke`),
   inviteLinks: () =>
     get<{ links: InviteLink[]; max_open: number }>("/api/hosted/invite-links"),
   createInviteLink: (role: "admin" | "member") =>

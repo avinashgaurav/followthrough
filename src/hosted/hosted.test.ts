@@ -1177,3 +1177,89 @@ describe("invite links", () => {
     expect((await handleApi(req("GET", "/api/me", { cookie: a.cookie }))).status).toBe(200);
   });
 });
+
+describe("API tokens and MCP on the hosted app", () => {
+  const bearerReq = (method: string, path: string, token: string, body?: unknown) =>
+    new Request(`http://localhost${path}`, {
+      method,
+      headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  const mcp = async (token: string, name: string, args: Record<string, unknown> = {}) => {
+    const r = await handleApi(bearerReq("POST", "/api/mcp", token, { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: args } }));
+    return { status: r.status, body: (await r.json()) as { result?: { content: { text: string }[]; isError?: boolean } } };
+  };
+  const tokenFor = async (cookie: string) => {
+    const r = await handleApi(req("POST", "/api/tokens", { cookie, body: { name: "Claude" } }));
+    expect(r.status).toBe(201);
+    return ((await r.json()) as { token: string }).token;
+  };
+
+  test("a token names its workspace and only ever sees that workspace", async () => {
+    const a = await signedIn("tok-a");
+    const b = await signedIn("tok-b");
+    await handleApi(req("POST", "/api/clients", { cookie: a.cookie, body: { name: "Only In A" } }));
+    await handleApi(req("POST", "/api/clients", { cookie: b.cookie, body: { name: "Only In B" } }));
+    const ta = await tokenFor(a.cookie);
+    expect(ta.startsWith(`ftk_${a.ws.id}_`)).toBe(true);
+    const listed = await mcp(ta, "list_clients");
+    expect(listed.status).toBe(200);
+    expect(listed.body.result!.content[0]!.text).toContain("Only In A");
+    expect(listed.body.result!.content[0]!.text).not.toContain("Only In B");
+    // A's secret relabelled as B's workspace finds nothing in B.
+    const forged = ta.replace(`ftk_${a.ws.id}_`, `ftk_${b.ws.id}_`);
+    expect((await handleApi(bearerReq("GET", "/api/clients", forged))).status).toBe(401);
+    // whoami shows the workspace and free meetings.
+    expect((await mcp(ta, "whoami")).body.result!.content[0]!.text).toContain("meetings_quota");
+  });
+
+  test("made-up tokens are capped per IP and add a bounded number of rows", async () => {
+    const a = await signedIn("tok-flood");
+    const fake = (i: number) => `ftk_${a.ws.id}_${String(i).padStart(43, "z")}`;
+    const from = (token: string) =>
+      new Request("http://localhost/api/me", { headers: { authorization: `Bearer ${token}`, "x-forwarded-for": "203.0.113.200" } });
+    let last = 0;
+    for (let i = 0; i < 65; i++) last = (await handleApi(from(fake(i)))).status;
+    expect(last).toBe(429);
+    const rows = ((await db.query("SELECT COUNT(*) AS n FROM control.rate_hits WHERE key LIKE 'bearer-miss:%'").get()) as { n: number }).n;
+    expect(rows).toBeLessThanOrEqual(61);
+  });
+
+  test("an owner reclaiming the workspace revokes every token the password holder made", async () => {
+    const who = email("tok-squat");
+    const sq = await handleApi(req("POST", "/api/hosted/password-signup", { body: { email: who, password: "correct horse battery", product_name: "Sq" } }));
+    expect(sq.status).toBe(201);
+    const token = await tokenFor(cookieOf(sq));
+    expect((await handleApi(bearerReq("GET", "/api/me", token))).status).toBe(200);
+    const v = await handleApi(req("POST", "/api/hosted/link-verify", { body: { token_hash: `hash-ok:${who}` } }));
+    expect(v.status).toBe(200);
+    expect((await handleApi(bearerReq("GET", "/api/me", token))).status).toBe(401);
+  });
+
+  test("a password reset revokes that user's tokens", async () => {
+    const who = email("tok-reset");
+    const sq = await handleApi(req("POST", "/api/hosted/password-signup", { body: { email: who, password: "correct horse battery", product_name: "R" } }));
+    const code = ((await sq.clone().json()) as { recovery_code: string }).recovery_code;
+    const token = await tokenFor(cookieOf(sq));
+    const r = await handleApi(req("POST", "/api/hosted/password-reset", { body: { email: who, code, password: "a brand new passphrase" } }));
+    expect(r.status).toBe(200);
+    expect((await handleApi(bearerReq("GET", "/api/me", token))).status).toBe(401);
+  });
+
+  test("a local-scope token is refused on the hosted app", async () => {
+    expect((await handleApi(bearerReq("GET", "/api/me", `ftk_local_${"A".repeat(43)}`))).status).toBe(401);
+  });
+});
+
+describe("API token miss cap", () => {
+  test("a valid token from an IP that sent 60+ unknown tokens still works", async () => {
+    const a = await signedIn("tok-shared-ip");
+    const r = await handleApi(req("POST", "/api/tokens", { cookie: a.cookie, body: { name: "Claude" } }));
+    const token = ((await r.json()) as { token: string }).token;
+    const from = (t: string) =>
+      new Request("http://localhost/api/me", { headers: { authorization: `Bearer ${t}`, "x-forwarded-for": "198.51.100.77" } });
+    for (let i = 0; i < 65; i++) await handleApi(from(`ftk_${a.ws.id}_${String(i).padStart(43, "q")}`));
+    expect((await handleApi(from(`ftk_${a.ws.id}_${"q".repeat(43)}`))).status).toBe(429);
+    expect((await handleApi(from(token))).status).toBe(200);
+  });
+});
