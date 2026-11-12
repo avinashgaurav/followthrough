@@ -15,15 +15,15 @@ A client asks for a feature on a call, it ships weeks later, and nobody tells th
 ## Watch
 
 <p>
-  <a href="https://followthrough-eight.vercel.app/#watch"><img src="docs/media/launch.png" height="230" alt="Launch video, 36 seconds"></a>
+  <a href="https://followthrough-eight.vercel.app/#watch"><img src="docs/media/launch.png" height="230" alt="Launch video, 34 seconds"></a>
   &nbsp;
-  <a href="https://followthrough-eight.vercel.app/#watch"><img src="docs/media/walkthrough.png" height="230" alt="Walkthrough video, 48 seconds"></a>
+  <a href="https://followthrough-eight.vercel.app/#watch"><img src="docs/media/walkthrough.png" height="230" alt="Walkthrough video, 54 seconds"></a>
 </p>
 
 Click a poster to play it on the site.
 
-- **Launch video** (36 s): the problem in three lines, then every ask cited to the client's exact words, a person confirming it shipped, how fast the loop closes, and the free sign-up. [Or download the MP4](https://github.com/avinashgaurav/followthrough/releases/download/videos-2026-11-04-signup/FollowThrough-launch.mp4).
-- **Walkthrough** (48 s): the live demo on fictional data: Home, Review, the Library, one ask with the client's quote, a client page, Confirm shipped, Speed and Ask, ending on the free sign-up form. [Or download the MP4](https://github.com/avinashgaurav/followthrough/releases/download/videos-2026-11-04-signup/FollowThrough-walkthrough.mp4).
+- **Launch video** (34 s): the problem in three lines, every ask cited to the client's exact words, a person confirming it shipped, how fast the loop closes, then what's new for teams: invite links, recovery codes, calendar and audio capture. [Or download the MP4](https://github.com/avinashgaurav/followthrough/releases/download/videos-2026-11-12-teams/Followthrough-launch.mp4).
+- **Walkthrough** (54 s): the live demo on fictional data: Home, Capture from your calendar or audio, Review, one ask with the client's quote, the Library, Ask, a client page, Confirm shipped and Speed, then the free sign-up with a recovery code and a teammate joining by invite link. [Or download the MP4](https://github.com/avinashgaurav/followthrough/releases/download/videos-2026-11-12-teams/Followthrough-walkthrough.mp4).
 
 ## Try it
 
